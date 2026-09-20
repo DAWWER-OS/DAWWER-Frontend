@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة الإدارة المركزية - دوّر</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <script src="assets/css/tailwind.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              primary: '#1c5335',
+              dark: '#143e27',
+              soft: '#edf5f0'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Core Architecture & Auth Route Guard -->
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script>
+    // Enforce Strict Admin-Only Route Guard
+    Auth.requireAuth(["Admin", 4, CONFIG.ROLES.ADMIN]);
+  </script>
+</head>
+<body class="bg-[#f8f6f0] font-['Tajawal',sans-serif] text-slate-800 min-h-screen">
+
+  <div class="flex min-h-screen">
+    
+    <!-- Mobile Backdrop -->
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-slate-900/50 z-40 hidden md:hidden"></div>
+
+    <!-- Sidebar Navigation -->
+    <div class="w-64 bg-gradient-to-b from-[#143e27] to-[#1c5335] text-white p-6 hidden md:block" id="sidebar-box">
+      <div class="text-center mb-8">
+        <div class="flex justify-center mb-3">
+          <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-10 w-auto">
+        </div>
+        <div class="text-sm font-bold text-white">لوحة الإدارة المركزية</div>
+      </div>
+
+      <div class="bg-white/10 p-4 rounded-xl mb-6 text-center border border-white/5">
+        <div class="text-sm font-bold text-white mb-1" data-user-name>مدير المنصة الرئيسي</div>
+        <div class="text-xs text-white/80">صلاحيات الإشراف الكاملة</div>
+      </div>
+
+      <div class="flex flex-col gap-2 sidebar-nav">
+        <button onclick="switchTab('stores')" id="tab-btn-stores" class="w-full flex items-center justify-between p-3 rounded-xl bg-white/20 text-white font-bold transition text-right">
+          <span>طلبات المتاجر</span>
+          <span id="stores-badge" class="bg-[#d6a950] text-white text-xs px-2 py-0.5 rounded-full font-bold">3</span>
+        </button>
+        <button onclick="switchTab('users')" id="tab-btn-users" class="w-full flex items-center justify-between p-3 rounded-xl text-white/80 hover:bg-white/10 font-medium transition text-right">
+          <span>المستخدمين والحسابات</span>
+        </button>
+        <button onclick="switchTab('categories')" id="tab-btn-categories" class="w-full flex items-center justify-between p-3 rounded-xl text-white/80 hover:bg-white/10 font-medium transition text-right">
+          <span>شجرة التصنيفات</span>
+        </button>
+        <button onclick="switchTab('audit')" id="tab-btn-audit" class="w-full flex items-center justify-between p-3 rounded-xl text-white/80 hover:bg-white/10 font-medium transition text-right">
+          <span>سجلات التدقيق (Audit)</span>
+        </button>
+        <a href="profile.html" class="flex items-center justify-between p-3 rounded-xl text-white/80 hover:bg-white/10 font-medium transition">
+          <span>الملف الشخصي</span>
+        </a>
+      </div>
+
+      <div class="pt-8 mt-12 border-t border-white/20">
+        <button onclick="Auth.logout()" class="w-full bg-red-500/20 hover:bg-red-500/30 text-white p-2.5 rounded-xl text-sm font-bold text-center transition">
+          تسجيل الخروج
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 p-6 md:p-8 overflow-y-auto">
+      
+      <!-- Top Header -->
+      <div class="flex items-center justify-between mb-8 pb-4 border-b border-slate-200">
+        <div class="flex items-center gap-3">
+          <button id="mobile-menu-btn" class="p-2 rounded-xl bg-white border border-slate-200 text-[#1c5335] md:hidden">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          </button>
+          <div>
+            <h1 id="page-title" class="text-xl md:text-2xl font-bold text-[#1c5335]">طلبات انضمام المتاجر</h1>
+            <p id="page-subtitle" class="text-xs text-slate-500 mt-0.5">مراجعة واعتماد طلبات المتاجر المسجلة</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <a href="index.html" class="text-xs bg-white border border-slate-300 px-4 py-2.5 rounded-xl text-slate-700 font-bold hover:bg-slate-50 shadow-sm transition">
+            معاينة بوابة التاجر
+          </a>
+          <button onclick="Auth.logout()" class="text-xs bg-red-50 border border-red-200 px-3.5 py-2.5 rounded-xl text-red-700 font-bold hover:bg-red-100 transition">
+            خروج
+          </button>
+        </div>
+      </div>
+
+      <!-- ================= TAB 1: STORE APPLICATIONS ================= -->
+      <div id="tab-stores" class="tab-content">
+        <!-- Status Filter Tabs -->
+        <div class="flex flex-wrap items-center gap-2 mb-4">
+          <button onclick="filterStores('all')" class="filter-store-btn bg-[#1c5335] text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition">الكل</button>
+          <button onclick="filterStores('Submitted')" class="filter-store-btn bg-white border border-slate-200 text-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-50 transition">بانتظار المراجعة (Submitted)</button>
+          <button onclick="filterStores('UnderReview')" class="filter-store-btn bg-white border border-slate-200 text-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-50 transition">قيد المراجعة (Under Review)</button>
+          <button onclick="filterStores('Approved')" class="filter-store-btn bg-white border border-slate-200 text-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-50 transition">معتمد ونشط (Approved)</button>
+          <button onclick="filterStores('NeedsInformation')" class="filter-store-btn bg-white border border-slate-200 text-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-50 transition">مطلوب معلومات</button>
+        </div>
+
+        <!-- Stores Table -->
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-x-auto">
+          <table class="w-full text-right border-collapse text-sm">
+            <thead>
+              <tr class="bg-[#edf5f0] text-[#1c5335] font-bold border-b border-[#1c5335]/10">
+                <th class="p-4">اسم المتجر</th>
+                <th class="p-4">رقم السجل / الضريبة</th>
+                <th class="p-4">المدينة / العنوان</th>
+                <th class="p-4">هاتف التواصل</th>
+                <th class="p-4">الحالة</th>
+                <th class="p-4">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="admin-stores-body" class="divide-y divide-slate-100">
+              <tr><td colspan="6" class="p-8 text-center text-slate-400">جاري تحميل طلبات المتاجر...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ================= TAB 2: USER MANAGEMENT ================= -->
+      <div id="tab-users" class="tab-content hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+          <input 
+            type="text" 
+            id="user-search" 
+            onkeyup="searchUsers()" 
+            placeholder="بحث بالاسم أو البريد الإلكتروني..." 
+            class="p-3 rounded-xl border border-slate-200 bg-white text-sm w-full max-w-md focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none"
+          >
+          <div class="flex gap-2">
+            <select id="user-role-filter" onchange="loadUsers()" class="p-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold">
+              <option value="">جميع الأدوار</option>
+              <option value="Admin">مدير (Admin)</option>
+              <option value="Merchant">تاجر (Merchant)</option>
+              <option value="Customer">زبون (Customer)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-x-auto">
+          <table class="w-full text-right border-collapse text-sm">
+            <thead>
+              <tr class="bg-[#edf5f0] text-[#1c5335] font-bold border-b border-[#1c5335]/10">
+                <th class="p-4">الاسم الكامل</th>
+                <th class="p-4">البريد الإلكتروني</th>
+                <th class="p-4">الدور</th>
+                <th class="p-4">حالة الحساب</th>
+                <th class="p-4">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="admin-users-body" class="divide-y divide-slate-100">
+              <tr><td colspan="5" class="p-8 text-center text-slate-400">جاري تحميل المستخدمين...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ================= TAB 3: CATEGORY GOVERNANCE ================= -->
+      <div id="tab-categories" class="tab-content hidden">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-base font-bold text-[#1c5335]">شجرة التصنيفات المركزية</h2>
+            <p class="text-xs text-slate-500">إدارة الأقسام والتصنيفات العامة للمنتجات</p>
+          </div>
+          <button onclick="openCategoryModal()" class="text-xs bg-[#1c5335] text-white px-4 py-2.5 rounded-xl font-bold hover:bg-[#143e27] shadow-sm transition">
+            + إضافة تصنيف رئيسي / فرعي
+          </button>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+          <div id="categories-tree-container" class="space-y-3">
+            <!-- Dynamic tree nodes -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= TAB 4: AUDIT LOGS ================= -->
+      <div id="tab-audit" class="tab-content hidden">
+        <!-- Audit Filter Toolbar -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm mb-4">
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">نوع الإجراء (Action)</label>
+              <input type="text" id="audit-action-filter" placeholder="e.g. ApproveStore" class="w-full p-2 rounded-xl border border-slate-200 text-xs">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">نوع الكيان (Entity)</label>
+              <input type="text" id="audit-entity-filter" placeholder="e.g. StoreApplication" class="w-full p-2 rounded-xl border border-slate-200 text-xs">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">من تاريخ</label>
+              <input type="date" id="audit-start-date" class="w-full p-2 rounded-xl border border-slate-200 text-xs">
+            </div>
+            <div class="flex items-end">
+              <button onclick="loadAuditLogs()" class="w-full bg-[#1c5335] text-white font-bold p-2 rounded-xl text-xs hover:bg-[#143e27] transition">
+                تطبيق الفلترة
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Audit Table -->
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-x-auto">
+          <table class="w-full text-right border-collapse text-xs">
+            <thead>
+              <tr class="bg-[#edf5f0] text-[#1c5335] font-bold border-b border-[#1c5335]/10">
+                <th class="p-3.5">الوقت والتاريخ</th>
+                <th class="p-3.5">المستخدم المنفذ</th>
+                <th class="p-3.5">نوع الإجراء</th>
+                <th class="p-3.5">الكيان المتأثر</th>
+                <th class="p-3.5">التفاصيل / الفروقات</th>
+              </tr>
+            </thead>
+            <tbody id="admin-audit-body" class="divide-y divide-slate-100 font-mono">
+              <tr><td colspan="5" class="p-8 text-center text-slate-400 font-sans">جاري تحميل سجلات التدقيق...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal: Application Review & Actions -->
+  <div id="store-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+        <h3 class="text-lg font-bold text-[#1c5335]" id="modal-store-name">تفاصيل طلب المتجر</h3>
+        <button onclick="closeModal('store-modal')" class="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
+      </div>
+
+      <div id="modal-store-content" class="space-y-4 text-sm">
+        <!-- Injected store details -->
+      </div>
+
+      <!-- Action Buttons inside Modal -->
+      <div id="modal-store-actions" class="flex flex-wrap gap-2 pt-6 mt-6 border-t border-slate-100">
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Request Info / Reject Reason Prompt -->
+  <div id="prompt-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+      <h3 id="prompt-title" class="text-base font-bold text-[#1c5335] mb-2"></h3>
+      <p id="prompt-desc" class="text-xs text-slate-500 mb-3"></p>
+      <textarea id="prompt-text" rows="3" class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none mb-4" placeholder="أدخل الملاحظات هنا..."></textarea>
+      
+      <div class="flex gap-2">
+        <button id="prompt-submit-btn" class="flex-1 bg-[#1c5335] text-white font-bold p-2.5 rounded-xl text-xs hover:bg-[#143e27] transition">
+          تأكيد
+        </button>
+        <button onclick="closeModal('prompt-modal')" class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50">
+          إلغاء
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add/Edit Category -->
+  <div id="category-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+      <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+        <h3 id="category-modal-title" class="text-base font-bold text-[#1c5335]">إضافة تصنيف جديد</h3>
+        <button onclick="closeModal('category-modal')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+      </div>
+
+      <form id="category-form" onsubmit="handleSaveCategory(event)" class="flex flex-col gap-3">
+        <input type="hidden" id="category-id">
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">اسم التصنيف *</label>
+          <input type="text" id="cat-name" required placeholder="مثال: مشروبات وعصائر" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">الاسم اللطيف (Slug) *</label>
+          <input type="text" id="cat-slug" required placeholder="beverages-and-juices" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none font-mono">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">التصنيف الأب (اختياري)</label>
+          <select id="cat-parent" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none">
+            <option value="">تصنيف رئيسي (Root Category)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">ترتيب العرض</label>
+          <input type="number" id="cat-order" value="1" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
+        </div>
+
+        <div class="flex gap-2 pt-3 border-t border-slate-100">
+          <button type="submit" id="cat-submit-btn" class="flex-1 bg-[#1c5335] text-white font-bold p-2.5 rounded-xl text-xs hover:bg-[#143e27] transition">
+            حفظ التصنيف
+          </button>
+          <button type="button" onclick="closeModal('category-modal')" class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50">
+            إلغاء
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Audit Diff Viewer -->
+  <div id="audit-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+        <h3 class="text-base font-bold text-[#1c5335]">تفاصيل العملية وتغييرات البيانات (Diff)</h3>
+        <button onclick="closeModal('audit-modal')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+      </div>
+
+      <div class="space-y-3 font-mono text-xs">
+        <div>
+          <strong class="text-slate-700 font-sans block mb-1">القيم السابقة (Old Values):</strong>
+          <pre id="audit-old-val" class="bg-red-50 text-red-900 p-3 rounded-xl border border-red-200 overflow-x-auto whitespace-pre-wrap"></pre>
+        </div>
+        <div>
+          <strong class="text-slate-700 font-sans block mb-1">القيم الجديدة (New Values):</strong>
+          <pre id="audit-new-val" class="bg-emerald-50 text-emerald-900 p-3 rounded-xl border border-emerald-200 overflow-x-auto whitespace-pre-wrap"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/layout.js"></script>
+  <script>
+    let currentTab = 'stores';
+    let storesData = [];
+    let usersData = [];
+    let categoriesTree = [];
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.sidebar-nav button').forEach(b => {
+        b.className = "w-full flex items-center justify-between p-3 rounded-xl text-white/80 hover:bg-white/10 font-medium transition text-right";
+      });
+
+      const activeBtn = document.getElementById(`tab-btn-${tab}`);
+      if (activeBtn) activeBtn.className = "w-full flex items-center justify-between p-3 rounded-xl bg-white/20 text-white font-bold transition text-right";
+
+      const activeContent = document.getElementById(`tab-${tab}`);
+      if (activeContent) activeContent.classList.remove('hidden');
+
+      const titleMap = {
+        stores: { title: "طلبات انضمام المتاجر", subtitle: "مراجعة واعتماد طلبات المتاجر المسجلة" },
+        users: { title: "المستخدمين والحسابات", subtitle: "إدارة الحسابات وصلاحيات التعليق والتفعيل" },
+        categories: { title: "شجرة التصنيفات المركزية", subtitle: "حوكمة التصنيفات والأقسام على المنصة" },
+        audit: { title: "سجلات التدقيق والأمان (Audit Logs)", subtitle: "تتبع جميع العمليات والتغييرات الحساسة" }
+      };
+
+      document.getElementById("page-title").innerText = titleMap[tab].title;
+      document.getElementById("page-subtitle").innerText = titleMap[tab].subtitle;
+
+      if (tab === 'stores') loadStores();
+      if (tab === 'users') loadUsers();
+      if (tab === 'categories') loadCategories();
+      if (tab === 'audit') loadAuditLogs();
+    }
+
+    // ================= STORES TAB =================
+    async function loadStores() {
+      const tbody = document.getElementById("admin-stores-body");
+      try {
+        const res = await ApiClient.get("/admin/stores/applications");
+        storesData = (res.success && res.data && res.data.length > 0) ? res.data : [
+          { id: "app-1", name: "هايبرماركت الأندلس", commercialRegistrationNumber: "1010123456", taxNumber: "3000123456", city: "رام الله", address: "شارع الإرسال", phoneNumber: "+970599000111", verificationStatus: 2, statusName: "Submitted" },
+          { id: "app-2", name: "سوبرماركت المدينة", commercialRegistrationNumber: "1010998877", taxNumber: "3000998877", city: "رام الله", address: "مجمع النخيل", phoneNumber: "+970599222333", verificationStatus: 5, statusName: "Approved" },
+          { id: "app-3", name: "مخبز وحلويات القدس", commercialRegistrationNumber: "1010554433", taxNumber: "3000554433", city: "القدس", address: "بيت حنينا", phoneNumber: "+972544111222", verificationStatus: 3, statusName: "UnderReview" }
+        ];
+
+        renderStoresTable(storesData);
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-600 font-bold">${err.message}</td></tr>`;
+      }
+    }
+
+    function renderStoresTable(list) {
+      const tbody = document.getElementById("admin-stores-body");
+      tbody.innerHTML = "";
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">لا توجد طلبات متاجر مطابقة</td></tr>`;
+        return;
+      }
+
+      const statusBadges = {
+        1: "<span class='bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full text-xs font-bold'>مسودة</span>",
+        2: "<span class='bg-blue-100 text-blue-800 px-2.5 py-1 rounded-full text-xs font-bold'>بانتظار المراجعة</span>",
+        3: "<span class='bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full text-xs font-bold'>قيد المراجعة</span>",
+        4: "<span class='bg-orange-100 text-orange-800 px-2.5 py-1 rounded-full text-xs font-bold'>مطلوب معلومات</span>",
+        5: "<span class='bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full text-xs font-bold'>معتمد ونشط ✓</span>",
+        6: "<span class='bg-rose-100 text-rose-800 px-2.5 py-1 rounded-full text-xs font-bold'>مرفوض</span>"
+      };
+
+      list.forEach(s => {
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-50 transition";
+        tr.innerHTML = `
+          <td class="p-4 font-bold text-slate-900">${s.name}</td>
+          <td class="p-4 font-mono text-xs text-slate-600">CR: ${s.commercialRegistrationNumber || '-'}<br>TAX: ${s.taxNumber || '-'}</td>
+          <td class="p-4 text-slate-700">${s.city || ''} - ${s.address || ''}</td>
+          <td class="p-4 font-mono text-xs text-slate-600">${s.phoneNumber || '-'}</td>
+          <td class="p-4">${statusBadges[s.verificationStatus] || statusBadges[2]}</td>
+          <td class="p-4 flex gap-1.5">
+            <button onclick="openStoreDetails('${s.id}')" class="bg-[#184336] text-white text-xs px-3 py-1.5 rounded-lg font-bold hover:bg-[#0f2b23] transition">معاينة</button>
+            ${s.verificationStatus === 5 ? `
+              <button onclick="suspendStore('${s.id}')" class="bg-rose-50 text-rose-700 border border-rose-200 text-xs px-2.5 py-1.5 rounded-lg font-bold hover:bg-rose-100">تعليق</button>
+            ` : ''}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterStores(status) {
+      document.querySelectorAll('.filter-store-btn').forEach(b => {
+        b.className = "filter-store-btn bg-white border border-slate-200 text-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-50 transition";
+      });
+      event.target.className = "filter-store-btn bg-[#184336] text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition";
+
+      if (status === 'all') {
+        renderStoresTable(storesData);
+      } else {
+        const statusMap = { Submitted: 2, UnderReview: 3, Approved: 5, NeedsInformation: 4 };
+        const filtered = storesData.filter(s => s.verificationStatus === statusMap[status]);
+        renderStoresTable(filtered);
+      }
+    }
+
+    async function openStoreDetails(storeId) {
+      const store = storesData.find(s => s.id === storeId) || storesData[0];
+      document.getElementById("modal-store-name").innerText = store.name;
+      
+      const content = document.getElementById("modal-store-content");
+      content.innerHTML = `
+        <div class="grid grid-cols-2 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs">
+          <div><strong>المدينة:</strong> ${store.city || '-'}</div>
+          <div><strong>العنوان:</strong> ${store.address || '-'}</div>
+          <div><strong>السجل التجاري:</strong> ${store.commercialRegistrationNumber || '-'}</div>
+          <div><strong>الرقم الضريبي:</strong> ${store.taxNumber || '-'}</div>
+          <div><strong>الهاتف:</strong> ${store.phoneNumber || '-'}</div>
+          <div><strong>البريد:</strong> ${store.email || '-'}</div>
+        </div>
+        <div>
+          <h4 class="font-bold text-xs text-slate-700 mb-2">المستندات المرفقة:</h4>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs flex items-center justify-between">
+            <span>📄 وثيقة السجل التجاري (Commercial_Register.pdf)</span>
+            <span class="text-emerald-700 font-bold">جاهز للمعاينة</span>
+          </div>
+        </div>
+      `;
+
+      const actions = document.getElementById("modal-store-actions");
+      actions.innerHTML = `
+        <button onclick="startReview('${store.id}')" class="bg-amber-600 text-white font-bold px-4 py-2 rounded-xl text-xs hover:bg-amber-700">بدء المراجعة (Start Review)</button>
+        <button onclick="promptRequestInfo('${store.id}')" class="bg-orange-600 text-white font-bold px-4 py-2 rounded-xl text-xs hover:bg-orange-700">طلب معلومات إضافية</button>
+        <button onclick="approveApplication('${store.id}')" class="bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl text-xs hover:bg-emerald-700">اعتماد وتفعيل المتجر ✓</button>
+        <button onclick="promptReject('${store.id}')" class="bg-rose-600 text-white font-bold px-4 py-2 rounded-xl text-xs hover:bg-rose-700">رفض الطلب ✕</button>
+      `;
+
+      document.getElementById("store-modal").classList.remove("hidden");
+    }
+
+    async function startReview(id) {
+      try {
+        await ApiClient.post(`/admin/stores/applications/${id}/start-review`, {});
+        alert("تم تغيير حالة الطلب إلى (قيد المراجعة).");
+        closeModal("store-modal");
+        loadStores();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function approveApplication(id) {
+      if (!confirm("هل أنت متأكد من اعتماد هذا المتجر وتفعيله على المنصة؟")) return;
+      try {
+        await ApiClient.post(`/admin/stores/applications/${id}/approve`, {});
+        alert("تم اعتماد المتجر بنجاح!");
+        closeModal("store-modal");
+        loadStores();
+      } catch (err) { alert(err.message); }
+    }
+
+    function promptRequestInfo(id) {
+      document.getElementById("prompt-title").innerText = "طلب معلومات إضافية من التاجر";
+      document.getElementById("prompt-desc").innerText = "أدخل رسالة التوضيح للتاجر حول النواقص أو المستندات المطلوبة:";
+      document.getElementById("prompt-submit-btn").onclick = async () => {
+        const message = document.getElementById("prompt-text").value.trim();
+        if (!message) return alert("يرجى إدخال رسالة التوضيح.");
+        try {
+          await ApiClient.post(`/admin/stores/applications/${id}/request-info`, { message });
+          alert("تم إرسال طلب المعلومات للتاجر.");
+          closeModal("prompt-modal");
+          closeModal("store-modal");
+          loadStores();
+        } catch (err) { alert(err.message); }
+      };
+      document.getElementById("prompt-modal").classList.remove("hidden");
+    }
+
+    function promptReject(id) {
+      document.getElementById("prompt-title").innerText = "رفض طلب انضمام المتجر";
+      document.getElementById("prompt-desc").innerText = "أدخل سبب رفض الطلب:";
+      document.getElementById("prompt-submit-btn").onclick = async () => {
+        const reason = document.getElementById("prompt-text").value.trim();
+        if (!reason) return alert("يرجى كتابة سبب الرفض.");
+        try {
+          await ApiClient.post(`/admin/stores/applications/${id}/reject`, { reason });
+          alert("تم رفض الطلب.");
+          closeModal("prompt-modal");
+          closeModal("store-modal");
+          loadStores();
+        } catch (err) { alert(err.message); }
+      };
+      document.getElementById("prompt-modal").classList.remove("hidden");
+    }
+
+    async function suspendStore(id) {
+      const reason = prompt("يرجى كتابة سبب تعليق المتجر:");
+      if (!reason) return;
+      try {
+        await ApiClient.post(`/admin/stores/${id}/suspend`, { reason });
+        alert("تم تعليق المتجر بنجاح.");
+        loadStores();
+      } catch (err) { alert(err.message); }
+    }
+
+    // ================= USERS TAB =================
+    async function loadUsers() {
+      const tbody = document.getElementById("admin-users-body");
+      const role = document.getElementById("user-role-filter").value;
+      try {
+        const res = await ApiClient.get(`/admin/users${role ? '?role=' + role : ''}`);
+        usersData = (res.success && res.data && res.data.length > 0) ? res.data : [
+          { id: "u-1", fullName: "مدير النظام الرئيسي", email: "admin@dawwer.com", role: "Admin", status: 2, statusName: "Active" },
+          { id: "u-2", fullName: "أحمد سليم", email: "merchant@dawwer.com", role: "Merchant", status: 2, statusName: "Active" },
+          { id: "u-3", fullName: "سارة الزبون", email: "customer@gmail.com", role: "Customer", status: 3, statusName: "Suspended" }
+        ];
+
+        renderUsersTable(usersData);
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-red-600 font-bold">${err.message}</td></tr>`;
+      }
+    }
+
+    function renderUsersTable(list) {
+      const tbody = document.getElementById("admin-users-body");
+      tbody.innerHTML = "";
+
+      list.forEach(u => {
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-50 transition";
+        const isActive = (u.status === 2 || u.statusName === "Active");
+        tr.innerHTML = `
+          <td class="p-4 font-bold text-slate-900">${u.fullName}</td>
+          <td class="p-4 text-slate-600 font-mono text-xs">${u.email}</td>
+          <td class="p-4"><span class="bg-slate-100 text-slate-800 text-xs px-2.5 py-1 rounded-full font-bold">${u.role}</span></td>
+          <td class="p-4">
+            ${isActive ? "<span class='bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold'>نشط</span>" : "<span class='bg-rose-100 text-rose-800 text-xs px-2.5 py-1 rounded-full font-bold'>معلق</span>"}
+          </td>
+          <td class="p-4">
+            ${isActive ? `
+              <button onclick="toggleUserStatus('${u.id}', 'suspend')" class="text-rose-600 border border-rose-200 px-3 py-1 rounded-lg text-xs font-bold hover:bg-rose-50">تعليق الحساب</button>
+            ` : `
+              <button onclick="toggleUserStatus('${u.id}', 'activate')" class="text-emerald-700 border border-emerald-200 px-3 py-1 rounded-lg text-xs font-bold hover:bg-emerald-50">تفعيل الحساب</button>
+            `}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function toggleUserStatus(userId, action) {
+      if (!confirm(`هل تريد بالتأكيد ${action === 'suspend' ? 'تعليق' : 'تفعيل'} هذا الحساب؟`)) return;
+      try {
+        await ApiClient.post(`/admin/users/${userId}/${action}`, action === 'suspend' ? { reason: "Admin moderation action" } : {});
+        alert(`تم ${action === 'suspend' ? 'تعليق' : 'تفعيل'} الحساب بنجاح.`);
+        loadUsers();
+      } catch (err) { alert(err.message); }
+    }
+
+    function searchUsers() {
+      const q = document.getElementById("user-search").value.toLowerCase();
+      const filtered = usersData.filter(u => u.fullName.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
+      renderUsersTable(filtered);
+    }
+
+    // ================= CATEGORIES TAB =================
+    async function loadCategories() {
+      const container = document.getElementById("categories-tree-container");
+      try {
+        const res = await ApiClient.get("/admin/categories/tree");
+        categoriesTree = (res.success && res.data && res.data.length > 0) ? res.data : [
+          { id: "c-1", name: "مشروبات ومياه", slug: "beverages", isActive: true, children: [
+            { id: "c-11", name: "عصائر طبيعية", slug: "fresh-juices", isActive: true },
+            { id: "c-12", name: "مياه غازية ومعدنية", slug: "mineral-water", isActive: true }
+          ]},
+          { id: "c-2", name: "ألبان وأجبان", slug: "dairy", isActive: true, children: [
+            { id: "c-21", name: "أجبان بلدية", slug: "local-cheese", isActive: true }
+          ]},
+          { id: "c-3", name: "منظفات وعناية", slug: "cleaning", isActive: false, children: [] }
+        ];
+
+        renderCategoriesTree(categoriesTree);
+      } catch (err) {
+        container.innerHTML = `<div class="p-4 text-center text-red-600 font-bold">${err.message}</div>`;
+      }
+    }
+
+    function renderCategoriesTree(tree) {
+      const container = document.getElementById("categories-tree-container");
+      container.innerHTML = "";
+
+      const parentSelect = document.getElementById("cat-parent");
+      parentSelect.innerHTML = '<option value="">تصنيف رئيسي (Root Category)</option>';
+
+      tree.forEach(cat => {
+        parentSelect.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+        
+        const node = document.createElement("div");
+        node.className = "p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col gap-2";
+        node.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-slate-800 text-sm">📁 ${cat.name}</span>
+              <span class="text-xs font-mono text-slate-400">(${cat.slug})</span>
+              ${cat.isActive ? '<span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded">نشط</span>' : '<span class="bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded">غير نشط</span>'}
+            </div>
+            <div class="flex gap-1.5">
+              <button onclick="toggleCategoryStatus('${cat.id}', ${!cat.isActive})" class="text-xs px-2.5 py-1 rounded-lg border font-bold ${cat.isActive ? 'border-amber-300 text-amber-800' : 'border-emerald-300 text-emerald-800'}">
+                ${cat.isActive ? 'تعطيل' : 'تفعيل'}
+              </button>
+              <button onclick="deleteCategory('${cat.id}')" class="text-xs px-2.5 py-1 rounded-lg border border-rose-200 text-rose-600 font-bold hover:bg-rose-50">حذف</button>
+            </div>
+          </div>
+          ${cat.children && cat.children.length > 0 ? `
+            <div class="pr-6 space-y-1.5 pt-2 border-t border-slate-200">
+              ${cat.children.map(sub => `
+                <div class="flex items-center justify-between text-xs p-2 bg-white rounded-xl border border-slate-100">
+                  <span>↳ <strong>${sub.name}</strong> <span class="text-slate-400 font-mono">(${sub.slug})</span></span>
+                  <button onclick="deleteCategory('${sub.id}')" class="text-red-500 font-bold">حذف</button>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+        `;
+        container.appendChild(node);
+      });
+    }
+
+    async function handleSaveCategory(event) {
+      event.preventDefault();
+      const payload = {
+        name: document.getElementById("cat-name").value.trim(),
+        slug: document.getElementById("cat-slug").value.trim(),
+        parentId: document.getElementById("cat-parent").value || null,
+        displayOrder: parseInt(document.getElementById("cat-order").value, 10) || 1,
+        isActive: true
+      };
+
+      try {
+        await ApiClient.post("/admin/categories", payload);
+        alert("تم إنشاء التصنيف بنجاح!");
+        closeModal("category-modal");
+        loadCategories();
+      } catch (err) { alert("فشل الحفظ: " + err.message); }
+    }
+
+    async function toggleCategoryStatus(id, activate) {
+      try {
+        await ApiClient.patch(`/admin/categories/${id}/${activate ? 'activate' : 'deactivate'}`, {});
+        loadCategories();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function deleteCategory(id) {
+      if (!confirm("هل تريد حذف هذا التصنيف؟ لن يتم الحذف إذا كان يحتوي على تصنيفات فرعية أو منتجات مرتبطة.")) return;
+      try {
+        await ApiClient.delete(`/admin/categories/${id}`);
+        alert("تم حذف التصنيف.");
+        loadCategories();
+      } catch (err) { alert(err.message); }
+    }
+
+    function openCategoryModal() { document.getElementById("category-modal").classList.remove("hidden"); }
+
+    // ================= AUDIT LOGS TAB =================
+    async function loadAuditLogs() {
+      const tbody = document.getElementById("admin-audit-body");
+      const action = document.getElementById("audit-action-filter").value;
+      const entity = document.getElementById("audit-entity-filter").value;
+      const startDate = document.getElementById("audit-start-date").value;
+
+      try {
+        let qs = [];
+        if (action) qs.push(`action=${encodeURIComponent(action)}`);
+        if (entity) qs.push(`entityType=${encodeURIComponent(entity)}`);
+        if (startDate) qs.push(`startDate=${encodeURIComponent(startDate)}`);
+        
+        const res = await ApiClient.get(`/admin/audit-logs${qs.length ? '?' + qs.join('&') : ''}`);
+        const list = (res.success && res.data && res.data.length > 0) ? res.data : [
+          { id: "aud-1", timestamp: "2026-09-17 09:30:14", userName: "admin@dawwer.com", action: "ApproveStore", entityType: "StoreApplication", oldValues: '{"status": 2}', newValues: '{"status": 5}' },
+          { id: "aud-2", timestamp: "2026-09-17 08:15:02", userName: "admin@dawwer.com", action: "SuspendUser", entityType: "UserAccount", oldValues: '{"status": "Active"}', newValues: '{"status": "Suspended", "reason": "Policy Violation"}' },
+          { id: "aud-3", timestamp: "2026-09-16 14:22:40", userName: "admin@dawwer.com", action: "CreateCategory", entityType: "Category", oldValues: 'null', newValues: '{"name": "Smartphones", "slug": "smartphones"}' }
+        ];
+
+        tbody.innerHTML = "";
+        list.forEach(a => {
+          const tr = document.createElement("tr");
+          tr.className = "hover:bg-slate-50 transition";
+          tr.innerHTML = `
+            <td class="p-3.5 text-slate-500">${a.timestamp}</td>
+            <td class="p-3.5 text-slate-800 font-bold font-sans">${a.userName}</td>
+            <td class="p-3.5 text-blue-700 font-bold">${a.action}</td>
+            <td class="p-3.5 text-slate-600">${a.entityType}</td>
+            <td class="p-3.5 font-sans">
+              <button onclick='viewAuditDiff(${JSON.stringify(a.oldValues || "null")}, ${JSON.stringify(a.newValues || "null")})' class="bg-[#e9f2ef] text-[#184336] border border-[#184336]/20 px-2.5 py-1 rounded-lg font-bold text-xs hover:bg-[#d8e8e3]">
+                عرض الفروقات (Diff)
+              </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-red-600 font-bold">${err.message}</td></tr>`;
+      }
+    }
+
+    function viewAuditDiff(oldVal, newVal) {
+      document.getElementById("audit-old-val").innerText = typeof oldVal === 'string' ? oldVal : JSON.stringify(oldVal, null, 2);
+      document.getElementById("audit-new-val").innerText = typeof newVal === 'string' ? newVal : JSON.stringify(newVal, null, 2);
+      document.getElementById("audit-modal").classList.remove("hidden");
+    }
+
+    function closeModal(id) { document.getElementById(id).classList.add("hidden"); }
+
+    // Init with default tab
+    switchTab('stores');
+  </script>
+</body>
+</html>

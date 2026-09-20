@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مواقع الممرات والرفوف - دوّر</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <script src="assets/css/tailwind.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              primary: '#1c5335',
+              dark: '#143e27',
+              soft: '#edf5f0'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Core Architecture & Auth Route Guard -->
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script>
+    Auth.requireAuth(["Merchant", 2, "Admin", 4]);
+  </script>
+</head>
+<body class="bg-[#f8f6f0] font-['Tajawal',sans-serif] text-slate-800 min-h-screen">
+
+  <div class="flex min-h-screen">
+
+    <!-- Mobile Backdrop -->
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-slate-900/50 z-40 hidden md:hidden"></div>
+
+    <!-- Sidebar Navigation -->
+    <div class="w-64 bg-gradient-to-b from-[#143e27] to-[#1c5335] text-white p-6 hidden md:block" id="sidebar-box">
+      <div class="text-center mb-8">
+        <div class="flex justify-center mb-3">
+          <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-10 w-auto">
+        </div>
+        <div class="text-sm font-bold text-white">لوحة تحكم التاجر</div>
+      </div>
+
+      <div class="bg-white/10 p-4 rounded-xl mb-6 text-center border border-white/5">
+        <div class="text-sm font-bold text-white mb-1" data-store-name>سوبرماركت المدينة</div>
+        <div class="text-xs text-white/80" data-user-role>مجمع النخيل - الطابق الأرضي</div>
+      </div>
+
+      <div class="flex flex-col gap-2 sidebar-nav">
+        <a href="index.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>نظرة عامة</span>
+        </a>
+        <a href="merchant-application.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>تسجيل واعتماد المتجر</span>
+        </a>
+        <a href="store-staff.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>فريق العمل والأدوار</span>
+        </a>
+        <a href="products.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>المنتجات</span>
+        </a>
+        <a href="add-product.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>إضافة منتج</span>
+        </a>
+        <a href="orders.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>الطلبات</span>
+        </a>
+        <a href="shelves.html" class="flex items-center justify-between p-3 rounded-xl bg-[#143e27] text-white font-bold transition">
+          <span>مواقع الممرات</span>
+        </a>
+        <a href="profile.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>الملف الشخصي</span>
+        </a>
+      </div>
+
+      <div class="pt-8 mt-12 border-t border-white/20">
+        <button onclick="Auth.logout()" class="w-full bg-red-500/20 hover:bg-red-500/30 text-white p-2.5 rounded-xl text-sm font-bold text-center transition">
+          تسجيل الخروج
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Workspace Content -->
+    <div class="flex-1 p-6 md:p-8">
+
+      <!-- Toast Alert Notification -->
+      <div id="toast-alert" class="fixed top-6 left-1/2 -translate-x-1/2 z-50 hidden max-w-md w-full px-4">
+        <div id="toast-inner" class="p-4 rounded-2xl shadow-xl border text-sm font-bold flex items-center justify-between">
+          <span id="toast-msg"></span>
+          <button onclick="hideToast()" class="text-xs opacity-70 hover:opacity-100 mr-3">✕</button>
+        </div>
+      </div>
+
+      <!-- Page Top Header Bar -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-200">
+        <div class="flex items-center gap-3">
+          <button id="mobile-menu-btn" class="p-2 rounded-xl bg-white border border-slate-200 text-[#1c5335] md:hidden">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          </button>
+          <div>
+            <h1 class="text-xl md:text-2xl font-bold text-[#1c5335]">مواقع الممرات</h1>
+            <p class="text-xs text-slate-500 mt-0.5">خريطة الممرات والرفوف داخل متجرك</p>
+          </div>
+        </div>
+
+        <!-- Add Aisle Action Pill Button (Figma Frame 2033) -->
+        <button 
+          onclick="openAddAisleModal()" 
+          class="flex items-center justify-center gap-2 bg-[#1c5335] text-white font-bold px-6 py-3 rounded-[30px] shadow hover:bg-[#143e27] text-sm transition"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>+ إضافة ممر</span>
+        </button>
+      </div>
+
+      <!-- Top Emerald Info Banner (Figma Desktop - 17 Banner) -->
+      <div class="bg-gradient-to-r from-[#143e27] to-[#1c5335] text-white p-6 rounded-2xl shadow-sm mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg md:text-xl font-bold mb-1">خريطة الممرات والرفوف</h2>
+          <p class="text-xs md:text-sm text-white/90 leading-relaxed max-w-2xl">
+            حدّد موقع كل منتج داخل المتجر لمساعدة العملاء في الوصول إليه بسرعة وتنظيم حركة البضائع وتوزيع الرفوف بدقة.
+          </p>
+        </div>
+        <div class="flex items-center gap-3">
+          <span id="total-aisles-count" class="bg-white/15 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl backdrop-blur-sm border border-white/20">
+            7 ممرات نشطة
+          </span>
+          <span id="total-shelves-count" class="bg-[#d6a950] text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-sm">
+            19 رف مسجل
+          </span>
+        </div>
+      </div>
+
+      <!-- Search & Filter Controls -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div class="relative w-full max-w-md">
+          <input 
+            type="text" 
+            id="aisle-search-input" 
+            onkeyup="filterAisles()" 
+            placeholder="بحث عن اسم الممر، التصنيف أو رمز الرف..." 
+            class="w-full p-3 pr-10 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335]"
+          >
+          <svg class="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <select id="category-filter" onchange="filterAisles()" class="p-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 focus:outline-none">
+            <option value="">جميع الأقسام والتصنيفات</option>
+            <option value="خضار وفواكه">خضار وفواكه</option>
+            <option value="الألبان والأجبان">الألبان والأجبان</option>
+            <option value="المشروبات">المشروبات</option>
+            <option value="المنظفات">المنظفات</option>
+            <option value="حبوب ومؤن">حبوب ومؤن</option>
+            <option value="مخبوزات">مخبوزات</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 3-Column Aisle Grid Container (Figma Desktop - 17 Artboard) -->
+      <div id="aisles-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Dynamically rendered aisle cards with direct Add Product CTA -->
+      </div>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="hidden bg-white p-12 rounded-3xl border border-slate-200 text-center">
+        <div class="w-16 h-16 bg-[#edf5f0] text-[#1c5335] rounded-full flex items-center justify-center mx-auto mb-4 border border-[#1c5335]/10">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+        </div>
+        <h3 class="text-base font-bold text-slate-800 mb-1">لا توجد ممرات مطابقة</h3>
+        <p class="text-xs text-slate-500 max-w-sm mx-auto mb-4">لم يتم العثور على ممرات مسجلة بناءً على معايير البحث الحالية.</p>
+        <button onclick="openAddAisleModal()" class="bg-[#1c5335] text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-[#143e27]">
+          + إضافة ممر جديد
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal 1: Add / Edit Aisle Definition Modal -->
+  <div id="aisle-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+        <h3 class="text-lg font-bold text-[#1c5335]" id="modal-title">إضافة ممر جديد</h3>
+        <button onclick="closeModal('aisle-modal')" class="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
+      </div>
+
+      <form id="aisle-form" onsubmit="handleSaveAisle(event)" class="flex flex-col gap-4">
+        <input type="hidden" id="aisle-id">
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1" for="aisle-name">اسم / رقم الممر *</label>
+          <input 
+            type="text" 
+            id="aisle-name" 
+            required 
+            placeholder="مثال: الممر 1 أو الممر A" 
+            class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none"
+          >
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1" for="aisle-category">القسم / التصنيف المرتبط *</label>
+          <select 
+            id="aisle-category" 
+            required 
+            class="w-full p-3 rounded-xl border border-slate-200 text-sm bg-white focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none"
+          >
+            <option value="">اختر التصنيف...</option>
+            <option value="خضار وفواكه">خضار وفواكه</option>
+            <option value="الألبان والأجبان">الألبان والأجبان</option>
+            <option value="المشروبات">المشروبات</option>
+            <option value="المنظفات">المنظفات</option>
+            <option value="حبوب ومؤن">حبوب ومؤن</option>
+            <option value="مخبوزات">مخبوزات</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1" for="aisle-items-count">عدد المنتجات المعروضة</label>
+          <input 
+            type="number" 
+            id="aisle-items-count" 
+            value="22" 
+            min="0"
+            class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none"
+          >
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1" for="aisle-shelves">رموز الرفوف (مفصولة بفاصلة) *</label>
+          <input 
+            type="text" 
+            id="aisle-shelves" 
+            required 
+            placeholder="مثال: F1, F2, E1" 
+            class="w-full p-3 rounded-xl border border-slate-200 text-sm font-mono focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none"
+          >
+          <p class="text-[11px] text-slate-400 mt-1">أدخل أسماء أو أكواد الرفوف مفصولة بفواصل (e.g. F1, F2, E1).</p>
+        </div>
+
+        <div class="flex gap-3 pt-4 border-t border-slate-100">
+          <button 
+            type="submit" 
+            id="save-aisle-btn" 
+            class="flex-1 bg-[#1c5335] hover:bg-[#143e27] text-white font-bold p-3 rounded-xl text-sm shadow transition"
+          >
+            حفظ الممر
+          </button>
+          <button 
+            type="button" 
+            onclick="closeModal('aisle-modal')" 
+            class="px-5 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50"
+          >
+            إلغاء
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Add Product Directly Inside Aisle Modal -->
+  <div id="add-product-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+        <div>
+          <h3 class="text-lg font-bold text-[#1c5335]" id="add-prod-modal-title">إضافة منتج إلى الممر</h3>
+          <p class="text-xs text-slate-500 mt-0.5" id="add-prod-modal-subtitle">تحديد الرف وموقع العرض داخل الممر</p>
+        </div>
+        <button onclick="closeModal('add-product-modal')" class="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
+      </div>
+
+      <form id="assign-product-form" onsubmit="handleAssignProductToAisle(event)" class="flex flex-col gap-4">
+        <input type="hidden" id="target-aisle-id">
+
+        <!-- Product Selection Dropdown / Search -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1" for="select-product">اختر المنتج *</label>
+          <select 
+            id="select-product" 
+            required 
+            class="w-full p-3 rounded-xl border border-slate-200 text-sm bg-white focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none"
+          >
+            <option value="">اختر منتجاً من قائمة المتجر...</option>
+            <option value="عصير برتقال طبيعي 1ل">عصير برتقال طبيعي 1ل (مشروبات - ₪12.5)</option>
+            <option value="لبنة بلدية 500غ">لبنة بلدية 500غ (ألبان وأجبان - ₪18.0)</option>
+            <option value="زيت زيتون بكر ممتاز 1ل">زيت زيتون بكر ممتاز 1ل (زيوت ومؤن - ₪45.0)</option>
+            <option value="أرز بسمتي فاخر 5كغ">أرز بسمتي فاخر 5كغ (حبوب ومعلبات - ₪38.0)</option>
+            <option value="حليب كامل الدسم 1ل">حليب كامل الدسم 1ل (ألبان وأجبان - ₪7.5)</option>
+            <option value="مناديل ورقية معطرة">مناديل ورقية معطرة (منظفات - ₪8.0)</option>
+            <option value="طماطم طازجة 1 كغ">طماطم طازجة 1 كغ (خضار وفواكه - ₪4.5)</option>
+            <option value="خيار بلدي 1 كغ">خيار بلدي 1 كغ (خضار وفواكه - ₪5.0)</option>
+            <option value="تفاح أحمر مستورد">تفاح أحمر مستورد (خضار وفواكه - ₪9.0)</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Target Shelf Selection (Populated dynamically per Aisle) -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" for="select-target-shelf">الرف المستهدف *</label>
+            <select 
+              id="select-target-shelf" 
+              required 
+              class="w-full p-3 rounded-xl border border-slate-200 text-sm font-mono font-bold text-[#1c5335] bg-white focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none"
+            >
+              <!-- Dynamically populated options -->
+            </select>
+          </div>
+
+          <!-- Quantity Allocation -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" for="shelf-stock-qty">الكمية على الرف</label>
+            <input 
+              type="number" 
+              id="shelf-stock-qty" 
+              min="1" 
+              value="10" 
+              class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none"
+            >
+          </div>
+        </div>
+
+        <!-- Position / Placement Notes -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1" for="shelf-position-note">ملاحظات الترتيب وموضع العرض (اختياري)</label>
+          <input 
+            type="text" 
+            id="shelf-position-note" 
+            placeholder="مثال: الصف الأوسط، الواجهة الرئيسية" 
+            class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none"
+          >
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-3 pt-4 border-t border-slate-100">
+          <button 
+            type="submit" 
+            id="assign-prod-btn" 
+            class="flex-1 bg-[#1c5335] hover:bg-[#143e27] text-white font-bold p-3.5 rounded-xl text-sm shadow transition flex items-center justify-center gap-2"
+          >
+            <span>تأكيد إضافة المنتج للرف</span>
+          </button>
+          <button 
+            type="button" 
+            onclick="closeModal('add-product-modal')" 
+            class="px-5 py-3.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50"
+          >
+            إلغاء
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="assets/js/layout.js"></script>
+  <script>
+    // Master Initial Aisle Dataset from Figma Desktop - 17
+    const defaultAisles = [
+      { id: 1, name: "الممر 1", category: "خضار وفواكه", count: 22, shelves: ["F1", "F2", "E1"] },
+      { id: 2, name: "الممر 2", category: "الألبان والأجبان", count: 18, shelves: ["H1", "H2"] },
+      { id: 3, name: "الممر 3", category: "المشروبات", count: 35, shelves: ["A1", "A2", "A3"] },
+      { id: 4, name: "الممر 4", category: "المنظفات", count: 14, shelves: ["B1", "B2", "B3"] },
+      { id: 5, name: "الممر 5", category: "حبوب ومؤن", count: 26, shelves: ["C4", "C3"] },
+      { id: 6, name: "الممر 6", category: "خضار وفواكه", count: 22, shelves: ["F1", "F2", "E1"] },
+      { id: 7, name: "الممر 9", category: "مخبوزات", count: 19, shelves: ["D1", "D2", "D3"] }
+    ];
+
+    function getAisles() {
+      const saved = localStorage.getItem("dawwer_store_aisles");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          return defaultAisles;
+        }
+      }
+      localStorage.setItem("dawwer_store_aisles", JSON.stringify(defaultAisles));
+      return defaultAisles;
+    }
+
+    function saveAisles(list) {
+      localStorage.setItem("dawwer_store_aisles", JSON.stringify(list));
+    }
+
+    function showToast(message, isSuccess = true) {
+      const toast = document.getElementById("toast-alert");
+      const inner = document.getElementById("toast-inner");
+      const msg = document.getElementById("toast-msg");
+
+      msg.innerText = message;
+      inner.className = isSuccess 
+        ? "p-4 rounded-2xl shadow-xl border bg-emerald-50 border-emerald-200 text-emerald-800 text-sm font-bold flex items-center justify-between"
+        : "p-4 rounded-2xl shadow-xl border bg-rose-50 border-rose-200 text-rose-800 text-sm font-bold flex items-center justify-between";
+
+      toast.classList.remove("hidden");
+      setTimeout(() => {
+        hideToast();
+      }, 3500);
+    }
+
+    function hideToast() {
+      document.getElementById("toast-alert").classList.add("hidden");
+    }
+
+    function renderAisles(list) {
+      const container = document.getElementById("aisles-grid");
+      const emptyState = document.getElementById("empty-state");
+      container.innerHTML = "";
+
+      if (!list || list.length === 0) {
+        emptyState.classList.remove("hidden");
+        return;
+      }
+      emptyState.classList.add("hidden");
+
+      let totalShelves = 0;
+
+      list.forEach(a => {
+        totalShelves += (a.shelves || []).length;
+
+        // Create Card matching Figma Rectangle 70 with "+ إضافة منتج" action
+        const card = document.createElement("div");
+        card.className = "bg-white p-6 rounded-2xl border border-black/[0.18] shadow-sm hover:shadow-md transition flex flex-col justify-between min-h-[190px]";
+
+        card.innerHTML = `
+          <div>
+            <!-- Aisle Header & Controls -->
+            <div class="flex items-start justify-between mb-2">
+              <div>
+                <h3 class="text-lg font-bold text-[#1c5335] mb-0.5">${a.name}</h3>
+                <p class="text-xs text-[#686464] font-medium">${a.category} — <span class="font-bold text-slate-800">${a.count} منتج معروض</span></p>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button onclick="editAisle(${a.id})" class="text-slate-400 hover:text-[#1c5335] p-1 text-xs" title="تعديل الممر">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                </button>
+                <button onclick="deleteAisle(${a.id})" class="text-slate-400 hover:text-rose-600 p-1 text-xs" title="حذف الممر">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Shelf Badges (Figma Frame 2029 / 2030 / 2031) -->
+            <div class="flex flex-wrap items-center gap-2 py-3 border-t border-slate-100 mt-2">
+              ${(a.shelves || []).map(code => `
+                <span class="w-8 h-8 rounded-md bg-[#edf5f0] text-[#1c5335] border border-[#1c5335]/20 font-bold font-mono text-xs flex items-center justify-center shadow-xs" title="الرف ${code.trim()}">
+                  ${code.trim()}
+                </span>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Direct "Add Product to Aisle" CTA Button -->
+          <div class="pt-3 border-t border-slate-100 mt-1">
+            <button 
+              onclick="openAddProductModal(${a.id})" 
+              class="w-full flex items-center justify-center gap-2 bg-[#edf5f0] hover:bg-[#dfeee5] text-[#1c5335] border border-[#1c5335]/20 font-bold py-2 px-3 rounded-xl text-xs transition"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              </svg>
+              <span>+ إضافة منتج لهذا الممر</span>
+            </button>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+
+      document.getElementById("total-aisles-count").innerText = `${list.length} ممرات نشطة`;
+      document.getElementById("total-shelves-count").innerText = `${totalShelves} رف مسجل`;
+    }
+
+    function filterAisles() {
+      const q = document.getElementById("aisle-search-input").value.toLowerCase().trim();
+      const cat = document.getElementById("category-filter").value;
+      const list = getAisles();
+
+      const filtered = list.filter(a => {
+        const matchesQuery = !q || 
+          a.name.toLowerCase().includes(q) || 
+          a.category.toLowerCase().includes(q) || 
+          (a.shelves || []).some(s => s.toLowerCase().includes(q));
+
+        const matchesCategory = !cat || a.category === cat;
+
+        return matchesQuery && matchesCategory;
+      });
+
+      renderAisles(filtered);
+    }
+
+    // Modal Handlers: Aisle Setup
+    function openAddAisleModal() {
+      document.getElementById("modal-title").innerText = "إضافة ممر جديد";
+      document.getElementById("aisle-id").value = "";
+      document.getElementById("aisle-form").reset();
+      document.getElementById("aisle-items-count").value = "22";
+      document.getElementById("aisle-modal").classList.remove("hidden");
+    }
+
+    function editAisle(id) {
+      const list = getAisles();
+      const a = list.find(item => item.id === id);
+      if (!a) return;
+
+      document.getElementById("modal-title").innerText = "تعديل بيانات الممر";
+      document.getElementById("aisle-id").value = a.id;
+      document.getElementById("aisle-name").value = a.name;
+      document.getElementById("aisle-category").value = a.category;
+      document.getElementById("aisle-items-count").value = a.count || 0;
+      document.getElementById("aisle-shelves").value = (a.shelves || []).join(", ");
+      document.getElementById("aisle-modal").classList.remove("hidden");
+    }
+
+    function deleteAisle(id) {
+      if (!confirm("هل أنت متأكد من حذف هذا الممر؟")) return;
+      const list = getAisles().filter(item => item.id !== id);
+      saveAisles(list);
+      filterAisles();
+      showToast("تم حذف الممر بنجاح.");
+    }
+
+    function handleSaveAisle(event) {
+      event.preventDefault();
+      const id = document.getElementById("aisle-id").value;
+      const name = document.getElementById("aisle-name").value.trim();
+      const category = document.getElementById("aisle-category").value;
+      const count = parseInt(document.getElementById("aisle-items-count").value, 10) || 0;
+      const shelvesRaw = document.getElementById("aisle-shelves").value;
+      const shelves = shelvesRaw.split(",").map(s => s.trim().toUpperCase()).filter(Boolean);
+
+      let list = getAisles();
+
+      if (id) {
+        list = list.map(item => item.id == id ? { ...item, name, category, count, shelves } : item);
+        showToast("تم تحديث بيانات الممر بنجاح!");
+      } else {
+        const newAisle = {
+          id: Date.now(),
+          name,
+          category,
+          count,
+          shelves
+        };
+        list.push(newAisle);
+        showToast("تمت إضافة الممر الجديد بنجاح!");
+      }
+
+      saveAisles(list);
+      closeModal("aisle-modal");
+      filterAisles();
+    }
+
+    // Modal Handlers: Direct Product Assignment inside Aisle
+    function openAddProductModal(aisleId) {
+      const list = getAisles();
+      const aisle = list.find(item => item.id === aisleId);
+      if (!aisle) return;
+
+      document.getElementById("target-aisle-id").value = aisle.id;
+      document.getElementById("add-prod-modal-title").innerText = `إضافة منتج إلى (${aisle.name})`;
+      document.getElementById("add-prod-modal-subtitle").innerText = `القسم: ${aisle.category} — الرفوف المتاحة: ${(aisle.shelves || []).join(", ")}`;
+
+      // Populate Target Shelves Dropdown with available shelves in this Aisle
+      const shelfSelect = document.getElementById("select-target-shelf");
+      shelfSelect.innerHTML = "";
+      
+      if (aisle.shelves && aisle.shelves.length > 0) {
+        aisle.shelves.forEach(s => {
+          shelfSelect.innerHTML += `<option value="${s}">الرف ${s}</option>`;
+        });
+      } else {
+        shelfSelect.innerHTML = `<option value="A-01">الرف الافتراضي (A-01)</option>`;
+      }
+
+      document.getElementById("assign-product-form").reset();
+      document.getElementById("target-aisle-id").value = aisle.id;
+      document.getElementById("shelf-stock-qty").value = "10";
+      document.getElementById("add-product-modal").classList.remove("hidden");
+    }
+
+    function handleAssignProductToAisle(event) {
+      event.preventDefault();
+      const aisleId = parseInt(document.getElementById("target-aisle-id").value, 10);
+      const productName = document.getElementById("select-product").value;
+      const targetShelf = document.getElementById("select-target-shelf").value;
+      const qty = parseInt(document.getElementById("shelf-stock-qty").value, 10) || 1;
+      const note = document.getElementById("shelf-position-note").value.trim();
+
+      if (!productName) {
+        alert("يرجى اختيار المنتج المراد إضافته.");
+        return;
+      }
+
+      let list = getAisles();
+      const aisleIndex = list.findIndex(item => item.id === aisleId);
+
+      if (aisleIndex > -1) {
+        // Increment product count in this aisle
+        list[aisleIndex].count = (list[aisleIndex].count || 0) + 1;
+        saveAisles(list);
+        filterAisles();
+
+        // Also add or update product in local store inventory for cross-page sync
+        let products = [];
+        try {
+          products = JSON.parse(localStorage.getItem("myProducts")) || [];
+        } catch(e) { products = []; }
+
+        const existingProdIndex = products.findIndex(p => p.name === productName);
+        if (existingProdIndex > -1) {
+          products[existingProdIndex].shelf = targetShelf;
+        } else {
+          products.unshift({
+            id: Date.now(),
+            name: productName,
+            category: list[aisleIndex].category,
+            shelf: targetShelf,
+            price: 15.0,
+            quantity: qty
+          });
+        }
+        localStorage.setItem("myProducts", JSON.stringify(products));
+
+        closeModal("add-product-modal");
+        showToast(`تمت إضافة "${productName}" بنجاح إلى ${list[aisleIndex].name} على الرف [${targetShelf}]!`);
+      }
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.add("hidden");
+    }
+
+    // Initialize View
+    renderAisles(getAisles());
+  </script>
+</body>
+</html>

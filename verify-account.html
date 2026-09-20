@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تأكيد وتفعيل الحساب - دوّر</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <script src="assets/css/tailwind.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              primary: '#1c5335',
+              dark: '#143e27',
+              soft: '#edf5f0'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-[#f8f6f0] font-['Tajawal',sans-serif] text-slate-800 min-h-screen">
+
+  <div class="flex min-h-screen w-full">
+    
+    <!-- Right Form Section -->
+    <div class="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
+      <div class="w-full max-w-md bg-white p-8 sm:p-10 rounded-3xl shadow-sm border border-slate-100">
+        
+        <div class="flex justify-center mb-6 lg:hidden">
+          <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-12 w-auto">
+        </div>
+
+        <!-- Header Section -->
+        <div class="mb-6 text-center sm:text-right">
+          <div class="inline-block bg-[#edf5f0] text-[#1c5335] border border-[#1c5335]/15 px-3.5 py-1 rounded-full text-xs font-bold mb-2">
+            تأكيد البريد الإلكتروني
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-bold text-[#1c5335] mb-1">رمز التحقق</h1>
+          
+          <!-- Static Read-Only Email Badge Display -->
+          <div class="mt-2 text-xs text-slate-500 leading-relaxed">
+            <span>تم إرسال رمز التحقق المكون من 6 أرقام إلى:</span>
+            <div class="mt-1.5 inline-flex items-center gap-1.5 bg-[#edf5f0] border border-[#1c5335]/20 px-3 py-1.5 rounded-xl text-[#1c5335] font-mono font-bold text-xs">
+              <svg class="w-3.5 h-3.5 text-[#1c5335]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              <span id="display-email-text">جاري التحقق...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Testing / Development Preview Code Helper Badge -->
+        <div id="preview-badge-container" class="hidden mb-4 p-3.5 rounded-2xl bg-[#edf5f0] border border-[#1c5335]/20 text-[#1c5335] text-xs flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="font-bold">رمز التجربة:</span>
+            <span id="preview-code-text" class="font-mono font-extrabold text-sm tracking-wider text-[#1c5335] bg-white px-2.5 py-0.5 rounded-lg border border-[#1c5335]/20"></span>
+          </div>
+          <button type="button" onclick="autoFillCode()" class="text-xs bg-[#1c5335] text-white px-3 py-1 rounded-lg font-bold hover:bg-[#143e27] transition">
+            تعبئة الرمز
+          </button>
+        </div>
+
+        <!-- Alert / Feedback Notification -->
+        <div id="alert-message" class="hidden mb-4 p-3.5 rounded-xl text-sm font-bold"></div>
+
+        <!-- Verification Form (Code Input Only) -->
+        <form id="verify-form" onsubmit="handleVerifyCode(event)" class="flex flex-col gap-4">
+          
+          <div>
+            <label class="block text-sm font-bold text-[#1c5335] mb-1.5" for="code-input">أدخل رمز التحقق (6 أرقام)</label>
+            <input 
+              type="text" 
+              id="code-input" 
+              maxlength="6"
+              class="w-full p-4 rounded-2xl border border-slate-200 text-2xl font-mono tracking-[0.4em] text-center focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] font-bold text-[#1c5335] bg-slate-50/50" 
+              placeholder="••••••" 
+              required
+              autofocus
+            >
+          </div>
+
+          <button type="submit" id="submit-btn" class="w-full bg-[#1c5335] hover:bg-[#143e27] text-white font-bold p-3.5 rounded-xl shadow text-sm transition mt-1">
+            تأكيد وتفعيل الحساب
+          </button>
+
+          <div class="flex items-center justify-between text-xs text-slate-500 pt-2">
+            <span>لم يصلك الرمز؟</span>
+            <button type="button" onclick="handleResendCode()" id="resend-btn" class="text-[#1c5335] hover:text-[#143e27] font-bold hover:underline">
+              إعادة إرسال رمز جديد
+            </button>
+          </div>
+
+          <div class="text-center mt-3 border-t border-slate-100 pt-3">
+            <a href="login.html" class="text-xs text-slate-500 hover:text-[#1c5335] font-bold">
+              ← العودة لصفحة تسجيل الدخول
+            </a>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+
+    <!-- Left Brand Hero Section (Modern, Dynamic & Feature-Rich) -->
+    <div class="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-12 overflow-hidden text-white" style="background: linear-gradient(180deg, #143e27 0%, #1c5335 100%);">
+      
+      <!-- Ambient Glow & Subtle Geometric Pattern Overlay -->
+      <div class="absolute inset-0 pointer-events-none">
+        <!-- Radial Soft Lighting -->
+        <div class="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-[#2a754c]/20 rounded-full blur-3xl"></div>
+        
+        <!-- Subtle SVG Pattern (opacity-10) -->
+        <svg class="absolute inset-0 w-full h-full opacity-10" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" fill="none">
+          <circle cx="400" cy="400" r="300" stroke="white" stroke-width="1.5" stroke-dasharray="8 8" />
+          <circle cx="400" cy="400" r="200" stroke="white" stroke-width="1.5" />
+          <circle cx="400" cy="400" r="100" stroke="white" stroke-width="1.5" stroke-dasharray="4 4" />
+          <path d="M0 400h800M400 0v800" stroke="white" stroke-width="1" stroke-dasharray="6 6" />
+          <path d="M150 150l500 500M650 150L150 650" stroke="white" stroke-width="0.5" stroke-dasharray="10 10" />
+        </svg>
+      </div>
+
+      <!-- Main Container (Centered Content) -->
+      <div class="relative z-10 my-auto max-w-lg mx-auto w-full flex flex-col gap-7">
+        
+        <!-- Header: Logo + Headline -->
+        <div class="text-right">
+          <div class="flex items-center gap-3 mb-4">
+            <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-12 w-auto">
+          </div>
+          <h2 class="text-3xl font-extrabold text-white leading-tight tracking-tight">
+            تحكم كامل بمتجرك،<br>
+            <span class="text-emerald-200">بمكان واحد.</span>
+          </h2>
+          <p class="text-white/80 text-sm mt-2 leading-relaxed">
+            المنصة الذكية الرائدة لإدارة مواقع المنتجات والرفوف وربط متجرك بمتسوقي منطقتك فورياً.
+          </p>
+        </div>
+
+        <!-- Feature Highlights (3 Sleek Glassmorphic Cards) -->
+        <div class="flex flex-col gap-3">
+          
+          <!-- Feature 1 -->
+          <div class="bg-white/10 backdrop-blur-md border border-white/10 p-3.5 rounded-2xl flex items-center gap-3.5 transition hover:bg-white/15">
+            <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-lg shadow-inner">
+              📍
+            </div>
+            <div class="text-right">
+              <h3 class="font-bold text-sm text-white">خريطة ذكية للممرات</h3>
+              <p class="text-xs text-white/75 mt-0.5">دل زبائنك على مكان كل منتج بدقة داخل متجرك.</p>
+            </div>
+          </div>
+
+          <!-- Feature 2 -->
+          <div class="bg-white/10 backdrop-blur-md border border-white/10 p-3.5 rounded-2xl flex items-center gap-3.5 transition hover:bg-white/15">
+            <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-lg shadow-inner">
+              📦
+            </div>
+            <div class="text-right">
+              <h3 class="font-bold text-sm text-white">إدارة سهلة للمنتجات</h3>
+              <p class="text-xs text-white/75 mt-0.5">نظّم رفوفك وتصنيفاتك بنقرات معدودة وبدون تعقيد.</p>
+            </div>
+          </div>
+
+          <!-- Feature 3 -->
+          <div class="bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex items-center gap-4 transition hover:bg-white/15">
+            <div class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-xl shadow-inner">
+              ⚡
+            </div>
+            <div class="text-right">
+              <h3 class="font-bold text-sm text-white">تحديث لحظي</h3>
+              <p class="text-xs text-white/75 mt-0.5">ظهور مباشر لمتجرك أمام المتسوقين في منطقتك.</p>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Footer / Mini Branding -->
+      <div class="relative z-10 text-center text-xs text-white/50 pt-4">
+        منصة دوّر © جميع الحقوق محفوظة لشركاء النجاح
+      </div>
+
+    </div>
+
+  </div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script>
+    let currentEmail = "";
+    let currentPreviewCode = "";
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      currentEmail = urlParams.get("email") || sessionStorage.getItem("dawwer_registered_email");
+      const previewCode = urlParams.get("previewCode");
+
+      if (!currentEmail) {
+        alert("لم يتم العثور على بريد إلكتروني للتفعيل. يرجى إنشاء حساب أولاً.");
+        window.location.href = "register.html";
+        return;
+      }
+
+      document.getElementById("display-email-text").innerText = currentEmail;
+
+      if (previewCode) {
+        currentPreviewCode = previewCode;
+        document.getElementById("preview-code-text").innerText = previewCode;
+        document.getElementById("preview-badge-container").classList.remove("hidden");
+        document.getElementById("code-input").value = previewCode;
+      }
+    });
+
+    function autoFillCode() {
+      if (currentPreviewCode) {
+        const input = document.getElementById("code-input");
+        input.value = currentPreviewCode;
+        input.focus();
+      }
+    }
+
+    async function handleVerifyCode(event) {
+      event.preventDefault();
+
+      const code = document.getElementById("code-input").value.trim();
+      const alertBox = document.getElementById("alert-message");
+      const btn = document.getElementById("submit-btn");
+
+      if (!currentEmail || !code) {
+        alertBox.innerText = "يرجى إدخال رمز التحقق.";
+        alertBox.className = "mb-4 p-3.5 rounded-xl text-sm font-bold bg-red-50 border border-red-200 text-red-700 block";
+        return;
+      }
+
+      alertBox.classList.add("hidden");
+      btn.innerText = "جاري التحقق من الرمز...";
+      btn.disabled = true;
+
+      try {
+        const payload = {
+          email: currentEmail,
+          code: code
+        };
+
+        const res = await ApiClient.post("/Auth/verify-code", payload);
+
+        alertBox.innerHTML = res.message || "تم تفعيل الحساب بنجاح! جاري تحويلك لتسجيل الدخول...";
+        alertBox.className = "mb-4 p-3.5 rounded-xl text-sm font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 block";
+
+        sessionStorage.removeItem("dawwer_registered_email");
+
+        setTimeout(() => {
+          window.location.href = "login.html";
+        }, 1500);
+      } catch (err) {
+        alertBox.innerHTML = err.message;
+        alertBox.className = "mb-4 p-3.5 rounded-xl text-sm font-bold bg-red-50 border border-red-200 text-red-700 block";
+        btn.innerText = "تأكيد وتفعيل الحساب";
+        btn.disabled = false;
+      }
+    }
+
+    async function handleResendCode() {
+      const resendBtn = document.getElementById("resend-btn");
+      const alertBox = document.getElementById("alert-message");
+
+      if (!currentEmail) {
+        alert("لم يتم العثور على بريد إلكتروني لإعادة الإرسال.");
+        return;
+      }
+
+      resendBtn.innerText = "جاري الإرسال...";
+      resendBtn.disabled = true;
+
+      try {
+        const res = await ApiClient.post("/Auth/resend-code", { email: currentEmail, codeType: 1 });
+        
+        if (res.data && res.data.verificationCodePreview) {
+          currentPreviewCode = res.data.verificationCodePreview;
+          document.getElementById("preview-code-text").innerText = currentPreviewCode;
+          document.getElementById("preview-badge-container").classList.remove("hidden");
+          document.getElementById("code-input").value = currentPreviewCode;
+        }
+
+        alertBox.innerHTML = res.message || "تمت إعادة إرسال رمز التحقق بنجاح.";
+        alertBox.className = "mb-4 p-3.5 rounded-xl text-sm font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 block";
+      } catch (err) {
+        alertBox.innerHTML = err.message;
+        alertBox.className = "mb-4 p-3.5 rounded-xl text-sm font-bold bg-red-50 border border-red-200 text-red-700 block";
+      } finally {
+        resendBtn.innerText = "إعادة إرسال رمز جديد";
+        resendBtn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>

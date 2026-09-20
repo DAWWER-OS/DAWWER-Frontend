@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>فريق العمل والأدوار - دوّر</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <script src="assets/css/tailwind.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              primary: '#1c5335',
+              dark: '#143e27',
+              soft: '#edf5f0'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Core Architecture & Auth Route Guard -->
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script>
+    Auth.requireAuth(["Merchant", 2, "Admin", 4, "Staff", 3]);
+  </script>
+</head>
+<body class="bg-[#f8f6f0] font-['Tajawal',sans-serif] text-slate-800 min-h-screen">
+
+  <div class="flex min-h-screen">
+
+    <!-- Mobile Backdrop -->
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-slate-900/50 z-40 hidden md:hidden"></div>
+
+    <!-- Sidebar Navigation -->
+    <div class="w-64 bg-gradient-to-b from-[#143e27] to-[#1c5335] text-white p-6 hidden md:block" id="sidebar-box">
+      <div class="text-center mb-8">
+        <div class="flex justify-center mb-3">
+          <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-10 w-auto">
+        </div>
+        <div class="text-sm font-bold text-white">إدارة المتجر</div>
+      </div>
+
+      <div class="bg-white/10 p-4 rounded-xl mb-6 text-center border border-white/5">
+        <div class="text-sm font-bold text-white mb-1" data-store-name>سوبرماركت المدينة</div>
+        <div class="text-xs text-white/80" data-user-role>إدارة الصلاحيات</div>
+      </div>
+
+      <div class="flex flex-col gap-2 sidebar-nav">
+        <a href="index.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>لوحة التحكم</span>
+        </a>
+        <a href="merchant-application.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>طلب تسجيل متجر</span>
+        </a>
+        <a href="store-staff.html" class="flex items-center justify-between p-3 rounded-xl bg-[#143e27] text-white font-bold transition">
+          <span>فريق العمل والأدوار</span>
+        </a>
+        <a href="products.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>المنتجات</span>
+        </a>
+        <a href="profile.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>الملف الشخصي</span>
+        </a>
+      </div>
+
+      <div class="pt-8 mt-12 border-t border-white/20">
+        <button onclick="Auth.logout()" class="w-full bg-red-500/20 hover:bg-red-500/30 text-white p-2.5 rounded-xl text-sm font-bold text-center transition">
+          تسجيل الخروج
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="flex-1 p-6 md:p-8">
+
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-4 border-b border-slate-200">
+        <div class="flex items-center gap-3">
+          <button id="mobile-menu-btn" class="p-2 rounded-xl bg-white border border-slate-200 text-[#1c5335] md:hidden">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          </button>
+          <div>
+            <h1 class="text-xl md:text-2xl font-bold text-[#1c5335]">فريق العمل والصلاحيات (RBAC)</h1>
+            <p class="text-xs text-slate-500 mt-0.5">إدارة الموظفين وتعيين الصلاحيات الدقيقة</p>
+          </div>
+        </div>
+
+        <div class="flex gap-2">
+          <button onclick="openAddRoleModal()" class="text-xs bg-white border border-slate-300 text-slate-700 font-bold px-4 py-2.5 rounded-xl hover:bg-slate-50 shadow-sm transition">
+            + دور جديد (Role)
+          </button>
+          <button onclick="openAddStaffModal()" class="text-xs bg-[#1c5335] hover:bg-[#143e27] text-white font-bold px-4 py-2.5 rounded-xl shadow transition">
+            + إضافة موظف
+          </button>
+        </div>
+      </div>
+
+      <!-- Staff List Table -->
+      <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-x-auto mb-8">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+          <h2 class="text-base font-bold text-[#1c5335]">الموظفون الحاليون</h2>
+          <span id="staff-count" class="text-xs bg-[#edf5f0] text-[#1c5335] border border-[#1c5335]/15 px-3 py-1 rounded-full font-bold"></span>
+        </div>
+
+        <table class="w-full text-right border-collapse text-sm">
+          <thead>
+            <tr class="bg-[#edf5f0] text-[#1c5335] font-bold border-b border-[#1c5335]/10">
+              <th class="p-4">اسم الموظف</th>
+              <th class="p-4">البريد الإلكتروني</th>
+              <th class="p-4">رقم الهاتف</th>
+              <th class="p-4">الدور الوظيفي</th>
+              <th class="p-4">الحالة</th>
+              <th class="p-4">الإجراء</th>
+            </tr>
+          </thead>
+          <tbody id="staff-table-body" class="divide-y divide-slate-100">
+            <tr>
+              <td colspan="6" class="p-8 text-center text-slate-400">جاري تحميل فريق العمل...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Roles & Permissions Matrix View -->
+      <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+        <div class="mb-4 pb-2 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-bold text-[#1c5335]">مصفوفة صلاحيات الأدوار (Permission Matrix)</h2>
+            <p class="text-xs text-slate-500 mt-0.5">الصلاحيات الممنوحة لكل مسمى وظيفي داخل المتجر</p>
+          </div>
+        </div>
+
+        <div id="roles-matrix-container" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Dynamically populated roles cards -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Add/Invite Staff Modal -->
+  <div id="staff-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+        <h3 class="text-lg font-bold text-[#1c5335]">إضافة موظف جديد للمتجر</h3>
+        <button onclick="closeModal('staff-modal')" class="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
+      </div>
+
+      <form id="add-staff-form" onsubmit="handleCreateStaff(event)" class="flex flex-col gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">الاسم الكامل *</label>
+          <input type="text" id="staff-name" required placeholder="سالم منصور" class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">البريد الإلكتروني *</label>
+          <input type="email" id="staff-email" required placeholder="employee@store.com" class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف</label>
+          <input type="tel" id="staff-phone" placeholder="+966551122334" class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">الدور الوظيفي (Role) *</label>
+          <select id="staff-role-select" required class="w-full p-3 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335]">
+            <option value="">اختر الدور...</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">كلمة المرور المؤقتة *</label>
+          <input type="password" id="staff-temp-pass" required placeholder="TempPassword123!" class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
+        </div>
+
+        <div class="flex gap-3 pt-4 border-t border-slate-100">
+          <button type="submit" id="save-staff-btn" class="flex-1 bg-[#1c5335] hover:bg-[#143e27] text-white font-bold p-3 rounded-xl text-sm shadow transition">
+            حفظ وإرسال الدعوة
+          </button>
+          <button type="button" onclick="closeModal('staff-modal')" class="px-5 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50">
+            إلغاء
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Create Custom Role Modal -->
+  <div id="role-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+        <h3 class="text-lg font-bold text-[#1c5335]">إنشاء دور وظيفي مخصص</h3>
+        <button onclick="closeModal('role-modal')" class="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
+      </div>
+
+      <form id="create-role-form" onsubmit="handleCreateRole(event)" class="flex flex-col gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">اسم الدور *</label>
+          <input type="text" id="role-name" required placeholder="مثال: محضر طلبات (Order Dispatcher)" class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">الوصف</label>
+          <textarea id="role-desc" rows="2" placeholder="المسؤوليات والصلاحيات المناطة بهذا الدور..." class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-2">تحديد الصلاحيات الممنوحة *</label>
+          <div class="space-y-2 bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="role-perms" value="Products.View" class="w-4 h-4 rounded text-[#1c5335] accent-[#1c5335]">
+              <span>عرض المنتجات والمخزون (Products.View)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="role-perms" value="Products.Manage" class="w-4 h-4 rounded text-[#1c5335] accent-[#1c5335]">
+              <span>إضافة وتعديل وحذف المنتجات (Products.Manage)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="role-perms" value="Inventory.View" class="w-4 h-4 rounded text-[#1c5335] accent-[#1c5335]">
+              <span>مراقبة مستويات المخزون والرفوف (Inventory.View)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="role-perms" value="Orders.View" class="w-4 h-4 rounded text-[#1c5335] accent-[#1c5335]">
+              <span>عرض طلبات الزبائن (Orders.View)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="role-perms" value="Orders.Manage" class="w-4 h-4 rounded text-[#1c5335] accent-[#1c5335]">
+              <span>إتمام وتحديث حالة الطلبات (Orders.Manage)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="role-perms" value="Staff.Manage" class="w-4 h-4 rounded text-[#1c5335] accent-[#1c5335]">
+              <span>إدارة فريق العمل والأدوار (Staff.Manage)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex gap-3 pt-4 border-t border-slate-100">
+          <button type="submit" id="save-role-btn" class="flex-1 bg-[#1c5335] hover:bg-[#143e27] text-white font-bold p-3 rounded-xl text-sm shadow transition">
+            إنشاء الدور
+          </button>
+          <button type="button" onclick="closeModal('role-modal')" class="px-5 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50">
+            إلغاء
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="assets/js/layout.js"></script>
+  <script>
+    let activeStoreId = null;
+    let rolesList = [];
+
+    async function initStaffPage() {
+      // Determine store ID from context or fetch active store
+      const store = Auth.getActiveStore();
+      if (store && store.storeId) {
+        activeStoreId = store.storeId;
+      } else {
+        try {
+          const res = await ApiClient.get("/merchant/stores");
+          if (res.data && res.data.length > 0) {
+            activeStoreId = res.data[0].id;
+          }
+        } catch(e) {}
+      }
+
+      if (!activeStoreId) {
+        document.getElementById("staff-table-body").innerHTML = `
+          <tr><td colspan="6" class="p-8 text-center text-slate-500">
+            يرجى <a href="merchant-application.html" class="text-[#1c5335] font-bold underline">تسجيل متجرك أولاً</a> لتتمكن من إدارة فريق العمل.
+          </td></tr>
+        `;
+        return;
+      }
+
+      await loadRoles();
+      await loadStaff();
+    }
+
+    async function loadRoles() {
+      try {
+        const res = await ApiClient.get(`/stores/${activeStoreId}/roles`);
+        rolesList = (res.success && res.data) ? res.data : [
+          { id: "1", name: "مدير المتجر (Store Manager)", permissions: ["Products.Manage", "Orders.Manage", "Inventory.Manage", "Staff.Manage"] },
+          { id: "2", name: "أمين الصندوق والطلبات (Order Dispatcher)", permissions: ["Orders.View", "Orders.Manage", "Inventory.View"] },
+          { id: "3", name: "مسؤول المخزون والرفوف", permissions: ["Products.View", "Inventory.View", "Inventory.Manage"] }
+        ];
+
+        const select = document.getElementById("staff-role-select");
+        select.innerHTML = '<option value="">اختر الدور...</option>';
+        rolesList.forEach(r => {
+          select.innerHTML += `<option value="${r.id}">${r.name}</option>`;
+        });
+
+        renderRolesMatrix();
+      } catch (err) {
+        console.warn("Failed to load roles from API:", err);
+      }
+    }
+
+    function renderRolesMatrix() {
+      const container = document.getElementById("roles-matrix-container");
+      container.innerHTML = "";
+
+      rolesList.forEach(r => {
+        const card = document.createElement("div");
+        card.className = "p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between";
+        card.innerHTML = `
+          <div>
+            <h4 class="font-bold text-slate-800 text-sm mb-1">${r.name}</h4>
+            <p class="text-xs text-slate-500 mb-3">${r.description || "صلاحيات مخصصة للعمليات"}</p>
+            <div class="flex flex-wrap gap-1.5">
+              ${(r.permissions || []).map(p => `<span class="bg-[#edf5f0] text-[#1c5335] border border-[#1c5335]/15 text-[10px] font-bold px-2 py-0.5 rounded">${p}</span>`).join('')}
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    async function loadStaff() {
+      const tbody = document.getElementById("staff-table-body");
+      try {
+        const res = await ApiClient.get(`/stores/${activeStoreId}/staff`);
+        const list = (res.success && res.data && res.data.length > 0) ? res.data : [
+          { id: "st-1", fullName: "أحمد سليم (المالك)", email: "owner@market.com", phoneNumber: "+966501112233", roleName: "مدير المتجر", isActive: true },
+          { id: "st-2", fullName: "خالد عبد الرحيم", email: "khalid@market.com", phoneNumber: "+966552233445", roleName: "أمين الصندوق والطلبات", isActive: true }
+        ];
+
+        document.getElementById("staff-count").innerText = `${list.length} عضو`;
+        tbody.innerHTML = "";
+
+        list.forEach(m => {
+          const tr = document.createElement("tr");
+          tr.className = "hover:bg-slate-50 transition";
+          tr.innerHTML = `
+            <td class="p-4 font-bold text-slate-900">${m.fullName}</td>
+            <td class="p-4 text-slate-600 font-mono text-xs">${m.email}</td>
+            <td class="p-4 text-slate-600">${m.phoneNumber || "-"}</td>
+            <td class="p-4"><span class="bg-[#d6a950]/15 text-[#916b1f] text-xs px-2.5 py-1 rounded-full font-bold">${m.roleName || "موظف"}</span></td>
+            <td class="p-4"><span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">نشط</span></td>
+            <td class="p-4">
+              <button onclick="removeStaff('${m.id}')" class="text-rose-600 hover:text-rose-800 text-xs font-bold border border-rose-200 px-2.5 py-1 rounded-lg">حذف</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-600 font-bold">${err.message}</td></tr>`;
+      }
+    }
+
+    async function handleCreateStaff(event) {
+      event.preventDefault();
+      const btn = document.getElementById("save-staff-btn");
+      btn.innerText = "جاري الحفظ...";
+      btn.disabled = true;
+
+      const payload = {
+        fullName: document.getElementById("staff-name").value.trim(),
+        email: document.getElementById("staff-email").value.trim(),
+        phoneNumber: document.getElementById("staff-phone").value.trim(),
+        storeRoleId: document.getElementById("staff-role-select").value,
+        temporaryPassword: document.getElementById("staff-temp-pass").value
+      };
+
+      try {
+        await ApiClient.post(`/stores/${activeStoreId}/staff`, payload);
+        alert("تمت إضافة الموظف وإرسال بيانات الدخول بنجاح!");
+        closeModal("staff-modal");
+        loadStaff();
+      } catch (err) {
+        alert("فشل إضافة الموظف: " + err.message);
+      } finally {
+        btn.innerText = "حفظ وإرسال الدعوة";
+        btn.disabled = false;
+      }
+    }
+
+    async function handleCreateRole(event) {
+      event.preventDefault();
+      const btn = document.getElementById("save-role-btn");
+      btn.innerText = "جاري الإنشاء...";
+      btn.disabled = true;
+
+      const checkedBoxes = document.querySelectorAll('input[name="role-perms"]:checked');
+      const permissionCodes = Array.from(checkedBoxes).map(cb => cb.value);
+
+      const payload = {
+        name: document.getElementById("role-name").value.trim(),
+        description: document.getElementById("role-desc").value.trim(),
+        permissionCodes
+      };
+
+      try {
+        await ApiClient.post(`/stores/${activeStoreId}/roles`, payload);
+        alert("تم إنشاء الدور الوظيفي بنجاح!");
+        closeModal("role-modal");
+        loadRoles();
+      } catch (err) {
+        alert("فشل إنشاء الدور: " + err.message);
+      } finally {
+        btn.innerText = "إنشاء الدور";
+        btn.disabled = false;
+      }
+    }
+
+    async function removeStaff(staffId) {
+      if (!confirm("هل أنت متأكد من رغبتك في إزالة هذا الموظف من المتجر؟")) return;
+      try {
+        await ApiClient.delete(`/stores/${activeStoreId}/staff/${staffId}`);
+        alert("تم حذف الموظف بنجاح.");
+        loadStaff();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    function openAddStaffModal() { document.getElementById("staff-modal").classList.remove("hidden"); }
+    function openAddRoleModal() { document.getElementById("role-modal").classList.remove("hidden"); }
+    function closeModal(id) { document.getElementById(id).classList.add("hidden"); }
+
+    initStaffPage();
+  </script>
+</body>
+</html>

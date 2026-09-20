@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>المنتجات والمخزون - دوّر</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <script src="assets/css/tailwind.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              primary: '#1c5335',
+              dark: '#143e27',
+              soft: '#edf5f0'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Core Architecture & Auth Route Guard -->
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script>
+    Auth.requireAuth();
+  </script>
+</head>
+<body class="bg-[#f8f6f0] font-['Tajawal',sans-serif] text-slate-800 min-h-screen">
+
+  <div class="flex min-h-screen">
+
+    <!-- Mobile Backdrop -->
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-slate-900/50 z-40 hidden md:hidden"></div>
+
+    <div class="w-64 bg-gradient-to-b from-[#143e27] to-[#1c5335] text-white p-6 hidden md:block" id="sidebar-box">
+      <div class="text-center mb-8">
+        <div class="flex justify-center mb-3">
+          <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-10 w-auto">
+        </div>
+        <div class="text-sm font-bold text-white">لوحة تحكم التاجر</div>
+      </div>
+
+      <div class="bg-white/10 p-4 rounded-xl mb-6 text-center border border-white/5">
+        <div class="text-sm font-bold text-white mb-1" data-user-name>سوبرماركت المدينة</div>
+        <div class="text-xs text-white/80" data-user-role>مجمع النخيل - الطابق الأرضي</div>
+      </div>
+
+      <div class="flex flex-col gap-2 sidebar-nav">
+        <a href="index.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>نظرة عامة</span>
+        </a>
+        <a href="merchant-application.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>تسجيل واعتماد المتجر</span>
+        </a>
+        <a href="store-staff.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>فريق العمل والأدوار</span>
+        </a>
+        <a href="products.html" class="flex items-center justify-between p-3 rounded-xl bg-[#143e27] text-white font-bold transition">
+          <span>المنتجات</span>
+          <span class="bg-[#d6a950] text-white text-xs px-2 py-0.5 rounded-full" id="sidebar-count">6</span>
+        </a>
+        <a href="add-product.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>إضافة منتج</span>
+        </a>
+        <a href="orders.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>الطلبات</span>
+          <span class="bg-[#d6a950] text-white text-xs px-2 py-0.5 rounded-full">6</span>
+        </a>
+        <a href="shelves.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>مواقع الممرات</span>
+        </a>
+        <a href="profile.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>الملف الشخصي</span>
+        </a>
+      </div>
+
+      <div class="pt-8 mt-12 border-t border-white/20">
+        <button onclick="Auth.logout()" class="w-full bg-red-500/20 hover:bg-red-500/30 text-white p-2.5 rounded-xl text-sm font-bold text-center transition">
+          تسجيل الخروج
+        </button>
+      </div>
+    </div>
+
+    <div class="flex-1 p-6 md:p-8">
+
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-200">
+        <div class="flex items-center gap-3">
+          <button id="mobile-menu-btn" class="p-2 rounded-xl bg-white border border-slate-200 text-[#1c5335] md:hidden">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          </button>
+          <div>
+            <h1 class="text-xl md:text-2xl font-bold text-[#1c5335]">قائمة المنتجات والمخزون</h1>
+            <p class="text-xs text-slate-500 mt-0.5">إدارة جميع المنتجات المسجلة في متجرك</p>
+          </div>
+        </div>
+        <a href="add-product.html" class="inline-block bg-[#1c5335] hover:bg-[#143e27] text-white font-bold px-5 py-2.5 rounded-xl shadow text-sm text-center transition">
+          + إضافة منتج جديد
+        </a>
+      </div>
+
+      <div class="mb-4">
+        <input 
+          type="text" 
+          id="search-input" 
+          onkeyup="searchProducts()" 
+          placeholder="ابحث عن اسم منتج أو موقع الرف..." 
+          class="w-full max-w-md p-3 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335]"
+        >
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-x-auto">
+        <table class="w-full text-right border-collapse">
+          <thead>
+            <tr class="bg-[#edf5f0] text-[#1c5335] text-sm font-bold border-b border-[#1c5335]/10">
+              <th class="p-4">اسم المنتج</th>
+              <th class="p-4">التصنيف</th>
+              <th class="p-4">السعر</th>
+              <th class="p-4">الكمية</th>
+              <th class="p-4">موقع الرف</th>
+              <th class="p-4">الحالة</th>
+              <th class="p-4">حذف</th>
+            </tr>
+          </thead>
+          <tbody id="products-table-body" class="divide-y divide-slate-100 text-sm">
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="assets/js/layout.js"></script>
+  <script>
+    var defaultProducts = [
+      { id: 1, name: "عصير برتقال طبيعي 1ل", category: "مشروبات", price: 12.5, quantity: 4, shelf: "A-02" },
+      { id: 2, name: "لبنة بلدية 500غ", category: "ألبان وأجبان", price: 18.0, quantity: 2, shelf: "B-01" },
+      { id: 3, name: "مناديل ورقية", category: "منظفات وعناية", price: 8.0, quantity: 0, shelf: "C-04" },
+      { id: 4, name: "زيت زيتون بكر ممتاز 1ل", category: "زيوت ومؤن", price: 45.0, quantity: 24, shelf: "A-05" },
+      { id: 5, name: "أرز بسمتي فاخر 5كغ", category: "حبوب ومعلبات", price: 38.0, quantity: 15, shelf: "D-01" },
+      { id: 6, name: "حليب كامل الدسم 1ل", category: "ألبان وأجبان", price: 7.5, quantity: 30, shelf: "B-03" }
+    ];
+
+    function getProducts() {
+      var saved = localStorage.getItem("myProducts");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch(e) {
+          return defaultProducts;
+        }
+      } else {
+        localStorage.setItem("myProducts", JSON.stringify(defaultProducts));
+        return defaultProducts;
+      }
+    }
+
+    function renderTable(list) {
+      var tbody = document.getElementById("products-table-body");
+      tbody.innerHTML = "";
+
+      if (list.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='7' class='text-center p-6 text-slate-400'>لا توجد منتجات مطابقة</td></tr>";
+        return;
+      }
+
+      for (var i = 0; i < list.length; i++) {
+        var p = list[i];
+        
+        var statusBadge = "<span class='bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold'>متوفر</span>";
+        if (p.quantity === 0) {
+          statusBadge = "<span class='bg-rose-100 text-rose-800 text-xs px-2.5 py-1 rounded-full font-bold'>نفذت الكمية</span>";
+        } else if (p.quantity <= 5) {
+          statusBadge = "<span class='bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-bold'>منخفض</span>";
+        }
+
+        var row = document.createElement("tr");
+        row.className = "hover:bg-slate-50 transition";
+        row.innerHTML = 
+          "<td class='p-4 font-bold text-slate-900'>" + p.name + "</td>" +
+          "<td class='p-4 text-slate-600'>" + p.category + "</td>" +
+          "<td class='p-4 font-bold text-slate-900'>₪" + p.price + "</td>" +
+          "<td class='p-4 text-slate-700'>" + p.quantity + "</td>" +
+          "<td class='p-4 font-mono text-xs text-slate-700'>" + p.shelf + "</td>" +
+          "<td class='p-4'>" + statusBadge + "</td>" +
+          "<td class='p-4'><button onclick='deleteProduct(" + p.id + ")' class='text-rose-600 hover:text-rose-800 text-xs font-bold border border-rose-200 px-2.5 py-1 rounded-lg'>حذف</button></td>";
+        
+        tbody.appendChild(row);
+      }
+
+      var countEl = document.getElementById("sidebar-count");
+      if (countEl) countEl.innerText = list.length;
+    }
+
+    function deleteProduct(id) {
+      if (confirm("هل تريد حذف هذا المنتج؟")) {
+        var list = getProducts();
+        var newList = [];
+        for (var i = 0; i < list.length; i++) {
+          if (list[i].id !== id) {
+            newList.push(list[i]);
+          }
+        }
+        localStorage.setItem("myProducts", JSON.stringify(newList));
+        renderTable(newList);
+      }
+    }
+
+    function searchProducts() {
+      var query = document.getElementById("search-input").value.toLowerCase();
+      var list = getProducts();
+      var filtered = [];
+      for (var i = 0; i < list.length; i++) {
+        var nameMatch = list[i].name.toLowerCase().indexOf(query) > -1;
+        var shelfMatch = list[i].shelf.toLowerCase().indexOf(query) > -1;
+        if (nameMatch || shelfMatch) {
+          filtered.push(list[i]);
+        }
+      }
+      renderTable(filtered);
+    }
+
+    renderTable(getProducts());
+  </script>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إضافة منتج - دوّر</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <script src="assets/css/tailwind.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              primary: '#1c5335',
+              dark: '#143e27',
+              soft: '#edf5f0'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Core Architecture & Auth Route Guard -->
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script>
+    Auth.requireAuth();
+  </script>
+</head>
+<body class="bg-[#f8f6f0] font-['Tajawal',sans-serif] text-slate-800 min-h-screen">
+
+  <div class="flex min-h-screen">
+
+    <!-- Mobile Backdrop -->
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-slate-900/50 z-40 hidden md:hidden"></div>
+
+    <div class="w-64 bg-gradient-to-b from-[#143e27] to-[#1c5335] text-white p-6 hidden md:block" id="sidebar-box">
+      <div class="text-center mb-8">
+        <div class="flex justify-center mb-3">
+          <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-10 w-auto">
+        </div>
+        <div class="text-sm font-bold text-white">لوحة تحكم التاجر</div>
+      </div>
+
+      <div class="bg-white/10 p-4 rounded-xl mb-6 text-center border border-white/5">
+        <div class="text-sm font-bold text-white mb-1" data-user-name>سوبرماركت المدينة</div>
+        <div class="text-xs text-white/80" data-user-role>مجمع النخيل - الطابق الأرضي</div>
+      </div>
+
+      <div class="flex flex-col gap-2 sidebar-nav">
+        <a href="index.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>نظرة عامة</span>
+        </a>
+        <a href="merchant-application.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>تسجيل واعتماد المتجر</span>
+        </a>
+        <a href="store-staff.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>فريق العمل والأدوار</span>
+        </a>
+        <a href="products.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>المنتجات</span>
+        </a>
+        <a href="add-product.html" class="flex items-center justify-between p-3 rounded-xl bg-[#143e27] text-white font-bold transition">
+          <span>إضافة منتج</span>
+        </a>
+        <a href="orders.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>الطلبات</span>
+        </a>
+        <a href="shelves.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>مواقع الممرات</span>
+        </a>
+        <a href="profile.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>الملف الشخصي</span>
+        </a>
+      </div>
+
+      <div class="pt-8 mt-12 border-t border-white/20">
+        <button onclick="Auth.logout()" class="w-full bg-red-500/20 hover:bg-red-500/30 text-white p-2.5 rounded-xl text-sm font-bold text-center transition">
+          تسجيل الخروج
+        </button>
+      </div>
+    </div>
+
+    <div class="flex-1 p-6 md:p-8">
+
+      <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
+        <div class="flex items-center gap-3">
+          <button id="mobile-menu-btn" class="p-2 rounded-xl bg-white border border-slate-200 text-[#1c5335] md:hidden">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          </button>
+          <div>
+            <h1 class="text-xl md:text-2xl font-bold text-[#1c5335]">إضافة منتج جديد</h1>
+            <p class="text-xs text-slate-500 mt-0.5">أدخل بيانات المنتج لحفظه في المتجر</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-100 max-w-2xl">
+        <form id="add-form" onsubmit="handleAddProduct(event)" class="flex flex-col gap-4">
+          
+          <div>
+            <label class="block text-sm font-bold text-[#1c5335] mb-1" for="prod-name">اسم المنتج</label>
+            <input 
+              type="text" 
+              id="prod-name" 
+              class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335]" 
+              placeholder="مثال: عصير برتقال طبيعي 1ل" 
+              required
+            >
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-bold text-[#1c5335] mb-1" for="prod-category">التصنيف</label>
+              <select 
+                id="prod-category" 
+                class="w-full p-3 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335]" 
+                required
+              >
+                <option value="">اختر التصنيف...</option>
+                <option value="مشروبات">مشروبات</option>
+                <option value="ألبان وأجبان">ألبان وأجبان</option>
+                <option value="منظفات وعناية">منظفات وعناية</option>
+                <option value="زيوت ومؤن">زيوت ومؤن</option>
+                <option value="حبوب ومعلبات">حبوب ومعلبات</option>
+                <option value="مخبوزات">مخبوزات</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-bold text-[#1c5335] mb-1" for="prod-shelf">موقع الرف</label>
+              <input 
+                type="text" 
+                id="prod-shelf" 
+                class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335]" 
+                placeholder="مثال: A-03" 
+                required
+              >
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-bold text-[#1c5335] mb-1" for="prod-price">السعر (شيكل ₪)</label>
+              <input 
+                type="number" 
+                step="0.5" 
+                id="prod-price" 
+                class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335]" 
+                placeholder="0.00" 
+                required
+              >
+            </div>
+
+            <div>
+              <label class="block text-sm font-bold text-[#1c5335] mb-1" for="prod-qty">الكمية المتوفرة</label>
+              <input 
+                type="number" 
+                id="prod-qty" 
+                class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335]" 
+                placeholder="0" 
+                required
+              >
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 pt-4">
+            <button 
+              type="submit" 
+              class="flex-1 bg-[#1c5335] hover:bg-[#143e27] text-white font-bold p-3.5 rounded-xl shadow text-sm transition"
+            >
+              حفظ المنتج
+            </button>
+            <a 
+              href="products.html" 
+              class="px-6 py-3.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-sm text-center"
+            >
+              إلغاء
+            </a>
+          </div>
+
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="assets/js/layout.js"></script>
+  <script>
+    function handleAddProduct(event) {
+      event.preventDefault();
+
+      var name = document.getElementById("prod-name").value;
+      var category = document.getElementById("prod-category").value;
+      var shelf = document.getElementById("prod-shelf").value;
+      var price = parseFloat(document.getElementById("prod-price").value);
+      var qty = parseInt(document.getElementById("prod-qty").value, 10);
+
+      var newProduct = {
+        id: Date.now(),
+        name: name,
+        category: category,
+        shelf: shelf,
+        price: price,
+        quantity: qty
+      };
+
+      var saved = localStorage.getItem("myProducts");
+      var list = [];
+      if (saved) {
+        try {
+          list = JSON.parse(saved);
+        } catch(e) {
+          list = [];
+        }
+      }
+
+      list.unshift(newProduct);
+      localStorage.setItem("myProducts", JSON.stringify(list));
+
+      alert("تمت إضافة المنتج بنجاح!");
+      window.location.href = "products.html";
+    }
+  </script>
+</body>
+</html>

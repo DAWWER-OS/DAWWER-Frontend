@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>دخول الإدارة - دوّر</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <script src="assets/css/tailwind.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              primary: '#1c5335',
+              dark: '#143e27',
+              soft: '#edf5f0'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-[#f8f6f0] font-['Tajawal',sans-serif] text-slate-800 min-h-screen">
+
+  <div class="flex min-h-screen w-full">
+    
+    <div class="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
+      <div class="w-full max-w-md bg-white p-8 sm:p-10 rounded-3xl shadow-sm border border-slate-100">
+        
+        <div class="flex justify-center mb-6 lg:hidden">
+          <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-12 w-auto">
+        </div>
+
+        <div class="mb-6 text-center sm:text-right">
+          <div class="inline-block bg-[#edf5f0] text-[#1c5335] border border-[#1c5335]/15 px-3 py-1 rounded-full text-xs font-bold mb-2">
+            بوابة الإدارة المركزية
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-bold text-[#1c5335] mb-1">دخول الإدارة</h1>
+          <p class="text-slate-500 text-sm">لوحة تحكم المشرفين والمدراء</p>
+        </div>
+
+        <div id="admin-error-box" class="hidden mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-bold"></div>
+
+        <form id="admin-login-form" onsubmit="handleAdminLogin(event)" class="flex flex-col gap-4">
+          
+          <div>
+            <label class="block text-sm font-bold text-[#1c5335] mb-1" for="admin-email-input">بريد المدير</label>
+            <input 
+              type="email" 
+              id="admin-email-input" 
+              class="w-full p-3.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335]" 
+              placeholder="admin@dawwer.com" 
+              value="admin@dawwer.com"
+              required
+            >
+          </div>
+
+          <div>
+            <label class="block text-sm font-bold text-[#1c5335] mb-1" for="admin-password-input">كلمة المرور</label>
+            <input 
+              type="password" 
+              id="admin-password-input" 
+              class="w-full p-3.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335]" 
+              placeholder="••••••••" 
+              value="StrongPassword123!"
+              required
+            >
+          </div>
+
+          <button type="submit" id="admin-submit-btn" class="w-full bg-[#1c5335] hover:bg-[#143e27] text-white font-bold p-3.5 rounded-xl shadow text-sm transition mt-2">
+            تسجيل دخول كمدير
+          </button>
+
+          <div class="text-center mt-4 text-sm text-slate-600">
+            <span>هل أنت تاجر؟</span>
+            <a href="login.html" class="text-[#1c5335] font-bold hover:underline">دخول بوابة التاجر</a>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+
+    <!-- Left Brand Hero Section (Modern, Dynamic & Feature-Rich) -->
+    <div class="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-12 overflow-hidden text-white" style="background: linear-gradient(180deg, #143e27 0%, #1c5335 100%);">
+      
+      <!-- Ambient Glow & Subtle Geometric Pattern Overlay -->
+      <div class="absolute inset-0 pointer-events-none">
+        <div class="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-[#2a754c]/20 rounded-full blur-3xl"></div>
+        <svg class="absolute inset-0 w-full h-full opacity-10" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" fill="none">
+          <circle cx="400" cy="400" r="300" stroke="white" stroke-width="1.5" stroke-dasharray="8 8" />
+          <circle cx="400" cy="400" r="200" stroke="white" stroke-width="1.5" />
+          <circle cx="400" cy="400" r="100" stroke="white" stroke-width="1.5" stroke-dasharray="4 4" />
+          <path d="M0 400h800M400 0v800" stroke="white" stroke-width="1" stroke-dasharray="6 6" />
+        </svg>
+      </div>
+
+      <!-- Main Container -->
+      <div class="relative z-10 my-auto max-w-lg mx-auto w-full flex flex-col gap-7">
+        <div class="text-right">
+          <div class="flex items-center gap-3 mb-4">
+            <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-12 w-auto">
+          </div>
+          <h2 class="text-3xl font-extrabold text-white leading-tight tracking-tight">
+            الإدارة والرقابة المركزية،<br>
+            <span class="text-emerald-200">لمنظومة دوّر.</span>
+          </h2>
+          <p class="text-white/80 text-sm mt-2 leading-relaxed">
+            التحكم الشامل بطلبات الانضمام، تدقيق المتاجر، وإدارة صلاحيات المشرفين.
+          </p>
+        </div>
+
+        <!-- Feature Highlights -->
+        <div class="flex flex-col gap-3">
+          <div class="bg-white/10 backdrop-blur-md border border-white/10 p-3.5 rounded-2xl flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-lg">
+              🛡️
+            </div>
+            <div class="text-right">
+              <h3 class="font-bold text-sm text-white">إدارة طلبات التجار</h3>
+              <p class="text-xs text-white/75 mt-0.5">مراجعة وتدقيق المستندات الرسمية واعتماد المتاجر الجديدة.</p>
+            </div>
+          </div>
+          <div class="bg-white/10 backdrop-blur-md border border-white/10 p-3.5 rounded-2xl flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-lg">
+              📊
+            </div>
+            <div class="text-right">
+              <h3 class="font-bold text-sm text-white">سجلات التدقيق والأمان</h3>
+              <p class="text-xs text-white/75 mt-0.5">متابعة دقيقة لكافة التغييرات والعمليات المنفذة على المنصة.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative z-10 text-center text-xs text-white/50 pt-4">
+        منصة دوّر © بوابة الإدارة العليا والتحكم
+      </div>
+    </div>
+
+  </div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script>
+    async function handleAdminLogin(event) {
+      event.preventDefault();
+
+      const email = document.getElementById("admin-email-input").value.trim();
+      const password = document.getElementById("admin-password-input").value;
+      const errorBox = document.getElementById("admin-error-box");
+      const btn = document.getElementById("admin-submit-btn");
+
+      errorBox.classList.add("hidden");
+      btn.innerText = "جاري التحقق...";
+      btn.disabled = true;
+
+      try {
+        const response = await ApiClient.post("/Auth/login", { email, password });
+        
+        if (response.success && response.data) {
+          const role = response.data.role;
+          if (role !== "Admin" && role !== 4 && role !== CONFIG.ROLES.ADMIN) {
+            throw new Error("هذا الحساب لا يملك صلاحيات وصول لوحة الإدارة.");
+          }
+
+          Auth.saveSession(response.data);
+          window.location.href = "admin-dashboard.html";
+        } else {
+          throw new Error(response.message || "بيانات الدخول غير صحيحة.");
+        }
+      } catch (err) {
+        errorBox.innerHTML = err.message;
+        errorBox.classList.remove("hidden");
+        btn.innerText = "تسجيل دخول كمدير";
+        btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>

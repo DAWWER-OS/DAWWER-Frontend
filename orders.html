@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>طلبات الزبائن - دوّر</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <script src="assets/css/tailwind.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              primary: '#1c5335',
+              dark: '#143e27',
+              soft: '#edf5f0'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Core Architecture & Auth Route Guard -->
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script>
+    Auth.requireAuth();
+  </script>
+</head>
+<body class="bg-[#f8f6f0] font-['Tajawal',sans-serif] text-slate-800 min-h-screen">
+
+  <div class="flex min-h-screen">
+
+    <!-- Mobile Backdrop -->
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-slate-900/50 z-40 hidden md:hidden"></div>
+
+    <div class="w-64 bg-gradient-to-b from-[#143e27] to-[#1c5335] text-white p-6 hidden md:block" id="sidebar-box">
+      <div class="text-center mb-8">
+        <div class="flex justify-center mb-3">
+          <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-10 w-auto">
+        </div>
+        <div class="text-sm font-bold text-white">لوحة تحكم التاجر</div>
+      </div>
+
+      <div class="bg-white/10 p-4 rounded-xl mb-6 text-center border border-white/5">
+        <div class="text-sm font-bold text-white mb-1" data-user-name>سوبرماركت المدينة</div>
+        <div class="text-xs text-white/80" data-user-role>مجمع النخيل - الطابق الأرضي</div>
+      </div>
+
+      <div class="flex flex-col gap-2 sidebar-nav">
+        <a href="index.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>نظرة عامة</span>
+        </a>
+        <a href="merchant-application.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>تسجيل واعتماد المتجر</span>
+        </a>
+        <a href="store-staff.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>فريق العمل والأدوار</span>
+        </a>
+        <a href="products.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>المنتجات</span>
+        </a>
+        <a href="add-product.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>إضافة منتج</span>
+        </a>
+        <a href="orders.html" class="flex items-center justify-between p-3 rounded-xl bg-[#143e27] text-white font-bold transition">
+          <span>الطلبات</span>
+          <span class="bg-[#d6a950] text-white text-xs px-2 py-0.5 rounded-full">6</span>
+        </a>
+        <a href="shelves.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>مواقع الممرات</span>
+        </a>
+        <a href="profile.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+          <span>الملف الشخصي</span>
+        </a>
+      </div>
+
+      <div class="pt-8 mt-12 border-t border-white/20">
+        <button onclick="Auth.logout()" class="w-full bg-red-500/20 hover:bg-red-500/30 text-white p-2.5 rounded-xl text-sm font-bold text-center transition">
+          تسجيل الخروج
+        </button>
+      </div>
+    </div>
+
+    <div class="flex-1 p-6 md:p-8">
+
+      <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
+        <div class="flex items-center gap-3">
+          <button id="mobile-menu-btn" class="p-2 rounded-xl bg-white border border-slate-200 text-[#1c5335] md:hidden">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          </button>
+          <div>
+            <h1 class="text-xl md:text-2xl font-bold text-[#1c5335]">طلبات الزبائن الحالية</h1>
+            <p class="text-xs text-slate-500 mt-0.5">قائمة بالطلبات الواردة وحالتها</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-x-auto">
+        <table class="w-full text-right border-collapse">
+          <thead>
+            <tr class="bg-[#edf5f0] text-[#1c5335] text-sm font-bold border-b border-[#1c5335]/10">
+              <th class="p-4">رقم الطلب</th>
+              <th class="p-4">اسم الزبون</th>
+              <th class="p-4">عدد العناصر</th>
+              <th class="p-4">المجموع</th>
+              <th class="p-4">الحالة</th>
+              <th class="p-4">الإجراء</th>
+            </tr>
+          </thead>
+          <tbody id="orders-table-body" class="divide-y divide-slate-100 text-sm">
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="assets/js/layout.js"></script>
+  <script>
+    var ordersList = [
+      { id: "ORD-1092", customer: "أحمد محمود", items: 5, total: 145.0, status: "preparing" },
+      { id: "ORD-1091", customer: "سارة خليل", items: 3, total: 82.5, status: "preparing" },
+      { id: "ORD-1090", customer: "خالد عبد الله", items: 8, total: 310.0, status: "preparing" },
+      { id: "ORD-1089", customer: "منى يوسف", items: 2, total: 45.0, status: "preparing" },
+      { id: "ORD-1088", customer: "طارق زياد", items: 6, total: 215.0, status: "completed" },
+      { id: "ORD-1087", customer: "ريم ناصر", items: 4, total: 130.0, status: "completed" }
+    ];
+
+    function renderOrders() {
+      var tbody = document.getElementById("orders-table-body");
+      tbody.innerHTML = "";
+
+      for (var i = 0; i < ordersList.length; i++) {
+        var o = ordersList[i];
+        var isPrep = (o.status === "preparing");
+
+        var badge = isPrep 
+          ? "<span class='bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-bold'>قيد التحضير</span>"
+          : "<span class='bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold'>مكتمل</span>";
+
+        var actionBtn = isPrep
+          ? "<button onclick='completeOrder(\"" + o.id + "\")' class='bg-[#1c5335] text-white text-xs px-3 py-1.5 rounded-lg font-bold hover:bg-[#143e27] transition'>إتمام التحضير</button>"
+          : "<span class='text-emerald-700 font-bold text-xs'>جاهز للتسليم ✓</span>";
+
+        var row = document.createElement("tr");
+        row.className = "hover:bg-slate-50 transition";
+        row.innerHTML = 
+          "<td class='p-4 font-bold text-slate-900'>" + o.id + "</td>" +
+          "<td class='p-4 text-slate-700'>" + o.customer + "</td>" +
+          "<td class='p-4 text-slate-600'>" + o.items + " عناصر</td>" +
+          "<td class='p-4 font-bold text-slate-900'>₪" + o.total + "</td>" +
+          "<td class='p-4'>" + badge + "</td>" +
+          "<td class='p-4'>" + actionBtn + "</td>";
+
+        tbody.appendChild(row);
+      }
+    }
+
+    function completeOrder(id) {
+      for (var i = 0; i < ordersList.length; i++) {
+        if (ordersList[i].id === id) {
+          ordersList[i].status = "completed";
+          break;
+        }
+      }
+      renderOrders();
+    }
+
+    renderOrders();
+  </script>
+</body>
+</html>
