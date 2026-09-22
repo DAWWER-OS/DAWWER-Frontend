@@ -39,8 +39,8 @@ function initLayout() {
   document.querySelectorAll("nav a, #sidebar-box a, .sidebar-nav a").forEach(link => {
     const href = link.getAttribute("href");
     if (href && (href === currentPath || href.startsWith(currentPath.split("?")[0]))) {
-      link.classList.add("bg-[#143e27]", "font-bold", "text-white");
-      link.classList.remove("text-white/80", "hover:bg-white/10");
+      link.classList.add("bg-[#0f2d20]", "font-bold", "text-white", "shadow-xs");
+      link.classList.remove("text-white/90", "text-white/80", "text-white/70", "hover:bg-white/10", "hover:bg-white/5");
     }
   });
 

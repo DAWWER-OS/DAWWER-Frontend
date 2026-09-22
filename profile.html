@@ -47,25 +47,87 @@
         <div class="text-xs text-white/80" data-user-role>مستخدم المنظومة</div>
       </div>
 
-      <div class="flex flex-col gap-2 sidebar-nav">
-        <a href="index.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
-          <span>نظرة عامة</span>
-        </a>
-        <a href="products.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
-          <span>المنتجات</span>
-        </a>
-        <a href="add-product.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
-          <span>إضافة منتج</span>
-        </a>
-        <a href="orders.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
-          <span>الطلبات</span>
-        </a>
-        <a href="shelves.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
-          <span>مواقع الممرات</span>
-        </a>
-        <a href="profile.html" class="flex items-center justify-between p-3 rounded-xl bg-[#143e27] text-white font-bold transition">
-          <span>الملف الشخصي</span>
-        </a>
+      <!-- Navigation Links (Flattened Structure with Section Dividers) -->
+      <div class="flex flex-col gap-5 sidebar-nav flex-1 overflow-y-auto pr-1">
+        
+        <!-- Section 1: Operations -->
+        <div>
+          <div class="text-[10px] font-extrabold uppercase tracking-wider text-white/50 px-3.5 mb-2">الرئيسية والعمليات</div>
+          <div class="flex flex-col gap-1">
+            <a href="index.html" class="flex items-center justify-between py-2 px-3.5 rounded-xl text-white/90 hover:text-white hover:bg-white/10 font-medium transition text-xs">
+              <div class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 opacity-80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                <span>نظرة عامة</span>
+              </div>
+            </a>
+            <a href="orders.html" class="flex items-center justify-between py-2 px-3.5 rounded-xl text-white/90 hover:text-white hover:bg-white/10 font-medium transition text-xs">
+              <div class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 opacity-80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                <span>الطلبات والمبيعات</span>
+              </div>
+              <span class="bg-[#d6a950] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">6</span>
+            </a>
+            <a href="store-staff.html" class="flex items-center justify-between py-2 px-3.5 rounded-xl text-white/90 hover:text-white hover:bg-white/10 font-medium transition text-xs">
+              <div class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 opacity-80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                <span>فريق العمل والأدوار</span>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- Section 2: Catalog & Shelves -->
+        <div>
+          <div class="text-[10px] font-extrabold uppercase tracking-wider text-white/50 px-3.5 mb-2">الكتالوج والرفوف</div>
+          <div class="flex flex-col gap-1">
+            <a href="catalog.html" class="flex items-center justify-between py-2 px-3.5 rounded-xl text-white/90 hover:text-white hover:bg-white/10 font-medium transition text-xs">
+              <div class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 opacity-80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                <span>الكتالوج والمخططات</span>
+              </div>
+              <span class="bg-[#d6a950] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">2.2</span>
+            </a>
+            <a href="products.html" class="flex items-center justify-between py-2 px-3.5 rounded-xl text-white/90 hover:text-white hover:bg-white/10 font-medium transition text-xs">
+              <div class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 opacity-80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                <span>المنتجات والمخزون</span>
+              </div>
+              <span class="bg-white/10 text-white text-xs px-2 py-0.5 rounded-full">6</span>
+            </a>
+            <a href="add-product.html" class="flex items-center justify-between py-2 px-3.5 rounded-xl text-white/90 hover:text-white hover:bg-white/10 font-medium transition text-xs">
+              <div class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 opacity-80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span>إضافة منتج جديد</span>
+              </div>
+            </a>
+            <a href="shelves.html" class="flex items-center justify-between py-2 px-3.5 rounded-xl text-white/90 hover:text-white hover:bg-white/10 font-medium transition text-xs">
+              <div class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 opacity-80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+                <span>مواقع الممرات والرفوف</span>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- Section 3: Store & Account -->
+        <div>
+          <div class="text-[10px] font-extrabold uppercase tracking-wider text-white/50 px-3.5 mb-2">إعدادات المتجر والحساب</div>
+          <div class="flex flex-col gap-1">
+            <a href="merchant-application.html" class="flex items-center justify-between py-2 px-3.5 rounded-xl text-white/90 hover:text-white hover:bg-white/10 font-medium transition text-xs">
+              <div class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 opacity-80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                <span>تسجيل واعتماد المتجر</span>
+              </div>
+            </a>
+            <a href="profile.html" class="flex items-center justify-between py-2 px-3.5 rounded-xl text-white/90 hover:text-white hover:bg-white/10 font-medium transition text-xs">
+              <div class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 opacity-80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                <span>الملف الشخصي</span>
+              </div>
+            </a>
+          </div>
+        </div>
+
       </div>
 
       <div class="pt-8 mt-12 border-t border-white/20">
