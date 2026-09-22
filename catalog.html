@@ -1,41 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DAWER Merchant Dashboard — Catalog, Floor-Plan & CSV Import Wizard</title>
+  <title>الكتالوج والمخططات الذكية - دوّر</title>
 
-  <!-- Google Fonts: Inter -->
+  <!-- Google Fonts: Tajawal & Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
 
   <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="assets/css/tailwind.min.js"></script>
   <script>
     tailwind.config = {
-      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Inter', 'sans-serif'],
+            sans: ['Tajawal', 'sans-serif'],
           },
           colors: {
             brand: {
-              50: '#f0fdf4',
-              100: '#dcfce7',
-              200: '#bbf7d0',
-              500: '#22c55e',
-              600: '#16a34a',
-              700: '#15803d',
-              800: '#166534',
-              900: '#14532d',
-              dark: '#143e27',
               primary: '#1c5335',
+              dark: '#143e27',
+              soft: '#edf5f0',
+              gold: '#d6a950',
             }
+          },
+          borderRadius: {
+            '2xl': '1rem',
+            '3xl': '1.5rem',
           }
         }
       }
+    }
+  </script>
+
+  <!-- Core Architecture & Auth Scripts -->
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/layout.js"></script>
+  <script>
+    if (typeof Auth !== 'undefined' && Auth.isAuthenticated && !Auth.isAuthenticated()) {
+      // Optional fallback for mock / demo previewing
+      console.log('Running in interactive catalog mode.');
     }
   </script>
 
@@ -74,334 +83,399 @@
     }
   </style>
 </head>
-<body class="bg-slate-50 font-sans text-slate-800 antialiased min-h-screen p-4 sm:p-6 lg:p-10">
+<body class="bg-[#f8f6f0] font-['Tajawal',sans-serif] text-slate-800 antialiased min-h-screen">
 
   <!-- Toast Container -->
-  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+  <div id="toast-container" class="fixed top-5 left-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-  <!-- Main Container -->
-  <div class="max-w-7xl mx-auto space-y-6">
+  <div class="flex min-h-screen">
 
-    <!-- Top Dashboard Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div>
+    <!-- Mobile Backdrop -->
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-slate-900/50 z-40 hidden md:hidden"></div>
+
+    <!-- Sidebar Navigation (Matching exact DAWER design) -->
+    <div class="w-64 bg-[#153f2d] text-white p-6 hidden md:block shrink-0 shadow-lg" id="sidebar-box">
+      <div class="text-center mb-8">
+        <div class="flex justify-center mb-3">
+          <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-10 w-auto">
+        </div>
+        <div class="text-sm font-bold text-white">لوحة تحكم التاجر</div>
+      </div>
+
+      <!-- User / Store Card -->
+      <div class="bg-[#234d3b] p-4 rounded-2xl mb-6 text-center border border-white/5 shadow-xs">
+        <div class="text-sm font-bold text-white mb-0.5" data-user-name>سوبرماركت المدينة</div>
+        <div class="text-xs text-white/70" data-user-role>مدير المتجر المعتمد</div>
+      </div>
+
+      <!-- Navigation Links -->
+      <div class="flex flex-col gap-1.5 sidebar-nav">
+        <a href="index.html" class="flex items-center justify-between py-2.5 px-4 rounded-xl text-white/90 hover:text-white hover:bg-white/5 font-medium transition">
+          <span>نظرة عامة</span>
+        </a>
+        <a href="merchant-application.html" class="flex items-center justify-between py-2.5 px-4 rounded-xl text-white/90 hover:text-white hover:bg-white/5 font-medium transition">
+          <span>تسجيل واعتماد المتجر</span>
+        </a>
+        <a href="store-staff.html" class="flex items-center justify-between py-2.5 px-4 rounded-xl text-white/90 hover:text-white hover:bg-white/5 font-medium transition">
+          <span>فريق العمل والأدوار</span>
+        </a>
+        <a href="catalog.html" class="flex items-center justify-between py-2.5 px-4 rounded-xl bg-[#0f2d20] text-white font-bold shadow-xs transition">
+          <span>الكتالوج والمخططات</span>
+          <span class="bg-[#d6a950] text-white text-[11px] px-2.5 py-0.5 rounded-full font-bold">2.2</span>
+        </a>
+        <a href="products.html" class="flex items-center justify-between py-2.5 px-4 rounded-xl text-white/90 hover:text-white hover:bg-white/5 font-medium transition">
+          <span>المنتجات والمخزون</span>
+          <span class="bg-white/10 text-white text-xs px-2 py-0.5 rounded-full">6</span>
+        </a>
+        <a href="add-product.html" class="flex items-center justify-between py-2.5 px-4 rounded-xl text-white/90 hover:text-white hover:bg-white/5 font-medium transition">
+          <span>إضافة منتج</span>
+        </a>
+        <a href="orders.html" class="flex items-center justify-between py-2.5 px-4 rounded-xl text-white/90 hover:text-white hover:bg-white/5 font-medium transition">
+          <span>الطلبات</span>
+          <span class="bg-[#d6a950] text-white text-xs px-2.5 py-0.5 rounded-full font-bold">6</span>
+        </a>
+        <a href="shelves.html" class="flex items-center justify-between py-2.5 px-4 rounded-xl text-white/90 hover:text-white hover:bg-white/5 font-medium transition">
+          <span>مواقع الممرات والرفوف</span>
+        </a>
+        <a href="profile.html" class="flex items-center justify-between py-2.5 px-4 rounded-xl text-white/90 hover:text-white hover:bg-white/5 font-medium transition">
+          <span>الملف الشخصي</span>
+        </a>
+      </div>
+
+      <div class="pt-8 mt-12 border-t border-white/10">
+        <button onclick="if(typeof Auth!=='undefined'&&Auth.logout){Auth.logout();}else{window.location.href='login.html';}" class="w-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-100 p-2.5 rounded-xl text-sm font-bold text-center transition">
+          تسجيل الخروج
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Content Canvas Area -->
+    <div class="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full space-y-6">
+
+      <!-- Top Dashboard Header with Mobile Menu Trigger -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80">
         <div class="flex items-center gap-3">
-          <div class="p-2.5 bg-brand-primary text-white rounded-xl shadow-md">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
+          <button id="mobile-menu-btn" class="p-2.5 rounded-2xl bg-white border border-slate-200 text-[#153f2d] md:hidden shadow-xs hover:bg-slate-50 transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          </button>
           <div>
-            <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-              DAWER Merchant Center
-              <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">Store #104</span>
+            <h1 class="text-2xl md:text-3xl font-extrabold text-[#153f2d] flex items-center gap-2">
+              <span>إدارة الكتالوج والمخطط الداخلي</span>
+              <span class="text-xs px-3 py-1 rounded-full bg-[#edf5f0] text-[#153f2d] font-bold border border-[#153f2d]/10">المتجر #104</span>
             </h1>
-            <p class="text-sm text-slate-500 mt-0.5">Manage in-store aisle mapping, real-time inventory, and shelf positions.</p>
+            <p class="text-xs md:text-sm text-slate-500 mt-1">تحديد مواقع الرفوف، الفهرسة الشاملة، والاستيراد الجماعي للمنتجات</p>
           </div>
         </div>
-      </div>
 
-      <!-- Navigation Tabs Switcher -->
-      <div class="bg-slate-200/80 p-1 rounded-xl flex items-center gap-1 border border-slate-300/50 self-start sm:self-auto">
-        <button id="tab-btn-catalog" class="tab-btn px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all bg-white text-slate-900 shadow-sm flex items-center gap-2">
-          <svg class="w-4 h-4 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-          </svg>
-          <span>Product Catalog</span>
-        </button>
-        <button id="tab-btn-floorplan" class="tab-btn px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all text-slate-600 hover:text-slate-900 flex items-center gap-2">
-          <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-          </svg>
-          <span>Store Floor-Plan & Layout</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- ============================================================= -->
-    <!-- TAB 1: PRODUCT CATALOG & SHELVES                             -->
-    <!-- ============================================================= -->
-    <div id="tab-content-catalog" class="space-y-6">
-
-      <!-- Catalog Action Header -->
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <h2 class="text-lg font-bold text-slate-900">Inventory Items</h2>
-          <span id="total-count-badge" class="px-2.5 py-0.5 text-xs font-bold bg-slate-200 text-slate-700 rounded-full">0</span>
-        </div>
-        <div class="flex items-center gap-3">
-          <button id="btn-import-catalog" class="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl shadow-sm hover:shadow transition">
-            <svg class="w-4 h-4 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
-            <span>Import Catalog (CSV/XLSX)</span>
-          </button>
-          <button id="btn-add-product" class="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-brand-primary hover:bg-brand-dark rounded-xl shadow-sm transition">
+        <!-- Navigation Tabs (Catalog vs Floorplan) -->
+        <div class="bg-white p-1 rounded-2xl flex items-center gap-1 border border-slate-200/80 shadow-xs self-start sm:self-auto">
+          <button id="tab-btn-catalog" class="tab-btn px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all bg-[#153f2d] text-white shadow-xs flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
-            <span>Add New Product</span>
+            <span>كتالوج المنتجات</span>
+          </button>
+          <button id="tab-btn-floorplan" class="tab-btn px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all text-slate-600 hover:text-[#153f2d] hover:bg-slate-50 flex items-center gap-2">
+            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+            <span>مخطط المتجر والممرات</span>
           </button>
         </div>
       </div>
 
-      <!-- Catalog Main Table Card -->
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+      <!-- ============================================================= -->
+      <!-- TAB 1: PRODUCT CATALOG & SHELVES                             -->
+      <!-- ============================================================= -->
+      <div id="tab-content-catalog" class="space-y-6">
 
-        <!-- Toolbar -->
-        <div class="p-5 border-b border-slate-200 space-y-4">
-          <!-- Status Tabs -->
-          <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 pb-4">
-            <button data-status-tab="ALL" class="status-tab active px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition flex items-center gap-2 bg-brand-primary text-white shadow-sm">
-              <span>All Items</span>
-              <span id="count-all" class="px-1.5 py-0.2 bg-white/20 text-white rounded-full text-[10px]">0</span>
-            </button>
-            <button data-status-tab="Published" class="status-tab px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition flex items-center gap-2 text-slate-600 hover:bg-slate-100">
-              <span>Published</span>
-              <span id="count-published" class="px-1.5 py-0.2 bg-emerald-100 text-emerald-700 rounded-full text-[10px]">0</span>
-            </button>
-            <button data-status-tab="Draft" class="status-tab px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition flex items-center gap-2 text-slate-600 hover:bg-slate-100">
-              <span>Draft</span>
-              <span id="count-draft" class="px-1.5 py-0.2 bg-amber-100 text-amber-700 rounded-full text-[10px]">0</span>
-            </button>
-            <button data-status-tab="Inactive" class="status-tab px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition flex items-center gap-2 text-slate-600 hover:bg-slate-100">
-              <span>Inactive</span>
-              <span id="count-inactive" class="px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded-full text-[10px]">0</span>
-            </button>
-          </div>
-
-          <!-- Search & Category Filters -->
-          <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div class="relative w-full sm:w-96">
-              <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <input 
-                id="search-input" 
-                type="text" 
-                placeholder="Search by product name or SKU..." 
-                class="w-full pl-10 pr-9 py-2 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 rounded-xl text-sm transition outline-none"
-              >
-              <button id="clear-search" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 hidden">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
-              <div class="relative w-full sm:w-52">
-                <select id="category-filter" class="w-full appearance-none bg-slate-50 hover:bg-white border border-slate-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 text-slate-700 py-2 pl-3.5 pr-8 rounded-xl text-sm font-medium outline-none cursor-pointer transition">
-                  <option value="ALL">All Categories</option>
-                </select>
-                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                </div>
-              </div>
-
-              <button id="btn-reset-filters" title="Reset all filters" class="p-2 border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Bulk Actions Floating Bar -->
-        <div id="bulk-actions-bar" class="bg-brand-50 border-b border-brand-200 px-6 py-2.5 flex items-center justify-between text-xs sm:text-sm text-brand-900 hidden transition-all duration-200">
-          <div class="flex items-center gap-2 font-medium">
-            <span class="inline-flex items-center justify-center w-5 h-5 bg-brand-primary text-white text-xs font-bold rounded-full" id="bulk-selected-count">0</span>
-            <span>item(s) selected</span>
-          </div>
+        <!-- Action Header Bar -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div class="flex items-center gap-2">
-            <button id="bulk-set-available" class="px-3 py-1 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-lg border border-slate-200 shadow-sm transition">
-              Set Available
-            </button>
-            <button id="bulk-delete" class="px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-lg border border-rose-200 transition">
-              Delete Selected
-            </button>
-            <button id="bulk-clear" class="text-slate-500 hover:text-slate-800 underline text-xs ml-2">
-              Clear selection
-            </button>
+            <h2 class="text-lg font-bold text-slate-900">قائمة أصناف المتجر</h2>
+            <span id="total-count-badge" class="px-2.5 py-0.5 text-xs font-bold bg-[#d6a950] text-white rounded-full">0</span>
           </div>
-        </div>
-
-        <!-- Table View -->
-        <div class="overflow-x-auto min-h-[380px]">
-          <table class="w-full text-left border-collapse">
-            <thead>
-              <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-500 text-xs font-semibold uppercase tracking-wider select-none">
-                <th scope="col" class="w-12 px-6 py-4">
-                  <input id="select-all-checkbox" type="checkbox" class="w-4 h-4 rounded text-brand-primary focus:ring-brand-primary/20 border-slate-300 cursor-pointer accent-brand-primary">
-                </th>
-                <th scope="col" class="px-6 py-4">Product</th>
-                <th scope="col" class="px-6 py-4">Category</th>
-                <th scope="col" class="px-6 py-4">Price</th>
-                <th scope="col" class="px-6 py-4">Shelf Location</th>
-                <th scope="col" class="px-6 py-4 text-center">Availability</th>
-                <th scope="col" class="px-6 py-4">Status</th>
-                <th scope="col" class="px-6 py-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="table-body" class="divide-y divide-slate-100 text-sm"></tbody>
-          </table>
-
-          <!-- Empty State -->
-          <div id="empty-state" class="hidden flex-col items-center justify-center py-16 px-4 text-center">
-            <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mb-4">
-              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+          <div class="flex items-center gap-3">
+            <button id="btn-import-catalog" class="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-[#153f2d] bg-white hover:bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs transition">
+              <svg class="w-4 h-4 text-[#153f2d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
-            </div>
-            <h3 class="text-base font-bold text-slate-800 mb-1">No products found</h3>
-            <p class="text-xs text-slate-500 max-w-sm mb-4">No matching records found for active filters.</p>
-            <button id="empty-reset-btn" class="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-semibold text-xs rounded-xl shadow-sm transition">
-              Clear all filters
+              <span>استيراد الكتالوج (CSV / Excel)</span>
+            </button>
+            <button id="btn-add-product" class="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-[#153f2d] hover:bg-[#0f2d20] rounded-2xl shadow-sm transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>إضافة منتج جديد</span>
             </button>
           </div>
         </div>
 
-        <!-- Pagination -->
-        <div class="px-6 py-4 bg-slate-50/50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 select-none">
-          <div class="flex items-center gap-4 text-xs text-slate-500">
-            <div class="flex items-center gap-2">
-              <span>Show</span>
-              <select id="items-per-page" class="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 outline-none">
-                <option value="5">5</option>
-                <option value="10" selected>10</option>
-                <option value="25">25</option>
-              </select>
-              <span>entries</span>
+        <!-- Main Table Card Container -->
+        <div class="bg-white rounded-3xl shadow-xs border border-slate-200/70 overflow-hidden flex flex-col">
+
+          <!-- Filter Toolbar -->
+          <div class="p-6 border-b border-slate-100 space-y-4">
+            
+            <!-- Status Tabs -->
+            <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 pb-4">
+              <button data-status-tab="ALL" class="status-tab active px-4 py-2 rounded-xl text-xs font-bold tracking-wide transition flex items-center gap-2 bg-[#153f2d] text-white shadow-xs">
+                <span>كافة المنتجات</span>
+                <span id="count-all" class="px-2 py-0.5 bg-white/20 text-white rounded-full text-[10px]">0</span>
+              </button>
+              <button data-status-tab="Published" class="status-tab px-4 py-2 rounded-xl text-xs font-bold tracking-wide transition flex items-center gap-2 text-slate-600 hover:bg-slate-100">
+                <span>منشور ومتاح</span>
+                <span id="count-published" class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px]">0</span>
+              </button>
+              <button data-status-tab="Draft" class="status-tab px-4 py-2 rounded-xl text-xs font-bold tracking-wide transition flex items-center gap-2 text-slate-600 hover:bg-slate-100">
+                <span>مسودة</span>
+                <span id="count-draft" class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px]">0</span>
+              </button>
+              <button data-status-tab="Inactive" class="status-tab px-4 py-2 rounded-xl text-xs font-bold tracking-wide transition flex items-center gap-2 text-slate-600 hover:bg-slate-100">
+                <span>غير نشط</span>
+                <span id="count-inactive" class="px-2 py-0.5 bg-slate-200 text-slate-700 rounded-full text-[10px]">0</span>
+              </button>
             </div>
-            <span class="text-slate-300">|</span>
-            <span id="pagination-summary">Showing 0 to 0 of 0 items</span>
-          </div>
-          <div class="flex items-center gap-1.5" id="pagination-controls"></div>
-        </div>
 
-      </div>
-
-    </div>
-
-    <!-- ============================================================= -->
-    <!-- TAB 2: STORE FLOOR-PLAN & INTERACTIVE SHELF MAPPER           -->
-    <!-- ============================================================= -->
-    <div id="tab-content-floorplan" class="space-y-6 hidden">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-        <div>
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-            Store Blueprint & Layout Mapper
-            <span id="total-pins-badge" class="px-2.5 py-0.5 text-xs font-bold bg-brand-primary text-white rounded-full">0 Tagged Zones</span>
-          </h2>
-          <p class="text-xs text-slate-500 mt-1">Upload your store blueprint. Click directly on any aisle to position a navigational waypoint.</p>
-        </div>
-        <div class="flex items-center gap-2.5">
-          <button id="btn-load-sample-map" class="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-brand-primary bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-xl transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-            <span>Load Sample Blueprint</span>
-          </button>
-          <button id="btn-clear-all-pins" class="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-            <span>Clear All Pins</span>
-          </button>
-        </div>
-      </div>
-
-      <div id="floorplan-dropzone-container" class="bg-white rounded-2xl border-2 border-dashed border-slate-300 hover:border-brand-primary p-8 text-center transition-all cursor-pointer group">
-        <input type="file" id="floorplan-file-input" accept="image/png, image/jpeg, image/svg+xml" class="hidden">
-        <div class="max-w-md mx-auto space-y-3">
-          <div class="w-16 h-16 mx-auto bg-brand-50 text-brand-primary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-          </div>
-          <div>
-            <span class="text-sm font-bold text-slate-800">Drag and drop store map here, or </span>
-            <span class="text-sm font-bold text-brand-primary underline">browse files</span>
-          </div>
-          <p class="text-xs text-slate-400">Supports PNG, JPG, or SVG architectural diagrams (Max 10MB)</p>
-          <div id="upload-error" class="hidden p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium rounded-xl"></div>
-          <div id="upload-progress-container" class="hidden pt-3 space-y-1.5">
-            <div class="flex justify-between text-xs font-bold text-slate-600">
-              <span>Uploading store blueprint...</span>
-              <span id="upload-progress-text">0%</span>
-            </div>
-            <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-              <div id="upload-progress-bar" class="h-full bg-brand-primary rounded-full transition-all duration-150" style="width: 0%"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div id="floorplan-workspace" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-          <div class="p-4 bg-slate-900 text-white flex items-center justify-between flex-wrap gap-2 border-b border-slate-800">
-            <div class="flex items-center gap-2 text-xs font-semibold">
-              <span class="inline-block w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse"></span>
-              <span class="text-slate-300">Click blueprint to place waypoint</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <button id="btn-zoom-out" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" /></svg></button>
-              <span id="zoom-level-label" class="text-xs font-mono px-2 py-1 bg-slate-800 rounded-lg text-slate-300">100%</span>
-              <button id="btn-zoom-in" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg></button>
-              <button id="btn-zoom-reset" class="px-2.5 py-1 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition">Reset</button>
-              <div class="h-4 w-px bg-slate-700 mx-1"></div>
-              <button id="btn-replace-map" class="px-3 py-1 text-xs font-semibold bg-white/10 hover:bg-white/20 text-white rounded-lg transition">Change Image</button>
-            </div>
-          </div>
-
-          <div id="map-viewport" class="relative overflow-auto p-4 min-h-[460px] max-h-[620px] flex items-center justify-center blueprint-bg select-none">
-            <div id="map-container" class="relative transition-transform duration-150 origin-center cursor-crosshair shadow-2xl rounded-lg overflow-hidden inline-block max-w-full">
-              <img id="floorplan-image" src="" alt="Store Floorplan" class="max-w-full h-auto block select-none pointer-events-none rounded-lg border border-white/20">
-              <div id="pins-layer" class="absolute inset-0 pointer-events-auto"></div>
-              
-              <div id="pin-popover" class="absolute z-30 hidden bg-white rounded-xl shadow-2xl border border-slate-200 p-4 w-64 transform -translate-x-1/2 -translate-y-full mb-3 pointer-events-auto">
-                <div class="flex items-center justify-between mb-2">
-                  <span class="text-xs font-bold text-slate-800">Tag Shelf / Aisle</span>
-                  <button id="btn-close-popover" type="button" class="text-slate-400 hover:text-slate-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+            <!-- Search Bar & Category Dropdown -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div class="relative w-full sm:w-96">
+                <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
                 </div>
-                <div class="space-y-2.5 text-xs">
-                  <div>
-                    <label class="block font-bold text-slate-600 mb-1">Zone / Aisle Name</label>
-                    <input type="text" id="popover-pin-label" placeholder="e.g., Zone A - Bakery" class="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-brand-primary">
+                <input 
+                  id="search-input" 
+                  type="text" 
+                  placeholder="ابحث باسم المنتج أو رمز الـ SKU..." 
+                  class="w-full pr-10 pl-9 py-2.5 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 focus:border-[#153f2d] focus:ring-1 focus:ring-[#153f2d] rounded-2xl text-sm transition outline-none"
+                >
+                <button id="clear-search" class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 hover:text-slate-600 hidden">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div class="flex items-center gap-3 w-full sm:w-auto justify-start sm:justify-end">
+                <div class="relative w-full sm:w-56">
+                  <select id="category-filter" class="w-full appearance-none bg-slate-50 hover:bg-white border border-slate-200 focus:border-[#153f2d] focus:ring-1 focus:ring-[#153f2d] text-slate-700 py-2.5 pr-4 pl-9 rounded-2xl text-sm font-bold outline-none cursor-pointer transition">
+                    <option value="ALL">جميع التصنيفات</option>
+                  </select>
+                  <div class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                   </div>
-                  <div>
-                    <label class="block font-bold text-slate-600 mb-1">Color Tag</label>
-                    <div class="flex items-center gap-1.5" id="color-picker-group">
-                      <button type="button" data-color="#16a34a" class="w-5 h-5 rounded-full bg-emerald-600 ring-2 ring-emerald-600 ring-offset-1"></button>
-                      <button type="button" data-color="#2563eb" class="w-5 h-5 rounded-full bg-blue-600"></button>
-                      <button type="button" data-color="#d97706" class="w-5 h-5 rounded-full bg-amber-600"></button>
-                      <button type="button" data-color="#dc2626" class="w-5 h-5 rounded-full bg-rose-600"></button>
-                      <button type="button" data-color="#7c3aed" class="w-5 h-5 rounded-full bg-purple-600"></button>
+                </div>
+
+                <button id="btn-reset-filters" title="إعادة ضبط الفلاتر" class="p-2.5 border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-2xl transition shadow-2xs">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Bulk Selection Actions Floating Header -->
+          <div id="bulk-actions-bar" class="bg-[#edf5f0] border-b border-[#153f2d]/15 px-6 py-3 flex items-center justify-between text-xs sm:text-sm text-[#153f2d] hidden transition-all duration-200">
+            <div class="flex items-center gap-2 font-bold">
+              <span class="inline-flex items-center justify-center w-5 h-5 bg-[#153f2d] text-white text-xs font-bold rounded-full" id="bulk-selected-count">0</span>
+              <span>عنصر محدد</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="bulk-set-available" class="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-800 font-bold rounded-xl border border-slate-200 shadow-2xs transition">
+                تعيين كـ "متوفر"
+              </button>
+              <button id="bulk-delete" class="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl border border-rose-200 transition">
+                حذف المحدد
+              </button>
+              <button id="bulk-clear" class="text-slate-500 hover:text-slate-800 underline text-xs mr-2">
+                إلغاء التحديد
+              </button>
+            </div>
+          </div>
+
+          <!-- Table View Section -->
+          <div class="overflow-x-auto min-h-[380px]">
+            <table class="w-full text-right border-collapse">
+              <thead>
+                <tr class="bg-[#edf5f0] text-[#153f2d] text-xs font-bold border-b border-[#153f2d]/10 select-none">
+                  <th scope="col" class="w-12 px-6 py-4">
+                    <input id="select-all-checkbox" type="checkbox" class="w-4 h-4 rounded text-[#153f2d] focus:ring-[#153f2d] border-slate-300 cursor-pointer accent-[#153f2d]">
+                  </th>
+                  <th scope="col" class="px-6 py-4">المنتج والرمز</th>
+                  <th scope="col" class="px-6 py-4">التصنيف</th>
+                  <th scope="col" class="px-6 py-4">السعر</th>
+                  <th scope="col" class="px-6 py-4">موقع الرف والممر</th>
+                  <th scope="col" class="px-6 py-4 text-center">التوفر</th>
+                  <th scope="col" class="px-6 py-4">الحالة</th>
+                  <th scope="col" class="px-6 py-4 text-left">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="table-body" class="divide-y divide-slate-100 text-sm">
+                <!-- Dynamically rendered rows -->
+              </tbody>
+            </table>
+
+            <!-- Empty State UI -->
+            <div id="empty-state" class="hidden flex-col items-center justify-center py-16 px-4 text-center">
+              <div class="w-16 h-16 bg-[#edf5f0] text-[#153f2d] rounded-3xl flex items-center justify-center mb-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+              </div>
+              <h3 class="text-base font-bold text-slate-800 mb-1">لم يتم العثور على أي منتجات</h3>
+              <p class="text-xs text-slate-500 max-w-sm mb-4">لا توجد نتائج مطابقة لبحثك أو الفلاتر المحددة حالياً.</p>
+              <button id="empty-reset-btn" class="px-5 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs rounded-2xl shadow-xs transition">
+                إعادة تعيين الفلاتر
+              </button>
+            </div>
+          </div>
+
+          <!-- Pagination Footer -->
+          <div class="px-6 py-4 bg-slate-50/70 border-t border-slate-200/70 flex flex-col sm:flex-row items-center justify-between gap-4 select-none">
+            <div class="flex items-center gap-4 text-xs text-slate-500">
+              <div class="flex items-center gap-2 font-medium">
+                <span>عرض</span>
+                <select id="items-per-page" class="bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs font-bold text-slate-700 outline-none">
+                  <option value="5">5</option>
+                  <option value="10" selected>10</option>
+                  <option value="25">25</option>
+                </select>
+                <span>عناصر لكل صفحة</span>
+              </div>
+              <span class="text-slate-300">|</span>
+              <span id="pagination-summary">عرض 0 إلى 0 من 0 عنصر</span>
+            </div>
+            <div class="flex items-center gap-1.5" id="pagination-controls"></div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ============================================================= -->
+      <!-- TAB 2: STORE FLOOR-PLAN & INTERACTIVE SHELF MAPPER           -->
+      <!-- ============================================================= -->
+      <div id="tab-content-floorplan" class="space-y-6 hidden">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/70 shadow-xs">
+          <div>
+            <h2 class="text-lg font-bold text-[#153f2d] flex items-center gap-2">
+              <span>مخطط المتجر ونقاط التوجيه الذكية</span>
+              <span id="total-pins-badge" class="px-3 py-0.5 text-xs font-bold bg-[#153f2d] text-white rounded-full">0 مناطق محددة</span>
+            </h2>
+            <p class="text-xs text-slate-500 mt-1">قم برفع المخطط المعماري الداخلي للمتجر وتحديد مواقع الممرات والرفوف بدقة بالنقر المباشر.</p>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <button id="btn-load-sample-map" class="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-[#153f2d] bg-[#edf5f0] hover:bg-[#d8ebd0] border border-[#153f2d]/10 rounded-2xl transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              <span>تحميل المخطط الافتراضي</span>
+            </button>
+            <button id="btn-clear-all-pins" class="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-2xl transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              <span>مسح كافة النقاط</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="floorplan-dropzone-container" class="bg-white rounded-3xl border-2 border-dashed border-slate-300 hover:border-[#153f2d] p-10 text-center transition-all cursor-pointer group shadow-xs">
+          <input type="file" id="floorplan-file-input" accept="image/png, image/jpeg, image/svg+xml" class="hidden">
+          <div class="max-w-md mx-auto space-y-3">
+            <div class="w-16 h-16 mx-auto bg-[#edf5f0] text-[#153f2d] rounded-3xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+            </div>
+            <div>
+              <span class="text-sm font-bold text-slate-800">اسحب وأفلت صورة مخطط المتجر هنا، أو </span>
+              <span class="text-sm font-bold text-[#153f2d] underline">تصفح الملفات</span>
+            </div>
+            <p class="text-xs text-slate-400">يدعم المخططات الهندسية بصيغة PNG أو JPG أو SVG (الحجم الأقصى: 10 ميغابايت)</p>
+            <div id="upload-error" class="hidden p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-2xl"></div>
+            <div id="upload-progress-container" class="hidden pt-3 space-y-1.5">
+              <div class="flex justify-between text-xs font-bold text-slate-600">
+                <span>جاري رفع المخطط...</span>
+                <span id="upload-progress-text">0%</span>
+              </div>
+              <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div id="upload-progress-bar" class="h-full bg-[#153f2d] rounded-full transition-all duration-150" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="floorplan-workspace" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-white rounded-3xl border border-slate-200/70 shadow-xs overflow-hidden flex flex-col">
+            <div class="p-4 bg-slate-900 text-white flex items-center justify-between flex-wrap gap-2 border-b border-slate-800">
+              <div class="flex items-center gap-2 text-xs font-bold">
+                <span class="inline-block w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse"></span>
+                <span class="text-slate-300">الوضع التفاعلي نشط:</span>
+                <span class="text-emerald-300 font-mono text-[11px]">انقر في أي مكان على الخريطة لتثبيت موقع</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button id="btn-zoom-out" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" /></svg></button>
+                <span id="zoom-level-label" class="text-xs font-mono px-2.5 py-1 bg-slate-800 rounded-xl text-slate-300 font-bold">100%</span>
+                <button id="btn-zoom-in" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg></button>
+                <button id="btn-zoom-reset" class="px-3 py-1 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition">إعادة ضبط</button>
+                <div class="h-4 w-px bg-slate-700 mx-1"></div>
+                <button id="btn-replace-map" class="px-3 py-1 text-xs font-bold bg-white/10 hover:bg-white/20 text-white rounded-xl transition">تغيير الصورة</button>
+              </div>
+            </div>
+
+            <div id="map-viewport" class="relative overflow-auto p-4 min-h-[460px] max-h-[620px] flex items-center justify-center blueprint-bg select-none">
+              <div id="map-container" class="relative transition-transform duration-150 origin-center cursor-crosshair shadow-2xl rounded-2xl overflow-hidden inline-block max-w-full">
+                <img id="floorplan-image" src="" alt="مخطط المتجر" class="max-w-full h-auto block select-none pointer-events-none rounded-2xl border border-white/20">
+                <div id="pins-layer" class="absolute inset-0 pointer-events-auto"></div>
+                
+                <div id="pin-popover" class="absolute z-30 hidden bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 w-64 transform -translate-x-1/2 -translate-y-full mb-3 pointer-events-auto text-right">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-slate-800">تسمية الرف / الممر</span>
+                    <button id="btn-close-popover" type="button" class="text-slate-400 hover:text-slate-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+                  </div>
+                  <div class="space-y-2.5 text-xs">
+                    <div>
+                      <label class="block font-bold text-slate-600 mb-1">اسم المنطقة أو الممر</label>
+                      <input type="text" id="popover-pin-label" placeholder="مثال: المنطقة أ - المخبوزات" class="w-full px-3 py-2 border border-slate-200 rounded-xl outline-none focus:border-[#153f2d] focus:ring-1 focus:ring-[#153f2d]">
+                    </div>
+                    <div>
+                      <label class="block font-bold text-slate-600 mb-1">لون التمييز</label>
+                      <div class="flex items-center gap-1.5" id="color-picker-group">
+                        <button type="button" data-color="#16a34a" class="w-5 h-5 rounded-full bg-emerald-600 ring-2 ring-emerald-600 ring-offset-1"></button>
+                        <button type="button" data-color="#2563eb" class="w-5 h-5 rounded-full bg-blue-600"></button>
+                        <button type="button" data-color="#d97706" class="w-5 h-5 rounded-full bg-amber-600"></button>
+                        <button type="button" data-color="#dc2626" class="w-5 h-5 rounded-full bg-rose-600"></button>
+                        <button type="button" data-color="#7c3aed" class="w-5 h-5 rounded-full bg-purple-600"></button>
+                      </div>
+                    </div>
+                    <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
+                      <button type="button" id="btn-cancel-popover" class="px-3 py-1 font-bold text-slate-600 hover:bg-slate-100 rounded-xl">إلغاء</button>
+                      <button type="button" id="btn-save-popover-pin" class="px-3.5 py-1 font-bold text-white bg-[#153f2d] hover:bg-[#0f2d20] rounded-xl shadow-xs">حفظ النقطة</button>
                     </div>
                   </div>
-                  <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
-                    <button type="button" id="btn-cancel-popover" class="px-2.5 py-1 font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
-                    <button type="button" id="btn-save-popover-pin" class="px-3 py-1 font-semibold text-white bg-brand-primary hover:bg-brand-dark rounded-lg shadow-sm">Save Pin</button>
-                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between">
-            <span>Coordinates normalized to % offsets.</span>
-            <span id="current-coords-display" class="font-mono text-[11px] text-slate-400">X: — | Y: —</span>
-          </div>
-        </div>
-
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col h-full">
-          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div>
-              <h3 class="text-sm font-bold text-slate-900">Defined Zones & Shelves</h3>
-              <p class="text-xs text-slate-400">Waypoints mapped on this blueprint</p>
+            <div class="px-5 py-3 bg-slate-50 border-t border-slate-200/80 text-xs text-slate-500 flex items-center justify-between font-medium">
+              <span>يتم حفظ الإحداثيات بنسب مئوية نسبية لضمان دقة العرض على جميع الشاشات.</span>
+              <span id="current-coords-display" class="font-mono text-[11px] text-slate-400" dir="ltr">X: — | Y: —</span>
             </div>
-            <span id="sidebar-pins-count" class="px-2 py-0.5 text-xs font-bold bg-slate-100 text-slate-700 rounded-full">0</span>
           </div>
-          <div id="pins-list-container" class="flex-1 overflow-y-auto space-y-2.5 my-4 max-h-[500px] pr-1"></div>
+
+          <div class="bg-white rounded-3xl border border-slate-200/70 shadow-xs p-6 flex flex-col h-full">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div>
+                <h3 class="text-sm font-bold text-slate-900">المناطق والرفوف المحددة</h3>
+                <p class="text-xs text-slate-400">نقاط التوجيه المثبتة على المخطط</p>
+              </div>
+              <span id="sidebar-pins-count" class="px-2.5 py-0.5 text-xs font-bold bg-[#edf5f0] text-[#153f2d] rounded-full">0</span>
+            </div>
+            <div id="pins-list-container" class="flex-1 overflow-y-auto space-y-2.5 my-4 max-h-[500px] pl-1"></div>
+          </div>
         </div>
       </div>
+
     </div>
 
   </div>
@@ -416,39 +490,39 @@
       <!-- Wizard Header -->
       <div class="flex items-center justify-between pb-5 border-b border-slate-100 shrink-0">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl bg-brand-primary/10 text-brand-primary flex items-center justify-center font-bold">
+          <div class="w-10 h-10 rounded-2xl bg-[#edf5f0] text-[#153f2d] flex items-center justify-center font-bold">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
           </div>
           <div>
-            <h3 class="text-lg font-bold text-slate-900 leading-tight">Bulk Catalog Import Wizard</h3>
-            <p class="text-xs text-slate-500 mt-0.5">Import bulk products, prices, and shelf coordinates from CSV / spreadsheet.</p>
+            <h3 class="text-lg font-bold text-slate-900 leading-tight">معالج استيراد الكتالوج الجماعي</h3>
+            <p class="text-xs text-slate-500 mt-0.5">استيراد الأصناف، الأسعار، ومواقع الرفوف من ملفات CSV أو Excel بضغطة واحدة.</p>
           </div>
         </div>
-        <button id="btn-close-wizard" type="button" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition">
+        <button id="btn-close-wizard" type="button" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-2xl transition">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
       </div>
 
       <!-- Stepper Progress Bar -->
       <div class="py-4 border-b border-slate-100 shrink-0">
-        <div class="grid grid-cols-4 gap-2 text-xs">
-          <div id="step-indicator-1" class="step-indicator flex items-center gap-2 p-2 rounded-xl bg-brand-50 text-brand-900 font-bold border border-brand-200">
-            <span class="w-5 h-5 rounded-full bg-brand-primary text-white flex items-center justify-center text-[10px]">1</span>
-            <span class="truncate">1. Upload File</span>
+        <div class="grid grid-cols-4 gap-2 text-xs font-bold">
+          <div id="step-indicator-1" class="step-indicator flex items-center gap-2 p-2 rounded-2xl bg-[#edf5f0] text-[#153f2d] border border-[#153f2d]/20">
+            <span class="w-5 h-5 rounded-full bg-[#153f2d] text-white flex items-center justify-center text-[10px]">1</span>
+            <span class="truncate">1. رفع الملف</span>
           </div>
-          <div id="step-indicator-2" class="step-indicator flex items-center gap-2 p-2 rounded-xl bg-slate-50 text-slate-400 font-medium border border-slate-200">
+          <div id="step-indicator-2" class="step-indicator flex items-center gap-2 p-2 rounded-2xl bg-slate-50 text-slate-400 border border-slate-200">
             <span class="w-5 h-5 rounded-full bg-slate-300 text-slate-700 flex items-center justify-center text-[10px]">2</span>
-            <span class="truncate">2. Map Columns</span>
+            <span class="truncate">2. مطابقة الأعمدة</span>
           </div>
-          <div id="step-indicator-3" class="step-indicator flex items-center gap-2 p-2 rounded-xl bg-slate-50 text-slate-400 font-medium border border-slate-200">
+          <div id="step-indicator-3" class="step-indicator flex items-center gap-2 p-2 rounded-2xl bg-slate-50 text-slate-400 border border-slate-200">
             <span class="w-5 h-5 rounded-full bg-slate-300 text-slate-700 flex items-center justify-center text-[10px]">3</span>
-            <span class="truncate">3. Validate</span>
+            <span class="truncate">3. التحقق والتدقيق</span>
           </div>
-          <div id="step-indicator-4" class="step-indicator flex items-center gap-2 p-2 rounded-xl bg-slate-50 text-slate-400 font-medium border border-slate-200">
+          <div id="step-indicator-4" class="step-indicator flex items-center gap-2 p-2 rounded-2xl bg-slate-50 text-slate-400 border border-slate-200">
             <span class="w-5 h-5 rounded-full bg-slate-300 text-slate-700 flex items-center justify-center text-[10px]">4</span>
-            <span class="truncate">4. Commit</span>
+            <span class="truncate">4. الاعتماد النهائي</span>
           </div>
         </div>
       </div>
@@ -459,32 +533,32 @@
         <!-- STEP 1: FILE DROPZONE -->
         <div id="wizard-step-1" class="wizard-step-content space-y-4">
           <div class="text-center max-w-md mx-auto space-y-1">
-            <h4 class="text-sm font-bold text-slate-900">Upload Product Inventory File</h4>
-            <p class="text-xs text-slate-500">Supported formats: standard .csv and .xlsx spreadsheet files up to 5MB.</p>
+            <h4 class="text-sm font-bold text-slate-900">رفع ملف الأصناف والمخزون</h4>
+            <p class="text-xs text-slate-500">الصيغ المدعومة: ملفات CSV أو جداول Excel (XLSX) بحد أقصى 5 ميغابايت.</p>
           </div>
 
-          <div id="csv-dropzone" class="border-2 border-dashed border-slate-300 hover:border-brand-primary bg-slate-50 hover:bg-brand-50/30 p-8 rounded-2xl text-center cursor-pointer transition group">
+          <div id="csv-dropzone" class="border-2 border-dashed border-slate-300 hover:border-[#153f2d] bg-slate-50 hover:bg-[#edf5f0]/50 p-8 rounded-3xl text-center cursor-pointer transition group shadow-2xs">
             <input type="file" id="csv-file-input" accept=".csv, .xlsx, text/csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="hidden">
-            <div class="w-12 h-12 mx-auto bg-brand-100 text-brand-primary rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+            <div class="w-12 h-12 mx-auto bg-[#edf5f0] text-[#153f2d] rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
             <div class="text-sm font-bold text-slate-800">
-              Drop CSV or spreadsheet here, or <span class="text-brand-primary underline">browse</span>
+              اسحب ملف الـ CSV هنا، أو <span class="text-[#153f2d] underline">تصفح من جهازك</span>
             </div>
-            <p class="text-xs text-slate-400 mt-1">UTF-8 encoded comma-separated files recommended</p>
+            <p class="text-xs text-slate-400 mt-1">يُفضل استخدام ترميز UTF-8 للملفات العربية</p>
           </div>
 
-          <div id="csv-upload-error" class="hidden p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium rounded-xl"></div>
+          <div id="csv-upload-error" class="hidden p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-2xl"></div>
 
           <div class="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div class="flex items-center gap-2.5 text-xs text-amber-900">
+            <div class="flex items-center gap-2.5 text-xs text-amber-900 font-medium">
               <svg class="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              <span>Want to test immediately? Load our simulated dataset with 15 products (including 2 deliberate errors to verify error handling).</span>
+              <span>هل تريد التجربة المباشرة؟ حمّل مجموعة البيانات النموذجية (15 عنصراً تحتوي على حالتي خطأ للتحقق من دقة التدقيق).</span>
             </div>
-            <button type="button" id="btn-load-sample-csv" class="whitespace-nowrap px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition">
-              Load Sample Data (15 Items)
+            <button type="button" id="btn-load-sample-csv" class="whitespace-nowrap px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-xs transition">
+              تحميل بيانات نموذجية (15 صنف)
             </button>
           </div>
         </div>
@@ -493,52 +567,52 @@
         <div id="wizard-step-2" class="wizard-step-content space-y-4 hidden">
           <div class="flex items-center justify-between">
             <div>
-              <h4 class="text-sm font-bold text-slate-900">Smart Column Header Mapping</h4>
-              <p class="text-xs text-slate-500">Map fields from your uploaded file to DAWER catalog attributes.</p>
+              <h4 class="text-sm font-bold text-slate-900">المطابقة الذكية للأعمدة والحقول</h4>
+              <p class="text-xs text-slate-500">طابق أعمدة الملف المرفوع مع حقول كتالوج دوّر الأساسية.</p>
             </div>
-            <span class="text-xs px-2.5 py-1 bg-brand-50 text-brand-900 font-bold rounded-lg border border-brand-200" id="detected-columns-count">0 Headers Detected</span>
+            <span class="text-xs px-3 py-1 bg-[#edf5f0] text-[#153f2d] font-bold rounded-xl border border-[#153f2d]/10" id="detected-columns-count">0 حقول تم التعرف عليها</span>
           </div>
 
-          <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="bg-slate-50 p-5 rounded-3xl border border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Product Name <span class="text-rose-500">*</span></label>
-              <select id="map-name" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-brand-primary"></select>
+              <label class="block text-xs font-bold text-slate-700 mb-1">اسم المنتج <span class="text-rose-500">*</span></label>
+              <select id="map-name" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d]"></select>
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">SKU / Barcode <span class="text-rose-500">*</span></label>
-              <select id="map-sku" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-brand-primary"></select>
+              <label class="block text-xs font-bold text-slate-700 mb-1">رمز الباركود / SKU <span class="text-rose-500">*</span></label>
+              <select id="map-sku" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d]"></select>
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Price (USD) <span class="text-rose-500">*</span></label>
-              <select id="map-price" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-brand-primary"></select>
+              <label class="block text-xs font-bold text-slate-700 mb-1">السعر <span class="text-rose-500">*</span></label>
+              <select id="map-price" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d]"></select>
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Category</label>
-              <select id="map-category" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-brand-primary"></select>
+              <label class="block text-xs font-bold text-slate-700 mb-1">التصنيف</label>
+              <select id="map-category" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d]"></select>
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Store Zone</label>
-              <select id="map-zone" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-brand-primary"></select>
+              <label class="block text-xs font-bold text-slate-700 mb-1">المنطقة (Zone)</label>
+              <select id="map-zone" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d]"></select>
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Aisle Location</label>
-              <select id="map-aisle" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-brand-primary"></select>
+              <label class="block text-xs font-bold text-slate-700 mb-1">الممر والرف (Aisle)</label>
+              <select id="map-aisle" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d]"></select>
             </div>
           </div>
 
-          <div class="border border-slate-200 rounded-2xl overflow-hidden">
-            <div class="p-3 bg-slate-100/80 flex items-center justify-between text-xs font-bold text-slate-700">
-              <span>Preview First 3 Rows with Current Mapping:</span>
+          <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+            <div class="p-3 bg-[#edf5f0] flex items-center justify-between text-xs font-bold text-[#153f2d]">
+              <span>معاينة حية لأول 3 صفوف مع التخصيص الحالي:</span>
             </div>
             <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs">
-                <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+              <table class="w-full text-right text-xs">
+                <thead class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
                   <tr>
-                    <th class="px-4 py-2">Name</th>
-                    <th class="px-4 py-2">SKU</th>
-                    <th class="px-4 py-2">Price</th>
-                    <th class="px-4 py-2">Category</th>
-                    <th class="px-4 py-2">Location</th>
+                    <th class="px-4 py-2.5">اسم الصنف</th>
+                    <th class="px-4 py-2.5">الرمز</th>
+                    <th class="px-4 py-2.5">السعر</th>
+                    <th class="px-4 py-2.5">التصنيف</th>
+                    <th class="px-4 py-2.5">الموقع</th>
                   </tr>
                 </thead>
                 <tbody id="mapping-preview-tbody" class="divide-y divide-slate-100"></tbody>
@@ -550,43 +624,43 @@
         <!-- STEP 3: VALIDATION SUMMARY -->
         <div id="wizard-step-3" class="wizard-step-content space-y-4 hidden">
           <div>
-            <h4 class="text-sm font-bold text-slate-900">Pre-Import Validation & Diagnostics</h4>
-            <p class="text-xs text-slate-500">Checking data formats, positive pricing, and duplicate SKU conflicts.</p>
+            <h4 class="text-sm font-bold text-slate-900">التدقيق المسبق وفحص البيانات</h4>
+            <p class="text-xs text-slate-500">التحقق من صحة الأسعار الإيجابية، وسلامة الرموز، وعدم تكرار الباركود.</p>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl">
-              <div class="text-xs font-bold text-slate-400 uppercase">Total Rows Scanned</div>
+              <div class="text-xs font-bold text-slate-400 uppercase">إجمالي الصفوف المفحوصة</div>
               <div class="text-2xl font-extrabold text-slate-900 mt-1" id="metric-total-rows">0</div>
             </div>
             <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl">
-              <div class="text-xs font-bold text-emerald-700 uppercase">Ready To Import</div>
+              <div class="text-xs font-bold text-emerald-800 uppercase">جاهزة للاستيراد</div>
               <div class="text-2xl font-extrabold text-emerald-700 mt-1" id="metric-valid-rows">0</div>
             </div>
             <div class="bg-rose-50 border border-rose-200 p-4 rounded-2xl">
-              <div class="text-xs font-bold text-rose-700 uppercase">Rows with Errors</div>
+              <div class="text-xs font-bold text-rose-800 uppercase">صفوف تحتوي على أخطاء</div>
               <div class="text-2xl font-extrabold text-rose-700 mt-1" id="metric-error-rows">0</div>
             </div>
           </div>
 
-          <div id="error-details-container" class="border border-rose-200 rounded-2xl overflow-hidden bg-rose-50/30">
-            <div class="p-3 bg-rose-100/80 flex items-center justify-between text-xs font-bold text-rose-900">
+          <div id="error-details-container" class="border border-rose-200 rounded-2xl overflow-hidden bg-rose-50/40">
+            <div class="p-3 bg-rose-100/90 flex items-center justify-between text-xs font-bold text-rose-900">
               <span class="flex items-center gap-1.5">
                 <svg class="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                <span>Identified Errors (These rows will be skipped):</span>
+                <span>الصفوف التي تحتوي على مشاكل (سيتم استبعادها):</span>
               </span>
-              <button type="button" id="btn-download-error-csv" class="px-3 py-1 bg-white hover:bg-rose-50 text-rose-700 font-bold border border-rose-300 rounded-lg shadow-sm transition">
-                Download Error Rows (.csv)
+              <button type="button" id="btn-download-error-csv" class="px-3.5 py-1.5 bg-white hover:bg-rose-50 text-rose-700 font-bold border border-rose-300 rounded-xl shadow-2xs transition">
+                تحميل تقرير الأخطاء (.csv)
               </button>
             </div>
             <div class="max-h-48 overflow-y-auto">
-              <table class="w-full text-left text-xs">
-                <thead class="bg-rose-50 text-rose-700 font-semibold border-b border-rose-200">
+              <table class="w-full text-right text-xs">
+                <thead class="bg-rose-50 text-rose-800 font-bold border-b border-rose-200">
                   <tr>
-                    <th class="px-4 py-2">Row #</th>
-                    <th class="px-4 py-2">Product Name</th>
-                    <th class="px-4 py-2">SKU</th>
-                    <th class="px-4 py-2">Error Reason</th>
+                    <th class="px-4 py-2">رقم الصف</th>
+                    <th class="px-4 py-2">اسم الصنف</th>
+                    <th class="px-4 py-2">الرمز</th>
+                    <th class="px-4 py-2">سبب الخطأ</th>
                   </tr>
                 </thead>
                 <tbody id="error-details-tbody" class="divide-y divide-rose-100 text-rose-900"></tbody>
@@ -597,29 +671,29 @@
 
         <!-- STEP 4: CONFIRM & COMMIT -->
         <div id="wizard-step-4" class="wizard-step-content space-y-4 hidden text-center py-4">
-          <div class="w-16 h-16 mx-auto bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center">
+          <div class="w-16 h-16 mx-auto bg-emerald-100 text-emerald-700 rounded-3xl flex items-center justify-center shadow-xs">
             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
           <div class="space-y-1">
-            <h4 class="text-lg font-extrabold text-slate-900">Ready to Commit Bulk Import</h4>
+            <h4 class="text-lg font-extrabold text-slate-900">جاهز لاعتماد الاستيراد الجماعي</h4>
             <p class="text-xs text-slate-500 max-w-sm mx-auto">
-              You are about to add <span id="final-import-count" class="font-bold text-slate-900">0</span> valid products directly to your live store catalog.
+              سيتم إضافة عدد <span id="final-import-count" class="font-bold text-[#153f2d] text-sm">0</span> صنفاً سليماً إلى كتالوج متجرك فوراً.
             </p>
           </div>
-          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 max-w-md mx-auto text-left text-xs space-y-2">
-            <div class="flex justify-between text-slate-600">
-              <span>Catalog Target:</span>
-              <span class="font-bold text-slate-900">DAWER Store #104</span>
+          <div class="p-4 bg-[#edf5f0] rounded-2xl border border-[#153f2d]/10 max-w-md mx-auto text-right text-xs space-y-2 font-medium">
+            <div class="flex justify-between text-slate-700">
+              <span>المتجر المستهدف:</span>
+              <span class="font-bold text-[#153f2d]">سوبرماركت المدينة (#104)</span>
             </div>
-            <div class="flex justify-between text-slate-600">
-              <span>Default Status:</span>
-              <span class="font-bold text-emerald-600">Published</span>
+            <div class="flex justify-between text-slate-700">
+              <span>حالة النشر الافتراضية:</span>
+              <span class="font-bold text-emerald-700">منشور ومتاح</span>
             </div>
-            <div class="flex justify-between text-slate-600">
-              <span>Immediate Stock Availability:</span>
-              <span class="font-bold text-brand-primary">In Stock</span>
+            <div class="flex justify-between text-slate-700">
+              <span>حالة التوفر الفوري:</span>
+              <span class="font-bold text-[#153f2d]">متوفر في المخزون</span>
             </div>
           </div>
         </div>
@@ -628,18 +702,18 @@
 
       <!-- Wizard Footer Action Buttons -->
       <div class="flex items-center justify-between pt-4 border-t border-slate-100 shrink-0">
-        <button type="button" id="btn-wizard-back" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition hidden">
-          ← Back
+        <button type="button" id="btn-wizard-back" class="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-2xl transition hidden">
+          → السابق
         </button>
-        <div class="flex items-center gap-2 ml-auto">
-          <button type="button" id="btn-wizard-cancel" class="px-4 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 rounded-xl transition">
-            Cancel
+        <div class="flex items-center gap-2 mr-auto">
+          <button type="button" id="btn-wizard-cancel" class="px-4 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-2xl transition">
+            إلغاء
           </button>
-          <button type="button" id="btn-wizard-next" class="px-5 py-2 text-xs font-bold text-white bg-brand-primary hover:bg-brand-dark rounded-xl shadow-sm transition">
-            Continue to Mapping →
+          <button type="button" id="btn-wizard-next" class="px-6 py-2.5 text-xs font-bold text-white bg-[#153f2d] hover:bg-[#0f2d20] rounded-2xl shadow-sm transition">
+            المتابعة للمطابقة ←
           </button>
-          <button type="button" id="btn-wizard-commit" class="px-6 py-2 text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md transition hidden">
-            Commit & Import Products
+          <button type="button" id="btn-wizard-commit" class="px-6 py-2.5 text-xs font-extrabold text-white bg-emerald-700 hover:bg-emerald-800 rounded-2xl shadow-md transition hidden">
+            اعتماد واستيراد الأصناف
           </button>
         </div>
       </div>
@@ -650,18 +724,18 @@
   <!-- Product Modal (Add / Edit) -->
   <div id="product-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto hidden" aria-modal="true" role="dialog">
     <div id="modal-backdrop" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm opacity-0 modal-backdrop"></div>
-    <div id="modal-panel" class="relative bg-white rounded-2xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 transform scale-95 opacity-0 modal-panel my-8 z-10">
+    <div id="modal-panel" class="relative bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 transform scale-95 opacity-0 modal-panel my-8 z-10">
       <div class="flex items-center justify-between pb-5 border-b border-slate-100">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-brand-primary/10 text-brand-primary flex items-center justify-center">
+          <div class="w-10 h-10 rounded-2xl bg-[#edf5f0] text-[#153f2d] flex items-center justify-center">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
           <div>
-            <h3 id="modal-title" class="text-lg font-bold text-slate-900 leading-tight">Add New Product</h3>
-            <p class="text-xs text-slate-500 mt-0.5">Configure item specs and exact shelf coordinates.</p>
+            <h3 id="modal-title" class="text-lg font-bold text-slate-900 leading-tight">إضافة صنف جديد</h3>
+            <p class="text-xs text-slate-500 mt-0.5">تحديد مواصفات المنتج وإحداثيات الرف والممر بدقة.</p>
           </div>
         </div>
-        <button id="btn-close-modal" type="button" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition">
+        <button id="btn-close-modal" type="button" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-2xl transition">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
       </div>
@@ -669,91 +743,93 @@
       <form id="product-form" class="mt-5 space-y-5" novalidate>
         <input type="hidden" id="form-product-id">
         <div class="space-y-4">
-          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">1. General Information</h4>
+          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">1. المعلومات الأساسية</h4>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="sm:col-span-2">
-              <label for="form-name" class="block text-xs font-bold text-slate-700 mb-1.5">Product Name <span class="text-rose-500">*</span></label>
-              <input type="text" id="form-name" placeholder="e.g., Organic Hass Avocados" class="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 focus:border-brand-primary rounded-xl text-sm outline-none">
+              <label for="form-name" class="block text-xs font-bold text-slate-700 mb-1.5">اسم المنتج <span class="text-rose-500">*</span></label>
+              <input type="text" id="form-name" placeholder="مثال: أفوكادو هاس عضوي (عبوة 4 حبات)" class="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 focus:border-[#153f2d] focus:ring-1 focus:ring-[#153f2d] rounded-2xl text-sm outline-none">
             </div>
             <div>
-              <label for="form-sku" class="block text-xs font-bold text-slate-700 mb-1.5">SKU / Barcode <span class="text-rose-500">*</span></label>
-              <input type="text" id="form-sku" placeholder="e.g., GRO-AVO-001" class="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 focus:border-brand-primary rounded-xl text-sm font-mono uppercase outline-none">
+              <label for="form-sku" class="block text-xs font-bold text-slate-700 mb-1.5">الباركود / SKU <span class="text-rose-500">*</span></label>
+              <input type="text" id="form-sku" placeholder="GRO-AVO-001" class="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 focus:border-[#153f2d] focus:ring-1 focus:ring-[#153f2d] rounded-2xl text-sm font-mono uppercase outline-none" dir="ltr">
             </div>
             <div>
-              <label for="form-category" class="block text-xs font-bold text-slate-700 mb-1.5">Category <span class="text-rose-500">*</span></label>
-              <select id="form-category" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none">
-                <option value="">Select category...</option>
-                <option value="Dairy & Eggs">Dairy & Eggs</option>
-                <option value="Fresh Produce">Fresh Produce</option>
-                <option value="Bakery">Bakery</option>
-                <option value="Beverages">Beverages</option>
-                <option value="Pantry & Oils">Pantry & Oils</option>
-                <option value="Snacks & Confectionery">Snacks & Confectionery</option>
-                <option value="Meat & Seafood">Meat & Seafood</option>
+              <label for="form-category" class="block text-xs font-bold text-slate-700 mb-1.5">التصنيف <span class="text-rose-500">*</span></label>
+              <select id="form-category" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:border-[#153f2d] font-bold text-slate-700">
+                <option value="">اختر التصنيف...</option>
+                <option value="منتجات طازجة">منتجات طازجة</option>
+                <option value="ألبان وأجبان">ألبان وأجبان</option>
+                <option value="مخبوزات">مخبوزات</option>
+                <option value="مشروبات">مشروبات</option>
+                <option value="زيوت ومؤونة">زيوت ومؤونة</option>
+                <option value="تسالي وحلويات">تسالي وحلويات</option>
+                <option value="لحوم ومأكولات بحرية">لحوم ومأكولات بحرية</option>
               </select>
             </div>
             <div>
-              <label for="form-price" class="block text-xs font-bold text-slate-700 mb-1.5">Price ($) <span class="text-rose-500">*</span></label>
-              <input type="number" step="0.01" min="0.01" id="form-price" placeholder="0.00" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none">
+              <label for="form-price" class="block text-xs font-bold text-slate-700 mb-1.5">السعر (ر.س / د.أ) <span class="text-rose-500">*</span></label>
+              <input type="number" step="0.01" min="0.01" id="form-price" placeholder="0.00" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:border-[#153f2d]">
             </div>
             <div>
-              <label for="form-status" class="block text-xs font-bold text-slate-700 mb-1.5">Publishing Status</label>
-              <select id="form-status" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none">
-                <option value="Published">Published</option>
-                <option value="Draft">Draft</option>
-                <option value="Inactive">Inactive</option>
+              <label for="form-status" class="block text-xs font-bold text-slate-700 mb-1.5">حالة النشر</label>
+              <select id="form-status" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:border-[#153f2d] font-bold text-slate-700">
+                <option value="Published">منشور ومتاح</option>
+                <option value="Draft">مسودة داخلية</option>
+                <option value="Inactive">غير نشط</option>
               </select>
             </div>
           </div>
         </div>
 
         <div class="space-y-3 pt-2">
-          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">2. Store Shelf Coordinates</h4>
-          <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-4">
+          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">2. موقع الرف والممر الداخلي</h4>
+          <div class="bg-slate-50 p-5 rounded-3xl border border-slate-200/80 space-y-4">
             <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div>
-                <label for="loc-zone" class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Zone *</label>
-                <select id="loc-zone" class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none"><option value="">Select Zone</option></select>
+                <label for="loc-zone" class="block text-[11px] font-bold text-slate-600 mb-1">المنطقة (Zone) *</label>
+                <select id="loc-zone" class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#153f2d]"><option value="">اختر المنطقة</option></select>
               </div>
               <div>
-                <label for="loc-aisle" class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Aisle *</label>
-                <select id="loc-aisle" disabled class="w-full px-2.5 py-2 bg-white disabled:bg-slate-100 border border-slate-200 rounded-xl text-xs outline-none"><option value="">Select Aisle</option></select>
+                <label for="loc-aisle" class="block text-[11px] font-bold text-slate-600 mb-1">الممر (Aisle) *</label>
+                <select id="loc-aisle" disabled class="w-full px-2.5 py-2 bg-white disabled:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#153f2d]"><option value="">اختر الممر</option></select>
               </div>
               <div>
-                <label for="loc-rack" class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Rack *</label>
-                <select id="loc-rack" disabled class="w-full px-2.5 py-2 bg-white disabled:bg-slate-100 border border-slate-200 rounded-xl text-xs outline-none"><option value="">Select Rack</option></select>
+                <label for="loc-rack" class="block text-[11px] font-bold text-slate-600 mb-1">الوحدة (Rack) *</label>
+                <select id="loc-rack" disabled class="w-full px-2.5 py-2 bg-white disabled:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#153f2d]"><option value="">اختر الوحدة</option></select>
               </div>
               <div>
-                <label for="loc-shelf" class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Shelf Level *</label>
-                <select id="loc-shelf" disabled class="w-full px-2.5 py-2 bg-white disabled:bg-slate-100 border border-slate-200 rounded-xl text-xs outline-none"><option value="">Select Shelf</option></select>
+                <label for="loc-shelf" class="block text-[11px] font-bold text-slate-600 mb-1">مستوى الرف *</label>
+                <select id="loc-shelf" disabled class="w-full px-2.5 py-2 bg-white disabled:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#153f2d]"><option value="">اختر الرف</option></select>
               </div>
             </div>
-            <div id="location-preview-badge" class="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-400">
-              <span>No location selected</span>
+            <div id="location-preview-badge" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#edf5f0] text-[#153f2d] border border-[#153f2d]/15 rounded-xl text-xs font-bold">
+              <span>لم يتم تحديد موقع الرف</span>
             </div>
           </div>
         </div>
 
-        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
+        <div class="p-4 bg-[#edf5f0] rounded-2xl border border-[#153f2d]/15 flex items-center justify-between">
           <div>
-            <div class="text-xs font-bold text-slate-900">In-Store Stock Availability</div>
-            <div class="text-[11px] text-slate-500">Toggle whether this product is immediately available for fulfillment.</div>
+            <div class="text-xs font-bold text-[#153f2d]">التوفر الفوري بالمخزون</div>
+            <div class="text-[11px] text-slate-600">تفعيل إمكانية طلب الصنف فوراً من قبل المتسوقين.</div>
           </div>
           <label class="relative inline-flex items-center cursor-pointer select-none">
             <input type="checkbox" id="form-available" class="sr-only peer" checked>
-            <div class="w-11 h-6 bg-slate-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+            <div class="w-11 h-6 bg-slate-300 rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#153f2d]"></div>
           </label>
         </div>
 
         <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-          <button type="button" id="btn-cancel-modal" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
-          <button type="submit" class="px-5 py-2 text-sm font-semibold text-white bg-brand-primary hover:bg-brand-dark rounded-xl shadow-sm">Save Product</button>
+          <button type="button" id="btn-cancel-modal" class="px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-2xl transition">إلغاء</button>
+          <button type="submit" class="px-6 py-2.5 text-xs font-bold text-white bg-[#153f2d] hover:bg-[#0f2d20] rounded-2xl shadow-sm transition">حفظ التغييرات</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- JAVASCRIPT APPLICATION LOGIC -->
+  <!-- ============================================================= -->
+  <!-- JAVASCRIPT APPLICATION ENGINE                                 -->
+  <!-- ============================================================= -->
   <script>
     (function () {
       'use strict';
@@ -764,28 +840,28 @@
             <rect width="900" height="560" fill="#0f172a"/>
             <rect x="20" y="20" width="860" height="520" fill="#1e293b" stroke="#38bdf8" stroke-width="4" rx="10"/>
             <rect x="400" y="534" width="100" height="12" fill="#22c55e" rx="4"/>
-            <text x="450" y="525" fill="#4ade80" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">MAIN ENTRANCE / CHECKOUT</text>
+            <text x="450" y="525" fill="#4ade80" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">المدخل الرئيسي / كاونتر الدفع</text>
             <g>
               <rect x="60" y="60" width="220" height="160" fill="#153f2d" stroke="#22c55e" stroke-width="2" stroke-dasharray="6,4" rx="8"/>
-              <text x="170" y="90" fill="#86efac" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">ZONE A - BAKERY & FRESH</text>
+              <text x="170" y="90" fill="#86efac" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">المنطقة أ - المخبوزات والطازج</text>
               <rect x="80" y="110" width="40" height="90" fill="#334155" rx="4"/>
-              <text x="100" y="160" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">Aisle 01</text>
+              <text x="100" y="160" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">ممر 01</text>
               <rect x="150" y="110" width="40" height="90" fill="#334155" rx="4"/>
-              <text x="170" y="160" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">Aisle 02</text>
+              <text x="170" y="160" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">ممر 02</text>
             </g>
             <g>
               <rect x="340" y="60" width="220" height="160" fill="#1e3a5f" stroke="#38bdf8" stroke-width="2" stroke-dasharray="6,4" rx="8"/>
-              <text x="450" y="90" fill="#7dd3fc" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">ZONE B - DAIRY & EGGS</text>
+              <text x="450" y="90" fill="#7dd3fc" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">المنطقة ب - الألبان والمبردات</text>
               <rect x="360" y="110" width="40" height="90" fill="#334155" rx="4"/>
-              <text x="380" y="160" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">Aisle 03</text>
+              <text x="380" y="160" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">ممر 03</text>
               <rect x="430" y="110" width="40" height="90" fill="#334155" rx="4"/>
-              <text x="450" y="160" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">Aisle 04</text>
+              <text x="450" y="160" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">ممر 04</text>
             </g>
             <g>
               <rect x="620" y="60" width="220" height="160" fill="#451a03" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6,4" rx="8"/>
-              <text x="730" y="90" fill="#fcd34d" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">ZONE C - SNACKS & DRINKS</text>
+              <text x="730" y="90" fill="#fcd34d" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">المنطقة ج - التسالي والمشروبات</text>
               <rect x="640" y="110" width="40" height="90" fill="#334155" rx="4"/>
-              <text x="660" y="160" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">Aisle 07</text>
+              <text x="660" y="160" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">ممر 07</text>
             </g>
           </svg>
         `;
@@ -793,31 +869,31 @@
       }
 
       const SAMPLE_CSV_RAW = `Item Name,Product SKU,Unit Price,Department,Store Zone,Aisle Name
-Organic Bananas (1kg),GRO-BAN-001,1.99,Fresh Produce,Zone A,Aisle 01
-Almarai Full Fat Greek Yogurt (500g),GRO-DAI-101,3.25,Dairy & Eggs,Zone B,Aisle 03
-Freshly Baked Baguette,GRO-BAK-202,1.50,Bakery,Zone A,Aisle 01
-Pure Sparkling Water (6x330ml),GRO-BEV-303,4.80,Beverages,Zone C,Aisle 07
-Spiced Tomato Paste (400g),GRO-PAN-404,1.10,Pantry & Oils,Zone A,Aisle 02
-Atlantic Salmon Steaks (300g),GRO-SEA-505,12.90,Meat & Seafood,Zone D,Chiller R1
-Natural Almond Butter (350g),GRO-SNK-606,6.75,Snacks & Confectionery,Zone C,Aisle 07
-Organic Whole Milk (1L),GRO-DAI-102,1.85,Dairy & Eggs,Zone B,Aisle 03
-Cheddar Cheese Block (200g),GRO-DAI-103,4.20,Dairy & Eggs,Zone B,Aisle 04
-Crunchy Potato Crisps (150g),GRO-SNK-607,2.10,Snacks & Confectionery,Zone C,Aisle 07
-Extra Fine Semolina Flour (1kg),GRO-BAK-203,2.40,Bakery,Zone A,Aisle 02
-Premium Basmati Rice (5kg),GRO-PAN-405,14.50,Pantry & Oils,Zone A,Aisle 02
-Fresh Strawberries Box (250g),GRO-FRU-701,3.90,Fresh Produce,Zone A,Aisle 01
-,GRO-ERR-801,5.00,Pantry & Oils,Zone A,Aisle 02
-Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
+أفوكادو هاس عضوي,GRO-BAN-001,1.99,منتجات طازجة,المنطقة أ,ممر 01
+زبادي يوناني كامل الدسم 500غ,GRO-DAI-101,3.25,ألبان وأجبان,المنطقة ب,ممر 03
+خبز باغيت فرنسي طازج,GRO-BAK-202,1.50,مخبوزات,المنطقة أ,ممر 01
+مياه فوارة طبيعية 6 عبوات,GRO-BEV-303,4.80,مشروبات,المنطقة ج,ممر 07
+معجون طماطم عضوي 400غ,GRO-PAN-404,1.10,زيوت ومؤونة,المنطقة أ,ممر 02
+ستيك سلمون نرويجي طازج,GRO-SEA-505,12.90,لحوم ومأكولات بحرية,المنطقة د,ثلاجة 1
+زبدة لوز طبيعية 350غ,GRO-SNK-606,6.75,تسالي وحلويات,المنطقة ج,ممر 07
+حليب طازج كامل الدسم 2 لتر,GRO-DAI-102,1.85,ألبان وأجبان,المنطقة ب,ممر 03
+جبنة شيدر قالب 200غ,GRO-DAI-103,4.20,ألبان وأجبان,المنطقة ب,ممر 04
+رقائق بطاطس مقرمشة 150غ,GRO-SNK-607,2.10,تسالي وحلويات,المنطقة ج,ممر 07
+طحين سميد فاخر 1 كغ,GRO-BAK-203,2.40,مخبوزات,المنطقة أ,ممر 02
+أرز بسمتي درجة أولى 5 كغ,GRO-PAN-405,14.50,زيوت ومؤونة,المنطقة أ,ممر 02
+فراولة طازجة عبوة 250غ,GRO-FRU-701,3.90,منتجات طازجة,المنطقة أ,ممر 01
+,GRO-ERR-801,5.00,زيوت ومؤونة,المنطقة أ,ممر 02
+صنف بسعر غير صالح,GRO-ERR-802,-3.50,تسالي وحلويات,المنطقة ج,ممر 07`;
 
       const state = {
         currentTab: 'catalog',
         products: [
-          { id: 'prod-001', name: 'Organic Hass Avocados (4-Pack)', sku: 'GRO-AVO-001', category: 'Fresh Produce', price: 4.99, isAvailable: true, location: { zone: 'Zone A', aisle: 'Aisle 02', rack: 'R1', shelf: 'S2 - Eye Level' }, status: 'Published', updatedAt: '2026-09-21 10:30' },
-          { id: 'prod-002', name: 'Almarai Full Cream Fresh Milk (2L)', sku: 'GRO-DAI-042', category: 'Dairy & Eggs', price: 2.75, isAvailable: true, location: { zone: 'Zone B', aisle: 'Aisle 04', rack: 'R1', shelf: 'S1 - Top Chiller' }, status: 'Published', updatedAt: '2026-09-22 08:15' },
-          { id: 'prod-003', name: 'Artisan Sourdough Loaf (500g)', sku: 'GRO-BAK-109', category: 'Bakery', price: 3.50, isAvailable: false, location: { zone: 'Zone A', aisle: 'Aisle 01', rack: 'R2', shelf: 'S2 - Eye Level' }, status: 'Draft', updatedAt: '2026-09-20 16:45' },
-          { id: 'prod-004', name: 'Extra Virgin Greek Olive Oil (750ml)', sku: 'GRO-PAN-881', category: 'Pantry & Oils', price: 11.20, isAvailable: true, location: { zone: 'Zone A', aisle: 'Aisle 02', rack: 'R2', shelf: 'S3 - Middle Shelf' }, status: 'Published', updatedAt: '2026-09-19 14:20' },
-          { id: 'prod-005', name: 'Premium Cold Brew Coffee (330ml)', sku: 'GRO-BEV-312', category: 'Beverages', price: 3.85, isAvailable: true, location: { zone: 'Zone C', aisle: 'Aisle 07', rack: 'R2', shelf: 'S2 - Eye Level' }, status: 'Published', updatedAt: '2026-09-22 09:00' },
-          { id: 'prod-006', name: 'Atlantic Salmon Fillet (400g)', sku: 'GRO-SEA-554', category: 'Meat & Seafood', price: 14.50, isAvailable: false, location: { zone: 'Zone D', aisle: 'Chiller R1', rack: 'R1', shelf: 'S2 - Main Shelf' }, status: 'Inactive', updatedAt: '2026-09-18 11:10' }
+          { id: 'prod-001', name: 'أفوكادو هاس عضوي (عبوة 4 حبات)', sku: 'GRO-AVO-001', category: 'منتجات طازجة', price: 4.99, isAvailable: true, location: { zone: 'المنطقة أ', aisle: 'ممر 02', rack: 'R1', shelf: 'رف 2 - مستوى العين' }, status: 'Published', updatedAt: '2026-09-21 10:30' },
+          { id: 'prod-002', name: 'حليب المراعي طازج كامل الدسم (2 لتر)', sku: 'GRO-DAI-042', category: 'ألبان وأجبان', price: 2.75, isAvailable: true, location: { zone: 'المنطقة ب', aisle: 'ممر 04', rack: 'R1', shelf: 'رف 1 - علوي' }, status: 'Published', updatedAt: '2026-09-22 08:15' },
+          { id: 'prod-003', name: 'رغيف ساوردو حرفي بالخميرة الطبيعية', sku: 'GRO-BAK-109', category: 'مخبوزات', price: 3.50, isAvailable: false, location: { zone: 'المنطقة أ', aisle: 'ممر 01', rack: 'R2', shelf: 'رف 2 - مستوى العين' }, status: 'Draft', updatedAt: '2026-09-20 16:45' },
+          { id: 'prod-004', name: 'زيت زيتون بكر ممتاز يوناني (750 مل)', sku: 'GRO-PAN-881', category: 'زيوت ومؤونة', price: 11.20, isAvailable: true, location: { zone: 'المنطقة أ', aisle: 'ممر 02', rack: 'R2', shelf: 'رف 3 - أوسط' }, status: 'Published', updatedAt: '2026-09-19 14:20' },
+          { id: 'prod-005', name: 'قهوة كولد برو بريميوم منقوعة (330 مل)', sku: 'GRO-BEV-312', category: 'مشروبات', price: 3.85, isAvailable: true, location: { zone: 'المنطقة ج', aisle: 'ممر 07', rack: 'R2', shelf: 'رف 2 - مستوى العين' }, status: 'Published', updatedAt: '2026-09-22 09:00' },
+          { id: 'prod-006', name: 'فيليه سلمون أطلسي طازج (400 غرام)', sku: 'GRO-SEA-554', category: 'لحوم ومأكولات بحرية', price: 14.50, isAvailable: false, location: { zone: 'المنطقة د', aisle: 'ثلاجة 1', rack: 'R1', shelf: 'رف 2 - رئيسي' }, status: 'Inactive', updatedAt: '2026-09-18 11:10' }
         ],
         selectedIds: new Set(),
         filters: { search: '', category: 'ALL', status: 'ALL' },
@@ -828,9 +904,9 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
           imageUrl: createSampleBlueprintSvg(),
           zoom: 1,
           pins: [
-            { id: 'pin-1', label: 'Zone A - Bakery Corner', color: '#16a34a', xPercent: 19, yPercent: 28 },
-            { id: 'pin-2', label: 'Zone B - Fresh Milk Chiller', color: '#2563eb', xPercent: 50, yPercent: 28 },
-            { id: 'pin-3', label: 'Zone C - Beverage Racks', color: '#d97706', xPercent: 81, yPercent: 28 }
+            { id: 'pin-1', label: 'المنطقة أ - ركن المخبوزات', color: '#16a34a', xPercent: 19, yPercent: 28 },
+            { id: 'pin-2', label: 'المنطقة ب - مبردات الحليب', color: '#2563eb', xPercent: 50, yPercent: 28 },
+            { id: 'pin-3', label: 'المنطقة ج - رفوف المشروبات', color: '#d97706', xPercent: 81, yPercent: 28 }
           ],
           pendingPin: null,
           selectedColor: '#16a34a',
@@ -954,12 +1030,12 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
         finalImportCount: document.getElementById('final-import-count'),
       };
 
-      const formatCurrency = (val) => `$${Number(val).toFixed(2)}`;
+      const formatCurrency = (val) => `${Number(val).toFixed(2)} ر.س`;
 
       function showToast(message, type = 'success') {
         const toast = document.createElement('div');
-        const bg = type === 'success' ? 'bg-slate-900 text-white' : 'bg-rose-600 text-white';
-        toast.className = `${bg} pointer-events-auto px-4 py-3 rounded-xl shadow-xl text-sm font-medium flex items-center gap-2 transform transition-all duration-300 translate-y-2 opacity-0`;
+        const bg = type === 'success' ? 'bg-[#153f2d] text-white border border-white/20' : 'bg-rose-600 text-white';
+        toast.className = `${bg} pointer-events-auto px-4 py-3 rounded-2xl shadow-xl text-xs font-bold flex items-center gap-2 transform transition-all duration-300 translate-y-2 opacity-0`;
         const icon = type === 'success' 
           ? `<svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`
           : `<svg class="w-4 h-4 text-white shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`;
@@ -979,14 +1055,14 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
       function switchTab(tab) {
         state.currentTab = tab;
         if (tab === 'catalog') {
-          DOM.tabBtnCatalog.className = "tab-btn px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all bg-white text-slate-900 shadow-sm flex items-center gap-2";
-          DOM.tabBtnFloorplan.className = "tab-btn px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all text-slate-600 hover:text-slate-900 flex items-center gap-2";
+          DOM.tabBtnCatalog.className = "tab-btn px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all bg-[#153f2d] text-white shadow-xs flex items-center gap-2";
+          DOM.tabBtnFloorplan.className = "tab-btn px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all text-slate-600 hover:text-[#153f2d] hover:bg-slate-50 flex items-center gap-2";
           DOM.tabContentCatalog.classList.remove('hidden');
           DOM.tabContentFloorplan.classList.add('hidden');
           renderCatalog();
         } else {
-          DOM.tabBtnFloorplan.className = "tab-btn px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all bg-white text-slate-900 shadow-sm flex items-center gap-2";
-          DOM.tabBtnCatalog.className = "tab-btn px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all text-slate-600 hover:text-slate-900 flex items-center gap-2";
+          DOM.tabBtnFloorplan.className = "tab-btn px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all bg-[#153f2d] text-white shadow-xs flex items-center gap-2";
+          DOM.tabBtnCatalog.className = "tab-btn px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all text-slate-600 hover:text-[#153f2d] hover:bg-slate-50 flex items-center gap-2";
           DOM.tabContentFloorplan.classList.remove('hidden');
           DOM.tabContentCatalog.classList.add('hidden');
           renderFloorPlan();
@@ -1021,15 +1097,15 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
           if (!indicator || !content) continue;
 
           if (i === step) {
-            indicator.className = "step-indicator flex items-center gap-2 p-2 rounded-xl bg-brand-50 text-brand-900 font-bold border border-brand-200";
-            indicator.querySelector('span').className = "w-5 h-5 rounded-full bg-brand-primary text-white flex items-center justify-center text-[10px]";
+            indicator.className = "step-indicator flex items-center gap-2 p-2 rounded-2xl bg-[#edf5f0] text-[#153f2d] font-bold border border-[#153f2d]/20";
+            indicator.querySelector('span').className = "w-5 h-5 rounded-full bg-[#153f2d] text-white flex items-center justify-center text-[10px]";
             content.classList.remove('hidden');
           } else if (i < step) {
-            indicator.className = "step-indicator flex items-center gap-2 p-2 rounded-xl bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200";
-            indicator.querySelector('span').className = "w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px]";
+            indicator.className = "step-indicator flex items-center gap-2 p-2 rounded-2xl bg-emerald-50 text-emerald-800 font-bold border border-emerald-200";
+            indicator.querySelector('span').className = "w-5 h-5 rounded-full bg-emerald-700 text-white flex items-center justify-center text-[10px]";
             content.classList.add('hidden');
           } else {
-            indicator.className = "step-indicator flex items-center gap-2 p-2 rounded-xl bg-slate-50 text-slate-400 font-medium border border-slate-200";
+            indicator.className = "step-indicator flex items-center gap-2 p-2 rounded-2xl bg-slate-50 text-slate-400 font-medium border border-slate-200";
             indicator.querySelector('span').className = "w-5 h-5 rounded-full bg-slate-300 text-slate-700 flex items-center justify-center text-[10px]";
             content.classList.add('hidden');
           }
@@ -1040,15 +1116,15 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
         DOM.btnWizardCommit.classList.toggle('hidden', step !== 4);
 
         if (step === 2) {
-          DOM.btnWizardNext.textContent = 'Validate Data →';
+          DOM.btnWizardNext.textContent = 'الانتقال للتدقيق ←';
           renderStep2Mapping();
         } else if (step === 3) {
-          DOM.btnWizardNext.textContent = 'Proceed to Commit →';
+          DOM.btnWizardNext.textContent = 'المتابعة للاعتماد النهائي ←';
           runValidation();
         } else if (step === 4) {
           DOM.finalImportCount.textContent = state.wizard.validRows.length;
         } else {
-          DOM.btnWizardNext.textContent = 'Continue to Mapping →';
+          DOM.btnWizardNext.textContent = 'المتابعة للمطابقة ←';
         }
       }
 
@@ -1083,13 +1159,13 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
       function handleCSVFile(file) {
         DOM.csvUploadError.classList.add('hidden');
         if (!file.name.match(/\.(csv|xlsx)$/i)) {
-          DOM.csvUploadError.textContent = 'Invalid file. Please select a .csv or .xlsx file.';
+          DOM.csvUploadError.textContent = 'صيغة الملف غير مدعومة. يرجى اختيار ملف CSV أو Excel.';
           DOM.csvUploadError.classList.remove('hidden');
           return;
         }
 
         if (file.size > 5 * 1024 * 1024) {
-          DOM.csvUploadError.textContent = 'File too large. Maximum size is 5MB.';
+          DOM.csvUploadError.textContent = 'حجم الملف كبير جداً. الحد الأقصى المسموح هو 5 ميغابايت.';
           DOM.csvUploadError.classList.remove('hidden');
           return;
         }
@@ -1098,7 +1174,7 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
         reader.onload = (e) => {
           const { headers, rows } = parseCSVText(e.target.result);
           if (!headers.length || !rows.length) {
-            DOM.csvUploadError.textContent = 'The uploaded file is empty or could not be parsed.';
+            DOM.csvUploadError.textContent = 'الملف المرفوع فارغ أو تعذر قراءة أعمدته.';
             DOM.csvUploadError.classList.remove('hidden');
             return;
           }
@@ -1110,11 +1186,11 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
       function processParsedData(headers, rows) {
         state.wizard.headers = headers;
         state.wizard.rawRows = rows;
-        DOM.detectedColumnsCount.textContent = `${headers.length} Headers Detected`;
+        DOM.detectedColumnsCount.textContent = `تم التعرف على ${headers.length} أعمدة`;
 
         const smartMatch = (keywords) => {
           for (let h of headers) {
-            const normalized = h.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const normalized = h.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '');
             for (let kw of keywords) {
               if (normalized.includes(kw)) return h;
             }
@@ -1122,20 +1198,20 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
           return '';
         };
 
-        state.wizard.mappings.name = smartMatch(['name', 'title', 'item', 'product']) || headers[0];
-        state.wizard.mappings.sku = smartMatch(['sku', 'barcode', 'code', 'id']) || (headers[1] || '');
-        state.wizard.mappings.price = smartMatch(['price', 'cost', 'unitprice', 'msrp', 'rate', 'usd']) || (headers[2] || '');
-        state.wizard.mappings.category = smartMatch(['category', 'department', 'dept', 'type', 'group']) || '';
-        state.wizard.mappings.zone = smartMatch(['zone', 'section', 'area']) || '';
-        state.wizard.mappings.aisle = smartMatch(['aisle', 'bay', 'corridor']) || '';
+        state.wizard.mappings.name = smartMatch(['name', 'title', 'item', 'product', 'اسم', 'صنف', 'منتج']) || headers[0];
+        state.wizard.mappings.sku = smartMatch(['sku', 'barcode', 'code', 'id', 'رمز', 'باركود']) || (headers[1] || '');
+        state.wizard.mappings.price = smartMatch(['price', 'cost', 'unitprice', 'msrp', 'rate', 'سعر']) || (headers[2] || '');
+        state.wizard.mappings.category = smartMatch(['category', 'department', 'dept', 'type', 'تصنيف', 'قسم']) || '';
+        state.wizard.mappings.zone = smartMatch(['zone', 'section', 'area', 'منطقة', 'جناح']) || '';
+        state.wizard.mappings.aisle = smartMatch(['aisle', 'bay', 'corridor', 'ممر', 'رف']) || '';
 
         setWizardStep(2);
-        showToast(`Parsed ${rows.length} records successfully!`);
+        showToast(`تمت معالجة ${rows.length} سجلاً بنجاح!`);
       }
 
       function renderStep2Mapping() {
         const populateSelect = (selectEl, currentVal) => {
-          selectEl.innerHTML = '<option value="">-- Do Not Map --</option>';
+          selectEl.innerHTML = '<option value="">-- بدون مطابقة --</option>';
           state.wizard.headers.forEach(h => {
             const opt = document.createElement('option');
             opt.value = h;
@@ -1166,11 +1242,11 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
         const previewRows = state.wizard.rawRows.slice(0, 3);
         DOM.mappingPreviewTbody.innerHTML = previewRows.map(row => `
           <tr class="hover:bg-slate-50">
-            <td class="px-4 py-2 font-bold text-slate-800">${escapeHtml(nameIdx !== -1 ? row[nameIdx] : '—')}</td>
-            <td class="px-4 py-2 font-mono text-slate-500">${escapeHtml(skuIdx !== -1 ? row[skuIdx] : '—')}</td>
-            <td class="px-4 py-2 font-semibold text-slate-900">${priceIdx !== -1 ? formatCurrency(parseFloat(row[priceIdx]) || 0) : '—'}</td>
-            <td class="px-4 py-2">${escapeHtml(catIdx !== -1 ? row[catIdx] : 'General')}</td>
-            <td class="px-4 py-2 text-slate-600">${escapeHtml(zoneIdx !== -1 ? row[zoneIdx] : 'Zone A')} › ${escapeHtml(aisleIdx !== -1 ? row[aisleIdx] : 'Aisle 01')}</td>
+            <td class="px-4 py-2.5 font-bold text-slate-800">${escapeHtml(nameIdx !== -1 ? row[nameIdx] : '—')}</td>
+            <td class="px-4 py-2.5 font-mono text-slate-500" dir="ltr">${escapeHtml(skuIdx !== -1 ? row[skuIdx] : '—')}</td>
+            <td class="px-4 py-2.5 font-bold text-slate-900">${priceIdx !== -1 ? formatCurrency(parseFloat(row[priceIdx]) || 0) : '—'}</td>
+            <td class="px-4 py-2.5"><span class="px-2.5 py-0.5 rounded-lg bg-slate-100 font-bold text-slate-700">${escapeHtml(catIdx !== -1 ? row[catIdx] : 'عام')}</span></td>
+            <td class="px-4 py-2.5 text-slate-600 font-bold">${escapeHtml(zoneIdx !== -1 ? row[zoneIdx] : 'المنطقة أ')} › ${escapeHtml(aisleIdx !== -1 ? row[aisleIdx] : 'ممر 01')}</td>
           </tr>
         `).join('');
       }
@@ -1201,24 +1277,24 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
           const rawName = nameIdx !== -1 ? (row[nameIdx] || '').trim() : '';
           const rawSku = skuIdx !== -1 ? (row[skuIdx] || '').trim().toUpperCase() : '';
           const rawPrice = priceIdx !== -1 ? parseFloat(row[priceIdx]) : NaN;
-          const rawCat = catIdx !== -1 ? (row[catIdx] || 'General').trim() : 'General';
-          const rawZone = zoneIdx !== -1 ? (row[zoneIdx] || 'Zone A').trim() : 'Zone A';
-          const rawAisle = aisleIdx !== -1 ? (row[aisleIdx] || 'Aisle 01').trim() : 'Aisle 01';
+          const rawCat = catIdx !== -1 ? (row[catIdx] || 'عام').trim() : 'عام';
+          const rawZone = zoneIdx !== -1 ? (row[zoneIdx] || 'المنطقة أ').trim() : 'المنطقة أ';
+          const rawAisle = aisleIdx !== -1 ? (row[aisleIdx] || 'ممر 01').trim() : 'ممر 01';
 
           let errors = [];
 
-          if (!rawName) errors.push('Product name is empty or missing.');
-          if (!rawSku) errors.push('SKU / Barcode is missing.');
-          if (rawSku && existingSkus.has(rawSku)) errors.push(`SKU '${rawSku}' already exists in catalog.`);
-          if (rawSku && seenImportSkus.has(rawSku)) errors.push(`Duplicate SKU '${rawSku}' in upload file.`);
-          if (isNaN(rawPrice) || rawPrice <= 0) errors.push(`Price must be a positive number.`);
+          if (!rawName) errors.push('اسم المنتج فارغ أو غير متوفر.');
+          if (!rawSku) errors.push('رمز الباركود / SKU غير متوفر.');
+          if (rawSku && existingSkus.has(rawSku)) errors.push(`رمز الصنف '${rawSku}' مسجل مسبقاً في كتالوج المتجر.`);
+          if (rawSku && seenImportSkus.has(rawSku)) errors.push(`تكرار رمز الصنف '${rawSku}' داخل نفس الملف.`);
+          if (isNaN(rawPrice) || rawPrice <= 0) errors.push(`السعر يجب أن يكون قيمة رقمية موجبة.`);
 
           if (errors.length > 0) {
             state.wizard.errorRows.push({
               rowNum,
               rawRow: row,
-              name: rawName || '[Empty Name]',
-              sku: rawSku || '[Empty SKU]',
+              name: rawName || '[بدون اسم]',
+              sku: rawSku || '[بدون رمز]',
               reason: errors.join(' ')
             });
           } else {
@@ -1227,10 +1303,10 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
               id: `prod-imp-${Date.now()}-${index}`,
               name: rawName,
               sku: rawSku,
-              category: rawCat || 'General',
+              category: rawCat || 'عام',
               price: rawPrice,
               isAvailable: true,
-              location: { zone: rawZone, aisle: rawAisle, rack: 'R1', shelf: 'S1 - Main' },
+              location: { zone: rawZone, aisle: rawAisle, rack: 'R1', shelf: 'رف 1 - رئيسي' },
               status: 'Published',
               updatedAt: new Date().toISOString().slice(0, 16)
             });
@@ -1248,10 +1324,10 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
           errorContainer.classList.remove('hidden');
           DOM.errorDetailsTbody.innerHTML = state.wizard.errorRows.map(err => `
             <tr class="hover:bg-rose-100/50">
-              <td class="px-4 py-2 font-mono font-bold">${err.rowNum}</td>
-              <td class="px-4 py-2 font-bold">${escapeHtml(err.name)}</td>
-              <td class="px-4 py-2 font-mono">${escapeHtml(err.sku)}</td>
-              <td class="px-4 py-2 font-semibold text-rose-700">${escapeHtml(err.reason)}</td>
+              <td class="px-4 py-2.5 font-mono font-bold">${err.rowNum}</td>
+              <td class="px-4 py-2.5 font-bold">${escapeHtml(err.name)}</td>
+              <td class="px-4 py-2.5 font-mono" dir="ltr">${escapeHtml(err.sku)}</td>
+              <td class="px-4 py-2.5 font-bold text-rose-700">${escapeHtml(err.reason)}</td>
             </tr>
           `).join('');
         }
@@ -1260,7 +1336,7 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
       function downloadErrorCSV() {
         if (!state.wizard.errorRows.length) return;
 
-        const headers = [...state.wizard.headers, 'Error Reason'];
+        const headers = [...state.wizard.headers, 'سبب الخطأ'];
         const rows = state.wizard.errorRows.map(err => {
           const rowData = [...err.rawRow];
           while (rowData.length < state.wizard.headers.length) rowData.push('');
@@ -1269,21 +1345,21 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
         });
 
         const csvContent = [headers.join(','), ...rows].join('\r\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.setAttribute('href', url);
-        link.setAttribute('download', `catalog_import_errors_${Date.now()}.csv`);
+        link.setAttribute('download', `dawwer_catalog_errors_${Date.now()}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-        showToast('Error report downloaded (.csv)');
+        showToast('تم تحميل ملف تقرير الأخطاء (.csv)');
       }
 
       function commitImport() {
         if (!state.wizard.validRows.length) {
-          showToast('No valid products to import', 'error');
+          showToast('لا توجد أصناف صالحة للاستيراد', 'error');
           return;
         }
 
@@ -1291,7 +1367,7 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
         state.products.unshift(...state.wizard.validRows);
         closeImportWizard();
         renderCatalog();
-        showToast(`Successfully imported ${count} products into catalog!`);
+        showToast(`تم استيراد ${count} منتج بنجاح إلى كتالوج المتجر!`);
       }
 
       function renderFloorPlan() {
@@ -1326,7 +1402,7 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
                 ${index + 1}
               </div>
               <div class="w-2 h-2 -mt-1 rotate-45 border-r-2 border-b-2 border-white" style="background-color: ${pin.color || '#16a34a'}"></div>
-              <div class="absolute bottom-full mb-1 hidden group-hover:flex px-2.5 py-1 bg-slate-900 text-white text-[11px] font-bold rounded-lg shadow-xl whitespace-nowrap z-30 pointer-events-none">
+              <div class="absolute bottom-full mb-1 hidden group-hover:flex px-2.5 py-1 bg-[#153f2d] text-white text-[11px] font-bold rounded-xl shadow-xl whitespace-nowrap z-30 pointer-events-none">
                 ${escapeHtml(pin.label)}
               </div>
             </div>
@@ -1334,14 +1410,14 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
 
           pinEl.addEventListener('click', (e) => {
             e.stopPropagation();
-            showToast(`Waypoint: ${pin.label}`);
+            showToast(`نقطة التوجيه: ${pin.label}`);
           });
 
           DOM.pinsLayer.appendChild(pinEl);
         });
 
         const count = state.floorPlan.pins.length;
-        DOM.totalPinsBadge.textContent = `${count} Tagged Zone${count === 1 ? '' : 's'}`;
+        DOM.totalPinsBadge.textContent = `${count} مناطق محددة`;
         DOM.sidebarPinsCount.textContent = count;
       }
 
@@ -1350,8 +1426,8 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
         if (state.floorPlan.pins.length === 0) {
           DOM.pinsListContainer.innerHTML = `
             <div class="py-12 text-center text-slate-400">
-              <div class="text-xs font-semibold text-slate-600">No waypoints defined yet</div>
-              <p class="text-[11px] text-slate-400 mt-0.5">Click directly on the blueprint image to pin an aisle.</p>
+              <div class="text-xs font-bold text-slate-600">لا توجد نقاط توجيه مسجلة بعد</div>
+              <p class="text-[11px] text-slate-400 mt-1">انقر على أي نقطة داخل صورة المخطط لتعيين ممر أو رف.</p>
             </div>
           `;
           return;
@@ -1359,15 +1435,15 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
 
         state.floorPlan.pins.forEach((pin, index) => {
           const card = document.createElement('div');
-          card.className = 'p-3 bg-slate-50 hover:bg-slate-100/80 rounded-xl border border-slate-200/90 flex items-center justify-between gap-2 transition group';
+          card.className = 'p-3.5 bg-slate-50 hover:bg-[#edf5f0]/50 rounded-2xl border border-slate-200/80 flex items-center justify-between gap-2 transition group';
           card.innerHTML = `
             <div class="flex items-center gap-2.5 min-w-0">
-              <div class="w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-sm" style="background-color: ${pin.color || '#16a34a'}">
+              <div class="w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-xs" style="background-color: ${pin.color || '#16a34a'}">
                 ${index + 1}
               </div>
               <div class="min-w-0">
                 <div class="text-xs font-bold text-slate-800 truncate">${escapeHtml(pin.label)}</div>
-                <div class="text-[10px] font-mono text-slate-400 mt-0.5">Coords: X ${pin.xPercent.toFixed(1)}% | Y ${pin.yPercent.toFixed(1)}%</div>
+                <div class="text-[10px] font-mono text-slate-400 mt-0.5" dir="ltr">X: ${pin.xPercent.toFixed(1)}% | Y: ${pin.yPercent.toFixed(1)}%</div>
               </div>
             </div>
             <button class="btn-delete-pin p-1 text-slate-400 hover:text-rose-600 rounded-lg"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
@@ -1377,7 +1453,7 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
             state.floorPlan.pins = state.floorPlan.pins.filter(p => p.id !== pin.id);
             renderPins();
             renderPinsSidebar();
-            showToast(`Removed "${pin.label}"`, 'error');
+            showToast(`تم حذف نقطة "${pin.label}"`, 'error');
           });
 
           DOM.pinsListContainer.appendChild(card);
@@ -1395,7 +1471,7 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
         state.floorPlan.pendingPin = { xPercent, yPercent };
         DOM.pinPopover.style.left = `${xPercent}%`;
         DOM.pinPopover.style.top = `${yPercent}%`;
-        DOM.popoverPinLabel.value = `Zone ${String.fromCharCode(65 + state.floorPlan.pins.length)} - Shelf`;
+        DOM.popoverPinLabel.value = `المنطقة ${String.fromCharCode(65 + state.floorPlan.pins.length)} - ممر`;
         DOM.pinPopover.classList.remove('hidden');
         DOM.popoverPinLabel.focus();
       }
@@ -1420,18 +1496,18 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
         hidePinPopover();
         renderPins();
         renderPinsSidebar();
-        showToast(`Pinned waypoint "${label}"!`);
+        showToast(`تم تثبيت نقطة "${label}"!`);
       }
 
       const SHELF_HIERARCHY = {
-        'Zone A': { label: 'Zone A - Ambient & Bakery', aisles: { 'Aisle 01': { racks: ['R1', 'R2'], shelves: ['S1 - Top Shelf', 'S2 - Eye Level', 'S3 - Bottom Shelf'] }, 'Aisle 02': { racks: ['R1', 'R2', 'R3'], shelves: ['S1 - Top Shelf', 'S2 - Eye Level', 'S3 - Middle Shelf', 'S4 - Bottom Shelf'] } } },
-        'Zone B': { label: 'Zone B - Fresh & Dairy', aisles: { 'Aisle 03': { racks: ['R1', 'R2'], shelves: ['S1 - Top Chiller', 'S2 - Eye Level', 'S3 - Bottom Chiller'] }, 'Aisle 04': { racks: ['R1', 'R2'], shelves: ['S1 - Upper Tier', 'S2 - Eye Level', 'S3 - Bottom Bin'] } } },
-        'Zone C': { label: 'Zone C - Beverages & Snacks', aisles: { 'Aisle 07': { racks: ['R1', 'R2', 'R3'], shelves: ['S1 - Top Display', 'S2 - Eye Level', 'S3 - Floor Case'] } } },
-        'Zone D': { label: 'Zone D - Frozen & Seafood', aisles: { 'Chiller R1': { racks: ['R1', 'R2'], shelves: ['S1 - Upper Case', 'S2 - Main Shelf', 'S3 - Deep Bin'] } } }
+        'المنطقة أ': { label: 'المنطقة أ - المخبوزات والطازج', aisles: { 'ممر 01': { racks: ['R1', 'R2'], shelves: ['رف 1 - علوي', 'رف 2 - مستوى العين', 'رف 3 - سفلي'] }, 'ممر 02': { racks: ['R1', 'R2', 'R3'], shelves: ['رف 1 - علوي', 'رف 2 - مستوى العين', 'رف 3 - أوسط', 'رف 4 - سفلي'] } } },
+        'المنطقة ب': { label: 'المنطقة ب - الألبان والمبردات', aisles: { 'ممر 03': { racks: ['R1', 'R2'], shelves: ['رف 1 - علوي', 'رف 2 - مستوى العين', 'رف 3 - سفلي'] }, 'ممر 04': { racks: ['R1', 'R2'], shelves: ['رف 1 - علوي', 'رف 2 - مستوى العين', 'رف 3 - سفلي'] } } },
+        'المنطقة ج': { label: 'المنطقة ج - التسالي والمشروبات', aisles: { 'ممر 07': { racks: ['R1', 'R2', 'R3'], shelves: ['رف 1 - علوي', 'رف 2 - مستوى العين', 'رف 3 - أرضي'] } } },
+        'المنطقة د': { label: 'المنطقة د - المجمدات واللحوم', aisles: { 'ثلاجة 1': { racks: ['R1', 'R2'], shelves: ['رف 1 - علوي', 'رف 2 - رئيسي', 'رف 3 - سفلي'] } } }
       };
 
       function initShelfZones() {
-        DOM.locZone.innerHTML = '<option value="">Select Zone</option>';
+        DOM.locZone.innerHTML = '<option value="">اختر المنطقة</option>';
         Object.keys(SHELF_HIERARCHY).forEach(z => {
           const opt = document.createElement('option');
           opt.value = z;
@@ -1441,9 +1517,9 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
       }
 
       function populateAisles(zone, selAisle = '') {
-        DOM.locAisle.innerHTML = '<option value="">Select Aisle</option>';
-        DOM.locRack.innerHTML = '<option value="">Select Rack</option>';
-        DOM.locShelf.innerHTML = '<option value="">Select Shelf</option>';
+        DOM.locAisle.innerHTML = '<option value="">اختر الممر</option>';
+        DOM.locRack.innerHTML = '<option value="">اختر الوحدة</option>';
+        DOM.locShelf.innerHTML = '<option value="">اختر الرف</option>';
         DOM.locAisle.disabled = !zone;
         DOM.locRack.disabled = true;
         DOM.locShelf.disabled = true;
@@ -1462,8 +1538,8 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
       }
 
       function populateRacks(zone, aisle, selRack = '') {
-        DOM.locRack.innerHTML = '<option value="">Select Rack</option>';
-        DOM.locShelf.innerHTML = '<option value="">Select Shelf</option>';
+        DOM.locRack.innerHTML = '<option value="">اختر الوحدة</option>';
+        DOM.locShelf.innerHTML = '<option value="">اختر الرف</option>';
         DOM.locRack.disabled = !aisle;
         DOM.locShelf.disabled = true;
 
@@ -1471,7 +1547,7 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
           SHELF_HIERARCHY[zone].aisles[aisle].racks.forEach(r => {
             const opt = document.createElement('option');
             opt.value = r;
-            opt.textContent = `Rack ${r}`;
+            opt.textContent = `الوحدة ${r}`;
             if (r === selRack) opt.selected = true;
             DOM.locRack.appendChild(opt);
           });
@@ -1481,7 +1557,7 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
       }
 
       function populateShelves(zone, aisle, rack, selShelf = '') {
-        DOM.locShelf.innerHTML = '<option value="">Select Shelf</option>';
+        DOM.locShelf.innerHTML = '<option value="">اختر الرف</option>';
         DOM.locShelf.disabled = !rack;
 
         if (zone && aisle && SHELF_HIERARCHY[zone]?.aisles[aisle]) {
@@ -1499,10 +1575,10 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
       function updateLocBadge() {
         const z = DOM.locZone.value, a = DOM.locAisle.value, r = DOM.locRack.value, s = DOM.locShelf.value;
         if (!z && !a && !r && !s) {
-          DOM.locationPreviewBadge.innerHTML = '<span>No location selected</span>';
+          DOM.locationPreviewBadge.innerHTML = '<span>لم يتم تحديد موقع الرف</span>';
           return;
         }
-        DOM.locationPreviewBadge.innerHTML = `<span class="text-brand-primary font-semibold">${z || '?'} › ${a || '?'} › ${r || '?'} › ${s?.split(' - ')[0] || '?'}</span>`;
+        DOM.locationPreviewBadge.innerHTML = `<span class="text-[#153f2d] font-bold">${z || '؟'} › ${a || '؟'} › ${r || '؟'} › ${s || '؟'}</span>`;
       }
 
       function getFilteredCatalog() {
@@ -1539,29 +1615,33 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
           DOM.tableBody.innerHTML = paginated.map(p => {
             const isSel = state.selectedIds.has(p.id);
             const statusBadge = p.status === 'Published' 
-              ? `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Published</span>`
-              : (p.status === 'Draft' ? `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">Draft</span>` : `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">Inactive</span>`);
+              ? `<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">منشور</span>`
+              : (p.status === 'Draft' ? `<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">مسودة</span>` : `<span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">غير نشط</span>`);
             
             return `
-              <tr class="hover:bg-slate-50 transition ${isSel ? 'bg-brand-50/50' : ''}">
+              <tr class="hover:bg-slate-50/90 transition ${isSel ? 'bg-[#edf5f0]/60' : ''}">
                 <td class="px-6 py-4">
-                  <input type="checkbox" class="row-select-checkbox w-4 h-4 rounded text-brand-primary cursor-pointer accent-brand-primary" data-id="${p.id}" ${isSel ? 'checked' : ''}>
+                  <input type="checkbox" class="row-select-checkbox w-4 h-4 rounded text-[#153f2d] cursor-pointer accent-[#153f2d]" data-id="${p.id}" ${isSel ? 'checked' : ''}>
                 </td>
                 <td class="px-6 py-4 font-bold text-slate-900">
-                  ${escapeHtml(p.name)}
-                  <div class="text-[11px] font-mono text-slate-400 font-normal">${p.sku}</div>
+                  <div class="text-sm font-extrabold text-slate-900">${escapeHtml(p.name)}</div>
+                  <div class="text-[11px] font-mono text-slate-400 font-normal" dir="ltr">${p.sku}</div>
                 </td>
-                <td class="px-6 py-4"><span class="px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-slate-100">${escapeHtml(p.category)}</span></td>
+                <td class="px-6 py-4"><span class="px-3 py-1 rounded-xl text-xs font-bold bg-[#edf5f0] text-[#153f2d]">${escapeHtml(p.category)}</span></td>
                 <td class="px-6 py-4 font-bold text-slate-900">${formatCurrency(p.price)}</td>
-                <td class="px-6 py-4 text-xs font-medium text-slate-700">${p.location ? `${p.location.zone} › ${p.location.aisle}` : '—'}</td>
+                <td class="px-6 py-4 text-xs font-bold text-slate-700">
+                  <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-xl">
+                    <span>${p.location ? `${p.location.zone} › ${p.location.aisle}` : '—'}</span>
+                  </div>
+                </td>
                 <td class="px-6 py-4 text-center">
-                  <input type="checkbox" class="toggle-availability w-4 h-4 rounded text-brand-primary accent-brand-primary cursor-pointer" data-id="${p.id}" ${p.isAvailable ? 'checked' : ''}>
+                  <input type="checkbox" class="toggle-availability w-4 h-4 rounded text-[#153f2d] accent-[#153f2d] cursor-pointer" data-id="${p.id}" ${p.isAvailable ? 'checked' : ''}>
                 </td>
                 <td class="px-6 py-4">${statusBadge}</td>
-                <td class="px-6 py-4 text-right">
-                  <div class="flex items-center justify-end gap-1">
-                    <button class="btn-edit-p p-1.5 text-slate-400 hover:text-brand-primary rounded-lg" data-id="${p.id}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
-                    <button class="btn-del-p p-1.5 text-slate-400 hover:text-rose-600 rounded-lg" data-id="${p.id}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                <td class="px-6 py-4 text-left">
+                  <div class="flex items-center justify-end gap-1.5">
+                    <button class="btn-edit-p p-2 text-slate-400 hover:text-[#153f2d] hover:bg-[#edf5f0] rounded-xl transition" data-id="${p.id}" title="تعديل"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+                    <button class="btn-del-p p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition" data-id="${p.id}" title="حذف"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
                   </div>
                 </td>
               </tr>
@@ -1577,10 +1657,10 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
 
         const startItem = total === 0 ? 0 : start + 1;
         const endItem = Math.min(start + state.pagination.pageSize, total);
-        DOM.paginationSummary.textContent = `Showing ${startItem} to ${endItem} of ${total} items`;
+        DOM.paginationSummary.textContent = `عرض ${startItem} إلى ${endItem} من أصل ${total} عنصر`;
 
         const cats = Array.from(new Set(state.products.map(p => p.category))).sort();
-        DOM.categoryFilter.innerHTML = '<option value="ALL">All Categories</option>' + cats.map(c => `<option value="${c}" ${c === state.filters.category ? 'selected' : ''}>${c}</option>`).join('');
+        DOM.categoryFilter.innerHTML = '<option value="ALL">جميع التصنيفات</option>' + cats.map(c => `<option value="${c}" ${c === state.filters.category ? 'selected' : ''}>${c}</option>`).join('');
 
         DOM.bulkActionsBar.classList.toggle('hidden', state.selectedIds.size === 0);
         DOM.bulkSelectedCount.textContent = state.selectedIds.size;
@@ -1594,7 +1674,7 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
         if (mode === 'edit' && productId) {
           const p = state.products.find(x => x.id === productId);
           if (!p) return;
-          DOM.modalTitle.textContent = `Edit Product — ${p.name}`;
+          DOM.modalTitle.textContent = `تعديل الصنف — ${p.name}`;
           DOM.formProductId.value = p.id;
           DOM.formName.value = p.name;
           DOM.formSku.value = p.sku;
@@ -1609,7 +1689,7 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
             populateShelves(p.location.zone, p.location.aisle, p.location.rack, p.location.shelf);
           }
         } else {
-          DOM.modalTitle.textContent = 'Add New Product';
+          DOM.modalTitle.textContent = 'إضافة صنف جديد';
           DOM.formProductId.value = '';
           DOM.formAvailable.checked = true;
           populateAisles('');
@@ -1640,14 +1720,14 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
         DOM.csvDropzone.addEventListener('click', () => DOM.csvFileInput.click());
         DOM.csvDropzone.addEventListener('dragover', (e) => {
           e.preventDefault();
-          DOM.csvDropzone.classList.add('border-brand-primary', 'bg-brand-50');
+          DOM.csvDropzone.classList.add('border-[#153f2d]', 'bg-[#edf5f0]/40');
         });
         DOM.csvDropzone.addEventListener('dragleave', () => {
-          DOM.csvDropzone.classList.remove('border-brand-primary', 'bg-brand-50');
+          DOM.csvDropzone.classList.remove('border-[#153f2d]', 'bg-[#edf5f0]/40');
         });
         DOM.csvDropzone.addEventListener('drop', (e) => {
           e.preventDefault();
-          DOM.csvDropzone.classList.remove('border-brand-primary', 'bg-brand-50');
+          DOM.csvDropzone.classList.remove('border-[#153f2d]', 'bg-[#edf5f0]/40');
           if (e.dataTransfer.files.length) handleCSVFile(e.dataTransfer.files[0]);
         });
         DOM.csvFileInput.addEventListener('change', (e) => {
@@ -1666,13 +1746,13 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
         DOM.btnWizardNext.addEventListener('click', () => {
           if (state.wizard.currentStep === 1) {
             if (!state.wizard.rawRows.length) {
-              showToast('Please upload a file or load sample data first', 'error');
+              showToast('يرجى رفع ملف أو تحميل البيانات النموذجية أولاً', 'error');
               return;
             }
             setWizardStep(2);
           } else if (state.wizard.currentStep === 2) {
             if (!DOM.mapName.value || !DOM.mapSku.value || !DOM.mapPrice.value) {
-              showToast('Please map required fields: Name, SKU, and Price', 'error');
+              showToast('يرجى مطابقة الحقول الأساسية المطلوبة (الاسم، الرمز، السعر)', 'error');
               return;
             }
             setWizardStep(3);
@@ -1699,7 +1779,7 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
               state.floorPlan.imageUrl = ev.target.result;
               state.floorPlan.pins = [];
               renderFloorPlan();
-              showToast('Blueprint loaded!');
+              showToast('تم تحميل المخطط بنجاح!');
             };
             reader.readAsDataURL(file);
           }
@@ -1740,14 +1820,14 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
         DOM.btnLoadSampleMap.addEventListener('click', () => {
           state.floorPlan.imageUrl = createSampleBlueprintSvg();
           renderFloorPlan();
-          showToast('Sample blueprint loaded!');
+          showToast('تم تحميل المخطط النموذجي!');
         });
         DOM.btnClearAllPins.addEventListener('click', () => {
-          if (confirm('Clear all tagged waypoints?')) {
+          if (confirm('هل أنت متأكد من مسح جميع نقاط التوجيه؟')) {
             state.floorPlan.pins = [];
             renderPins();
             renderPinsSidebar();
-            showToast('Pins cleared', 'error');
+            showToast('تم مسح كافة النقاط', 'error');
           }
         });
 
@@ -1763,8 +1843,8 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
         });
         DOM.statusTabs.forEach(t => {
           t.addEventListener('click', () => {
-            DOM.statusTabs.forEach(tab => tab.classList.remove('bg-brand-primary', 'text-white'));
-            t.classList.add('bg-brand-primary', 'text-white');
+            DOM.statusTabs.forEach(tab => tab.classList.remove('bg-[#153f2d]', 'text-white'));
+            t.classList.add('bg-[#153f2d]', 'text-white');
             state.filters.status = t.dataset.statusTab;
             renderCatalog();
           });
@@ -1780,17 +1860,17 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
           if (editBtn) return openModal('edit', editBtn.dataset.id);
 
           const delBtn = e.target.closest('.btn-del-p');
-          if (delBtn && confirm('Delete this product?')) {
+          if (delBtn && confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
             state.products = state.products.filter(p => p.id !== delBtn.dataset.id);
             renderCatalog();
-            showToast('Product deleted', 'error');
+            showToast('تم حذف المنتج بنجاح', 'error');
           }
 
           if (e.target.classList.contains('toggle-availability')) {
             const p = state.products.find(x => x.id === e.target.dataset.id);
             if (p) {
               p.isAvailable = e.target.checked;
-              showToast(`"${p.name}" updated to ${p.isAvailable ? 'In Stock' : 'Out of Stock'}`);
+              showToast(`تم تحديث حالة توفر "${p.name}" إلى ${p.isAvailable ? 'متوفر' : 'غير متوفر'}`);
             }
           }
         });
@@ -1804,16 +1884,16 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
           e.preventDefault();
           const name = DOM.formName.value.trim();
           const sku = DOM.formSku.value.trim();
-          if (!name || !sku) return alert('Name & SKU are required');
+          if (!name || !sku) return showToast('يرجى تعبئة الحقول الإلزامية', 'error');
 
           const payload = {
             name,
             sku: sku.toUpperCase(),
-            category: DOM.formCategory.value || 'General',
+            category: DOM.formCategory.value || 'عام',
             price: parseFloat(DOM.formPrice.value) || 0,
             status: DOM.formStatus.value,
             isAvailable: DOM.formAvailable.checked,
-            location: { zone: DOM.locZone.value, aisle: DOM.locAisle.value, rack: DOM.locRack.value, shelf: DOM.locShelf.value },
+            location: { zone: DOM.locZone.value || 'المنطقة أ', aisle: DOM.locAisle.value || 'ممر 01', rack: DOM.locRack.value || 'R1', shelf: DOM.locShelf.value || 'رف 1' },
             updatedAt: new Date().toISOString().slice(0, 16)
           };
 
@@ -1827,7 +1907,7 @@ Defective Price Item,GRO-ERR-802,-3.50,Snacks & Confectionery,Zone C,Aisle 07`;
 
           closeModal();
           renderCatalog();
-          showToast(`Saved "${payload.name}" successfully!`);
+          showToast(`تم حفظ "${payload.name}" بنجاح!`);
         });
       }
 
