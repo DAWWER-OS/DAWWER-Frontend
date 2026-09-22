@@ -68,7 +68,11 @@ const ApiClient = {
             errorMsg = responseData.message;
           }
         }
-        throw new Error(errorMsg);
+        const err = new Error(errorMsg);
+        err.status = response.status;
+        err.response = responseData;
+        err.data = responseData ? (responseData.data || responseData) : null;
+        throw err;
       }
 
       return responseData; // Standard envelope: { success, message, data, errors }

@@ -77,9 +77,12 @@
             <input 
               type="text" 
               id="code-input" 
-              maxlength="6"
-              class="w-full p-4 rounded-2xl border border-slate-200 text-2xl font-mono tracking-[0.4em] text-center focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] font-bold text-[#1c5335] bg-slate-50/50" 
+              class="code-input w-full p-4 rounded-2xl border border-slate-200 text-2xl font-mono tracking-[0.4em] text-center focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] font-bold text-[#1c5335] bg-slate-50/50" 
               placeholder="••••••" 
+              maxlength="6"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              oninput="this.value = this.value.replace(/\D/g, '')"
               required
               autofocus
             >
@@ -194,14 +197,44 @@
 
   <script src="assets/js/config.js"></script>
   <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
   <script>
     let currentEmail = "";
     let currentPreviewCode = "";
 
+    function getEnteredCode() {
+      const inputs = document.querySelectorAll('.code-input-digit, .code-digit');
+      if (inputs && inputs.length === 6) {
+        return Array.from(inputs).map(input => input.value.trim()).join('');
+      }
+      const singleInput = document.getElementById("code-input");
+      if (singleInput) {
+        return singleInput.value.trim().replace(/\D/g, '');
+      }
+      return '';
+    }
+
+    function setCodeInputs(codeStr) {
+      if (!codeStr) return;
+      const clean = String(codeStr).trim().replace(/\D/g, '');
+      const inputs = document.querySelectorAll('.code-input-digit, .code-digit');
+      if (inputs && inputs.length === 6) {
+        clean.split('').forEach((digit, idx) => {
+          if (inputs[idx]) inputs[idx].value = digit;
+        });
+      }
+      const singleInput = document.getElementById("code-input");
+      if (singleInput) {
+        singleInput.value = clean;
+      }
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
       const urlParams = new URLSearchParams(window.location.search);
       currentEmail = urlParams.get("email") || sessionStorage.getItem("dawwer_registered_email");
-      const previewCode = urlParams.get("previewCode");
+      const previewCode = urlParams.get("previewCode") || urlParams.get("code");
+
+      console.log("Verification Code to use:", previewCode);
 
       if (!currentEmail) {
         alert("لم يتم العثور على بريد إلكتروني للتفعيل. يرجى إنشاء حساب أولاً.");
@@ -212,30 +245,37 @@
       document.getElementById("display-email-text").innerText = currentEmail;
 
       if (previewCode) {
-        currentPreviewCode = previewCode;
-        document.getElementById("preview-code-text").innerText = previewCode;
+        currentPreviewCode = String(previewCode).trim().replace(/\D/g, '');
+        document.getElementById("preview-code-text").innerText = currentPreviewCode;
         document.getElementById("preview-badge-container").classList.remove("hidden");
-        document.getElementById("code-input").value = previewCode;
+        setCodeInputs(currentPreviewCode);
       }
     });
 
     function autoFillCode() {
       if (currentPreviewCode) {
+        setCodeInputs(currentPreviewCode);
         const input = document.getElementById("code-input");
-        input.value = currentPreviewCode;
-        input.focus();
+        if (input) input.focus();
       }
     }
 
     async function handleVerifyCode(event) {
       event.preventDefault();
 
-      const code = document.getElementById("code-input").value.trim();
       const alertBox = document.getElementById("alert-message");
       const btn = document.getElementById("submit-btn");
 
-      if (!currentEmail || !code) {
-        alertBox.innerText = "يرجى إدخال رمز التحقق.";
+      const enteredCode = getEnteredCode();
+
+      if (!currentEmail) {
+        alertBox.innerText = "لم يتم العثور على بريد إلكتروني للتفعيل.";
+        alertBox.className = "mb-4 p-3.5 rounded-xl text-sm font-bold bg-red-50 border border-red-200 text-red-700 block";
+        return;
+      }
+
+      if (enteredCode.length !== 6 || !/^\d{6}$/.test(enteredCode)) {
+        alertBox.innerText = "يجب إدخال رمز التحقق كاملاً المكون من 6 أرقام";
         alertBox.className = "mb-4 p-3.5 rounded-xl text-sm font-bold bg-red-50 border border-red-200 text-red-700 block";
         return;
       }
@@ -246,31 +286,83 @@
 
       try {
         const payload = {
-          email: currentEmail,
-          code: code
+          email: currentEmail.trim(),
+          code: enteredCode.trim(),
+          codeType: 1
         };
+
+        console.log("Sending Verify Payload:", payload);
 
         const res = await ApiClient.post("/Auth/verify-code", payload);
 
-        alertBox.innerHTML = res.message || "تم تفعيل الحساب بنجاح! جاري تحويلك لتسجيل الدخول...";
-        alertBox.className = "mb-4 p-3.5 rounded-xl text-sm font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 block";
+        console.log("Full Verify Response:", res);
 
         sessionStorage.removeItem("dawwer_registered_email");
 
-        setTimeout(() => {
-          window.location.href = "login.html";
-        }, 1500);
+        // Case 1: Backend returns authentication session tokens directly
+        if (res.data && (res.data.accessToken || res.data.token)) {
+          Auth.saveSession(res.data);
+          alertBox.innerHTML = res.message || "تم تفعيل الحساب بنجاح! جاري تحويلك للوحة التحكم...";
+          alertBox.className = "mb-4 p-3.5 rounded-xl text-sm font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 block";
+
+          setTimeout(() => {
+            if (res.data.role === "Admin" || res.data.role === 4) {
+              window.location.href = "admin-dashboard.html";
+            } else {
+              window.location.href = "index.html";
+            }
+          }, 1200);
+        } else {
+          // Case 2: Verification confirms email without returning auth tokens
+          alertBox.innerHTML = res.message || "تم تأكيد حسابك بنجاح! جاري تحويلك لتسجيل الدخول...";
+          alertBox.className = "mb-4 p-3.5 rounded-xl text-sm font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 block";
+
+          setTimeout(() => {
+            window.location.href = "login.html?verified=true";
+          }, 1400);
+        }
       } catch (err) {
-        alertBox.innerHTML = err.message;
+        alertBox.innerHTML = err.message || "رمز التحقق غير صحيح أو منتهي الصلاحية.";
         alertBox.className = "mb-4 p-3.5 rounded-xl text-sm font-bold bg-red-50 border border-red-200 text-red-700 block";
         btn.innerText = "تأكيد وتفعيل الحساب";
         btn.disabled = false;
       }
     }
 
+    let resendTimer = null;
+    let resendCountdown = 0;
+
+    function startResendCooldown(seconds = 60) {
+      const resendBtn = document.getElementById("resend-btn");
+      if (!resendBtn) return;
+
+      resendCountdown = seconds;
+      resendBtn.disabled = true;
+      resendBtn.classList.add("opacity-50", "cursor-not-allowed");
+
+      if (resendTimer) clearInterval(resendTimer);
+
+      resendBtn.innerText = `إعادة الإرسال بعد (${resendCountdown} ث)`;
+
+      resendTimer = setInterval(() => {
+        resendCountdown--;
+        if (resendCountdown <= 0) {
+          clearInterval(resendTimer);
+          resendTimer = null;
+          resendBtn.disabled = false;
+          resendBtn.classList.remove("opacity-50", "cursor-not-allowed");
+          resendBtn.innerText = "إعادة إرسال رمز جديد";
+        } else {
+          resendBtn.innerText = `إعادة الإرسال بعد (${resendCountdown} ث)`;
+        }
+      }, 1000);
+    }
+
     async function handleResendCode() {
       const resendBtn = document.getElementById("resend-btn");
       const alertBox = document.getElementById("alert-message");
+
+      if (resendCountdown > 0) return;
 
       if (!currentEmail) {
         alert("لم يتم العثور على بريد إلكتروني لإعادة الإرسال.");
@@ -281,21 +373,35 @@
       resendBtn.disabled = true;
 
       try {
-        const res = await ApiClient.post("/Auth/resend-code", { email: currentEmail, codeType: 1 });
-        
-        if (res.data && res.data.verificationCodePreview) {
-          currentPreviewCode = res.data.verificationCodePreview;
-          document.getElementById("preview-code-text").innerText = currentPreviewCode;
-          document.getElementById("preview-badge-container").classList.remove("hidden");
-          document.getElementById("code-input").value = currentPreviewCode;
+        let res = null;
+        try {
+          res = await ApiClient.post("/Auth/resend-code", { email: currentEmail.trim(), codeType: 1 });
+        } catch (e) {
+          res = await ApiClient.post("/Auth/resend-verification-code", { email: currentEmail.trim(), codeType: 1 });
         }
 
-        alertBox.innerHTML = res.message || "تمت إعادة إرسال رمز التحقق بنجاح.";
+        console.log("Full Resend Response:", res);
+        const preview = res?.data?.verificationCodePreview || res?.verificationCodePreview || res?.data?.previewCode || res?.data?.code || res?.code || "";
+        console.log("Extracted Code:", preview);
+
+        if (preview) {
+          currentPreviewCode = String(preview).trim().replace(/\D/g, '');
+          const previewText = document.getElementById("preview-code-text");
+          if (previewText) previewText.innerText = currentPreviewCode;
+          
+          const badgeContainer = document.getElementById("preview-badge-container");
+          if (badgeContainer) badgeContainer.classList.remove("hidden");
+
+          setCodeInputs(currentPreviewCode);
+        }
+
+        alertBox.innerHTML = "تم إعادة إرسال رمز التحقق بنجاح";
         alertBox.className = "mb-4 p-3.5 rounded-xl text-sm font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 block";
+
+        startResendCooldown(60);
       } catch (err) {
-        alertBox.innerHTML = err.message;
+        alertBox.innerHTML = err.message || "فشل إعادة إرسال رمز التحقق.";
         alertBox.className = "mb-4 p-3.5 rounded-xl text-sm font-bold bg-red-50 border border-red-200 text-red-700 block";
-      } finally {
         resendBtn.innerText = "إعادة إرسال رمز جديد";
         resendBtn.disabled = false;
       }

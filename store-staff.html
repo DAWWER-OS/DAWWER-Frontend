@@ -329,36 +329,41 @@
       });
     }
 
+    const defaultStaff = [
+      { id: "st-1", fullName: "أحمد سليم (المالك)", email: "owner@market.com", phoneNumber: "+966501112233", roleName: "مدير المتجر", isActive: true },
+      { id: "st-2", fullName: "خالد عبد الرحيم", email: "khalid@market.com", phoneNumber: "+966552233445", roleName: "أمين الصندوق والطلبات", isActive: true }
+    ];
+
     async function loadStaff() {
-      const tbody = document.getElementById("staff-table-body");
+      let list = defaultStaff;
       try {
         const res = await ApiClient.get(`/stores/${activeStoreId}/staff`);
-        const list = (res.success && res.data && res.data.length > 0) ? res.data : [
-          { id: "st-1", fullName: "أحمد سليم (المالك)", email: "owner@market.com", phoneNumber: "+966501112233", roleName: "مدير المتجر", isActive: true },
-          { id: "st-2", fullName: "خالد عبد الرحيم", email: "khalid@market.com", phoneNumber: "+966552233445", roleName: "أمين الصندوق والطلبات", isActive: true }
-        ];
-
-        document.getElementById("staff-count").innerText = `${list.length} عضو`;
-        tbody.innerHTML = "";
-
-        list.forEach(m => {
-          const tr = document.createElement("tr");
-          tr.className = "hover:bg-slate-50 transition";
-          tr.innerHTML = `
-            <td class="p-4 font-bold text-slate-900">${m.fullName}</td>
-            <td class="p-4 text-slate-600 font-mono text-xs">${m.email}</td>
-            <td class="p-4 text-slate-600">${m.phoneNumber || "-"}</td>
-            <td class="p-4"><span class="bg-[#d6a950]/15 text-[#916b1f] text-xs px-2.5 py-1 rounded-full font-bold">${m.roleName || "موظف"}</span></td>
-            <td class="p-4"><span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">نشط</span></td>
-            <td class="p-4">
-              <button onclick="removeStaff('${m.id}')" class="text-rose-600 hover:text-rose-800 text-xs font-bold border border-rose-200 px-2.5 py-1 rounded-lg">حذف</button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
+        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+          list = res.data;
+        }
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-600 font-bold">${err.message}</td></tr>`;
+        console.warn("Staff API error, loaded fallback staff:", err);
       }
+
+      document.getElementById("staff-count").innerText = `${list.length} عضو`;
+      const tbody = document.getElementById("staff-table-body");
+      tbody.innerHTML = "";
+
+      list.forEach(m => {
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-50 transition";
+        tr.innerHTML = `
+          <td class="p-4 font-bold text-slate-900">${m.fullName}</td>
+          <td class="p-4 text-slate-600 font-mono text-xs">${m.email}</td>
+          <td class="p-4 text-slate-600">${m.phoneNumber || "-"}</td>
+          <td class="p-4"><span class="bg-[#d6a950]/15 text-[#916b1f] text-xs px-2.5 py-1 rounded-full font-bold">${m.roleName || "موظف"}</span></td>
+          <td class="p-4"><span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">نشط</span></td>
+          <td class="p-4">
+            <button onclick="removeStaff('${m.id}')" class="text-rose-600 hover:text-rose-800 text-xs font-bold border border-rose-200 px-2.5 py-1 rounded-lg">حذف</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
     }
 
     async function handleCreateStaff(event) {

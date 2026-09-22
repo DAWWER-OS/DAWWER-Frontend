@@ -245,23 +245,23 @@
           role: CONFIG.ROLES.MERCHANT
         };
 
-        const res = await ApiClient.post("/Auth/register", payload);
+        const response = await ApiClient.post("/Auth/register", payload);
         
-        let previewCode = "";
-        if (res.data) {
-          previewCode = res.data.verificationCodePreview || res.data.previewCode || res.data.code || "";
-          if (previewCode) {
-            console.log(`[Development Mode] Verification Code Preview for ${email}:`, previewCode);
-          }
-        }
+        console.log("Full Register Response:", response);
+        const preview = response?.data?.verificationCodePreview || response?.verificationCodePreview || response?.data?.previewCode || response?.data?.code || response?.code || "";
+        console.log("Extracted Code:", preview);
 
         sessionStorage.setItem("dawwer_registered_email", email);
 
-        msgBox.innerHTML = res.message || "تم إنشاء الحساب بنجاح! جاري تحويلك لصفحة تفعيل الحساب...";
+        msgBox.innerHTML = response.message || "تم إنشاء الحساب بنجاح! جاري تحويلك لصفحة تفعيل الحساب...";
         msgBox.className = "mb-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-bold block";
 
         setTimeout(() => {
-          window.location.href = `verify-account.html?email=${encodeURIComponent(email)}&previewCode=${encodeURIComponent(previewCode)}`;
+          if (preview) {
+            window.location.href = `verify-account.html?email=${encodeURIComponent(email)}&previewCode=${encodeURIComponent(preview)}`;
+          } else {
+            window.location.href = `verify-account.html?email=${encodeURIComponent(email)}`;
+          }
         }, 1200);
       } catch (err) {
         msgBox.innerHTML = err.message;

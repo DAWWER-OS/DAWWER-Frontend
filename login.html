@@ -205,6 +205,18 @@
       }
     }
 
+    // Display success notification if redirected from account verification
+    document.addEventListener("DOMContentLoaded", () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("verified") === "true" || urlParams.get("verified") === "1") {
+        const errorBox = document.getElementById("error-message");
+        if (errorBox) {
+          errorBox.innerHTML = "تم تأكيد حسابك بنجاح، يمكنك الآن تسجيل الدخول";
+          errorBox.className = "mb-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-bold block";
+        }
+      }
+    });
+
     function togglePasswordVisibility(inputId, btn) {
       const input = document.getElementById(inputId);
       input.type = input.type === "password" ? "text" : "password";
@@ -225,7 +237,41 @@
       try {
         const response = await ApiClient.post("/Auth/login", { email, password });
         
-        if (response.success && response.data) {
+        // 1. Check if response indicates unverified account
+        const isUnverified = 
+          response.data?.isVerified === false ||
+          response.data?.requiresVerification === true ||
+          response.data?.status === "PendingVerification" ||
+          response.data?.status === 1 ||
+          (response.message && (
+            response.message.toLowerCase().includes("email verification required") ||
+            response.message.toLowerCase().includes("verification required") ||
+            response.message.toLowerCase().includes("verif") ||
+            response.message.includes("تفعيل") ||
+            response.message.includes("تأكيد")
+          ));
+
+        if (isUnverified) {
+          const previewCode = response.data?.verificationCodePreview || response.data?.previewCode || "";
+          if (previewCode) {
+            console.log("Unverified account code preview:", previewCode);
+          }
+
+          errorBox.innerHTML = "البريد الإلكتروني بحاجة إلى تأكيد، جاري تحويلك لصفحة التحقق...";
+          errorBox.className = "mb-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-bold block";
+
+          const redirectUrl = previewCode 
+            ? `verify-account.html?email=${encodeURIComponent(email)}&previewCode=${encodeURIComponent(previewCode)}`
+            : `verify-account.html?email=${encodeURIComponent(email)}`;
+
+          setTimeout(() => {
+            window.location.href = redirectUrl;
+          }, 1000);
+          return;
+        }
+
+        // 2. Successful Login with Active Session
+        if (response.success && response.data && response.data.accessToken) {
           Auth.saveSession(response.data);
 
           const urlParams = new URLSearchParams(window.location.search);
@@ -242,8 +288,50 @@
           throw new Error(response.message || "بيانات الدخول غير صحيحة.");
         }
       } catch (err) {
-        errorBox.innerHTML = err.message;
-        errorBox.classList.remove("hidden");
+        // Inspect if error envelope indicates an unverified account
+        const resData = err.data || (err.response ? err.response.data : null) || err.response;
+        const msg = (err.message || "").toLowerCase();
+        
+        const isUnverifiedError = 
+          (err.message && err.message.toLowerCase().includes("email verification required")) ||
+          msg.includes("email verification required") ||
+          msg.includes("verification required") ||
+          msg.includes("unconfirmed") ||
+          msg.includes("not verified") ||
+          msg.includes("pendingverification") ||
+          msg.includes("pending verification") ||
+          msg.includes("غير مفعّل") ||
+          msg.includes("تأكيد الحساب") ||
+          msg.includes("تفعيل الحساب") ||
+          msg.includes("رمز التحقق") ||
+          (resData && (
+            resData.isVerified === false ||
+            resData.requiresVerification === true ||
+            resData.status === "PendingVerification" ||
+            resData.status === 1
+          ));
+
+        if (isUnverifiedError) {
+          const previewCode = (resData && (resData.verificationCodePreview || resData.previewCode)) || "";
+          if (previewCode) {
+            console.log("Unverified account code preview:", previewCode);
+          }
+
+          errorBox.innerHTML = "البريد الإلكتروني بحاجة إلى تأكيد، جاري تحويلك لصفحة التحقق...";
+          errorBox.className = "mb-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-bold block";
+
+          const redirectUrl = previewCode 
+            ? `verify-account.html?email=${encodeURIComponent(email)}&previewCode=${encodeURIComponent(previewCode)}`
+            : `verify-account.html?email=${encodeURIComponent(email)}`;
+
+          setTimeout(() => {
+            window.location.href = redirectUrl;
+          }, 1000);
+          return;
+        }
+
+        errorBox.innerHTML = err.message || "حدث خطأ أثناء تسجيل الدخول.";
+        errorBox.className = "mb-4 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-bold block";
         btn.innerText = "تسجيل الدخول";
         btn.disabled = false;
       }

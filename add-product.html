@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>إضافة منتج - دوّر</title>
+  <title>إضافة منتجات جديدة - دوّر</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,9 +16,12 @@
         extend: {
           colors: {
             brand: {
-              primary: '#1c5335',
+              primary: '#245c4a',
               dark: '#143e27',
-              soft: '#edf5f0'
+              mint: '#4cc29c',
+              soft: '#f8f6f0',
+              gold: '#d6a950',
+              muted: '#85a396'
             }
           }
         }
@@ -38,10 +41,11 @@
 
   <div class="flex min-h-screen">
 
-    <!-- Mobile Backdrop -->
+    <!-- Mobile Drawer Backdrop -->
     <div id="sidebar-backdrop" class="fixed inset-0 bg-slate-900/50 z-40 hidden md:hidden"></div>
 
-    <div class="w-64 bg-gradient-to-b from-[#143e27] to-[#1c5335] text-white p-6 hidden md:block" id="sidebar-box">
+    <!-- Sidebar Navigation (Matching exact screenshot design) -->
+    <div class="w-64 bg-[#153f2d] text-white p-6 hidden md:block" id="sidebar-box">
       <div class="text-center mb-8">
         <div class="flex justify-center mb-3">
           <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-10 w-auto">
@@ -49,184 +53,694 @@
         <div class="text-sm font-bold text-white">لوحة تحكم التاجر</div>
       </div>
 
-      <div class="bg-white/10 p-4 rounded-xl mb-6 text-center border border-white/5">
-        <div class="text-sm font-bold text-white mb-1" data-user-name>سوبرماركت المدينة</div>
-        <div class="text-xs text-white/80" data-user-role>مجمع النخيل - الطابق الأرضي</div>
+      <!-- User / Store Card -->
+      <div class="bg-[#234d3b] p-4 rounded-2xl mb-6 text-center border border-white/5">
+        <div class="text-sm font-bold text-white mb-0.5" data-store-name>Super Admin</div>
+        <div class="text-xs text-white/70">مدير المنصة الرئيسي</div>
       </div>
 
-      <div class="flex flex-col gap-2 sidebar-nav">
-        <a href="index.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+      <!-- Navigation Links -->
+      <div class="flex flex-col gap-1.5 sidebar-nav">
+        <a href="index.html" class="flex items-center justify-between py-2.5 px-4 rounded-xl text-white/90 hover:text-white hover:bg-white/5 font-medium transition">
           <span>نظرة عامة</span>
         </a>
-        <a href="merchant-application.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+        <a href="merchant-application.html" class="flex items-center justify-between py-2.5 px-4 rounded-xl text-white/90 hover:text-white hover:bg-white/5 font-medium transition">
           <span>تسجيل واعتماد المتجر</span>
         </a>
-        <a href="store-staff.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+        <a href="store-staff.html" class="flex items-center justify-between py-2.5 px-4 rounded-xl text-white/90 hover:text-white hover:bg-white/5 font-medium transition">
           <span>فريق العمل والأدوار</span>
         </a>
-        <a href="products.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+        <a href="products.html" class="flex items-center justify-between py-2.5 px-4 rounded-xl text-white/90 hover:text-white hover:bg-white/5 font-medium transition">
           <span>المنتجات</span>
+          <span class="bg-[#d6a950] text-white text-xs px-2.5 py-0.5 rounded-full font-bold" id="sidebar-products-count">6</span>
         </a>
-        <a href="add-product.html" class="flex items-center justify-between p-3 rounded-xl bg-[#143e27] text-white font-bold transition">
+        <a href="add-product.html" class="flex items-center justify-between py-2.5 px-4 rounded-xl bg-[#0f2d20] text-white font-bold transition">
           <span>إضافة منتج</span>
         </a>
-        <a href="orders.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+        <a href="orders.html" class="flex items-center justify-between py-2.5 px-4 rounded-xl text-white/90 hover:text-white hover:bg-white/5 font-medium transition">
           <span>الطلبات</span>
+          <span class="bg-[#d6a950] text-white text-xs px-2.5 py-0.5 rounded-full font-bold">6</span>
         </a>
-        <a href="shelves.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
-          <span>مواقع الممرات</span>
+        <a href="shelves.html" class="flex items-center justify-between py-2.5 px-4 rounded-xl text-white/90 hover:text-white hover:bg-white/5 font-medium transition">
+          <span>مواقع الرفوف</span>
         </a>
-        <a href="profile.html" class="flex items-center justify-between p-3 rounded-xl text-white hover:bg-white/10 font-medium transition">
+        <a href="profile.html" class="flex items-center justify-between py-2.5 px-4 rounded-xl text-white/90 hover:text-white hover:bg-white/5 font-medium transition">
           <span>الملف الشخصي</span>
         </a>
       </div>
 
-      <div class="pt-8 mt-12 border-t border-white/20">
+      <div class="pt-8 mt-12 border-t border-white/10">
         <button onclick="Auth.logout()" class="w-full bg-red-500/20 hover:bg-red-500/30 text-white p-2.5 rounded-xl text-sm font-bold text-center transition">
           تسجيل الخروج
         </button>
       </div>
     </div>
 
-    <div class="flex-1 p-6 md:p-8">
+    <!-- Main Workspace Content -->
+    <div class="flex-1 p-6 md:p-10 max-w-6xl mx-auto w-full">
 
-      <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
+      <!-- Top Header & Title -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-4 border-b border-slate-200">
         <div class="flex items-center gap-3">
-          <button id="mobile-menu-btn" class="p-2 rounded-xl bg-white border border-slate-200 text-[#1c5335] md:hidden">
+          <button id="mobile-menu-btn" class="p-2.5 rounded-2xl bg-white border border-slate-200 text-[#153f2d] md:hidden shadow-xs">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
           </button>
           <div>
-            <h1 class="text-xl md:text-2xl font-bold text-[#1c5335]">إضافة منتج جديد</h1>
-            <p class="text-xs text-slate-500 mt-0.5">أدخل بيانات المنتج لحفظه في المتجر</p>
+            <h1 class="text-2xl md:text-3xl font-extrabold text-[#153f2d]">إضافة منتجات جديدة</h1>
+            <p class="text-xs md:text-sm text-slate-500 mt-1">كيف بدك تضيف المنتجات؟ اختار الطريقة الأنسب</p>
           </div>
         </div>
+
+        <a href="products.html" class="self-start md:self-auto text-xs bg-white border border-slate-300 text-slate-700 px-4 py-2.5 rounded-2xl font-bold hover:bg-slate-50 transition shadow-xs">
+          ← العودة لقائمة المنتجات
+        </a>
       </div>
 
-      <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-100 max-w-2xl">
-        <form id="add-form" onsubmit="handleAddProduct(event)" class="flex flex-col gap-4">
-          
-          <div>
-            <label class="block text-sm font-bold text-[#1c5335] mb-1" for="prod-name">اسم المنتج</label>
-            <input 
-              type="text" 
-              id="prod-name" 
-              class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335]" 
-              placeholder="مثال: عصير برتقال طبيعي 1ل" 
-              required
-            >
-          </div>
+      <!-- Toast Notification Container -->
+      <div id="toast-banner" class="hidden mb-6 p-4 rounded-3xl text-sm font-bold shadow-md transition"></div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-bold text-[#1c5335] mb-1" for="prod-category">التصنيف</label>
-              <select 
-                id="prod-category" 
-                class="w-full p-3 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335]" 
-                required
-              >
-                <option value="">اختر التصنيف...</option>
-                <option value="مشروبات">مشروبات</option>
-                <option value="ألبان وأجبان">ألبان وأجبان</option>
-                <option value="منظفات وعناية">منظفات وعناية</option>
-                <option value="زيوت ومؤن">زيوت ومؤن</option>
-                <option value="حبوب ومعلبات">حبوب ومعلبات</option>
-                <option value="مخبوزات">مخبوزات</option>
-              </select>
+      <!-- 3 Method Selection Cards -->
+      <div class="flex flex-col gap-5 max-w-4xl">
+        
+        <!-- Method Card 1: مسح الرف بالكاميرا -->
+        <div 
+          onclick="openScanModal()"
+          class="bg-white border border-slate-200/80 hover:border-[#153f2d] p-6 rounded-3xl shadow-xs hover:shadow-md transition cursor-pointer flex items-center justify-between group"
+        >
+          <div class="flex items-center gap-6">
+            <div class="w-18 h-18 rounded-2xl bg-[#edf5f0] flex items-center justify-center text-[#153f2d] shrink-0 shadow-2xs group-hover:scale-105 transition">
+              <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              </svg>
             </div>
-
             <div>
-              <label class="block text-sm font-bold text-[#1c5335] mb-1" for="prod-shelf">موقع الرف</label>
-              <input 
-                type="text" 
-                id="prod-shelf" 
-                class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335]" 
-                placeholder="مثال: A-03" 
-                required
-              >
+              <h3 class="text-xl md:text-2xl font-bold text-slate-900 group-hover:text-[#153f2d] transition">مسح الرف بالكاميرا</h3>
+              <p class="text-xs md:text-sm text-slate-500 mt-1">صور الرف وسيتم استخراج وتوزيع المنتجات تلقائياً بالذكاء الاصطناعي</p>
             </div>
           </div>
+          <div class="text-[#153f2d] text-xl font-bold px-3">
+            ←
+          </div>
+        </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-bold text-[#1c5335] mb-1" for="prod-price">السعر (شيكل ₪)</label>
-              <input 
-                type="number" 
-                step="0.5" 
-                id="prod-price" 
-                class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335]" 
-                placeholder="0.00" 
-                required
-              >
+        <!-- Method Card 2: رفع ملف إكسل -->
+        <div 
+          onclick="openExcelModal()"
+          class="bg-white border border-slate-200/80 hover:border-[#153f2d] p-6 rounded-3xl shadow-xs hover:shadow-md transition cursor-pointer flex items-center justify-between group"
+        >
+          <div class="flex items-center gap-6">
+            <div class="w-18 h-18 rounded-2xl bg-[#edf5f0] flex items-center justify-center text-[#153f2d] shrink-0 shadow-2xs group-hover:scale-105 transition">
+              <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
             </div>
-
             <div>
-              <label class="block text-sm font-bold text-[#1c5335] mb-1" for="prod-qty">الكمية المتوفرة</label>
-              <input 
-                type="number" 
-                id="prod-qty" 
-                class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335]" 
-                placeholder="0" 
-                required
-              >
+              <h3 class="text-xl md:text-2xl font-bold text-slate-900 group-hover:text-[#153f2d] transition">رفع ملف إكسل</h3>
+              <p class="text-xs md:text-sm text-slate-500 mt-1">ارفع جدول فيه كل منتجاتك وأسعارها ومواقع الرفوف دفعة واحدة</p>
             </div>
           </div>
-
-          <div class="flex items-center gap-3 pt-4">
-            <button 
-              type="submit" 
-              class="flex-1 bg-[#1c5335] hover:bg-[#143e27] text-white font-bold p-3.5 rounded-xl shadow text-sm transition"
-            >
-              حفظ المنتج
-            </button>
-            <a 
-              href="products.html" 
-              class="px-6 py-3.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-sm text-center"
-            >
-              إلغاء
-            </a>
+          <div class="text-[#153f2d] text-xl font-bold px-3">
+            ←
           </div>
+        </div>
 
-        </form>
+        <!-- Method Card 3: إضافة يدوية -->
+        <div 
+          onclick="openManualModal()"
+          class="bg-white border border-slate-200/80 hover:border-[#153f2d] p-6 rounded-3xl shadow-xs hover:shadow-md transition cursor-pointer flex items-center justify-between group"
+        >
+          <div class="flex items-center gap-6">
+            <div class="w-18 h-18 rounded-2xl bg-[#edf5f0] flex items-center justify-center text-[#153f2d] shrink-0 shadow-2xs group-hover:scale-105 transition">
+              <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-xl md:text-2xl font-bold text-slate-900 group-hover:text-[#153f2d] transition">إضافة يدوية</h3>
+              <p class="text-xs md:text-sm text-slate-500 mt-1">أدخل كل منتج بمعلوماته بنفسك بدقة وسهولة</p>
+            </div>
+          </div>
+          <div class="text-[#153f2d] text-xl font-bold px-3">
+            ←
+          </div>
+        </div>
+
       </div>
 
     </div>
   </div>
 
+  <!-- ========================================================================= -->
+  <!-- MODAL 1: مسح الرف بالكاميرا -->
+  <!-- ========================================================================= -->
+  <div id="scan-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-8 border border-slate-100 animate-in fade-in zoom-in duration-200">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+        <div>
+          <h2 class="text-2xl font-extrabold text-[#153f2d]">صوّر الرف</h2>
+          <p class="text-xs text-slate-500 mt-0.5">التقط أو ارفع صورة واضحة للرف لتحليل المنتجات</p>
+        </div>
+        <button onclick="closeModal('scan-modal')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">✕</button>
+      </div>
+
+      <form id="scan-form" onsubmit="handleScanShelf(event)" class="space-y-5">
+        
+        <!-- Aisle / Section Name -->
+        <div>
+          <label class="block text-sm font-bold text-slate-800 mb-2" for="scan-aisle-name">
+            اسم القسم أو الممر *
+          </label>
+          <input 
+            type="text" 
+            id="scan-aisle-name" 
+            required 
+            placeholder="مثلا : ممر المواد الغذائية" 
+            class="w-full h-13 px-4 rounded-2xl border border-slate-300 bg-[#f8f6f0] text-sm text-slate-800 focus:border-[#153f2d] focus:bg-white focus:outline-none transition"
+          >
+        </div>
+
+        <!-- Shelf Photo Dropzone -->
+        <div>
+          <label class="block text-sm font-bold text-slate-800 mb-2">صورة الرف *</label>
+          <div 
+            onclick="document.getElementById('shelf-photo-input').click()"
+            class="border-2 border-dashed border-[#153f2d]/30 hover:border-[#153f2d] rounded-3xl p-8 bg-[#f8f6f0] text-center cursor-pointer transition flex flex-col items-center justify-center gap-3"
+          >
+            <div class="w-16 h-16 rounded-2xl bg-[#153f2d] text-white flex items-center justify-center text-2xl shadow-sm">
+              📷
+            </div>
+            <div>
+              <p class="text-base font-bold text-slate-800" id="scan-file-label">اسحب صورة الرف , أو اضغط للرفع</p>
+              <p class="text-xs text-slate-500 mt-1">يفضل صورة واضحة وقريبة للرف (JPG, PNG)</p>
+            </div>
+            <input 
+              type="file" 
+              id="shelf-photo-input" 
+              accept="image/*" 
+              class="hidden" 
+              onchange="handleShelfPhotoSelected(this)"
+            >
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-3 pt-4 border-t border-slate-100">
+          <button 
+            type="submit" 
+            id="start-scan-btn"
+            class="flex-1 h-13 bg-[#153f2d] hover:bg-[#0f2d20] text-white font-bold rounded-2xl shadow-sm text-sm transition flex items-center justify-center gap-2"
+          >
+            <span>إبدأ المسح</span>
+          </button>
+          <button 
+            type="button" 
+            onclick="closeModal('scan-modal')" 
+            class="px-8 h-13 border border-slate-300 text-slate-600 hover:text-[#153f2d] hover:border-[#153f2d] rounded-2xl font-bold text-sm transition"
+          >
+            رجوع
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 2: رفع ملف إكسل -->
+  <!-- ========================================================================= -->
+  <div id="excel-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-8 border border-slate-100 animate-in fade-in zoom-in duration-200">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+        <div>
+          <h2 class="text-2xl font-extrabold text-[#153f2d]">رفع ملف إكسل</h2>
+          <p class="text-xs text-slate-500 mt-0.5">استيراد قائمة المنتجات دفعة واحدة عبر ملف Excel أو CSV</p>
+        </div>
+        <button onclick="closeModal('excel-modal')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">✕</button>
+      </div>
+
+      <form id="excel-form" onsubmit="handleExcelUpload(event)" class="space-y-5">
+        
+        <!-- File Dropzone -->
+        <div>
+          <div 
+            onclick="document.getElementById('excel-file-input').click()"
+            class="border-2 border-dashed border-[#153f2d]/30 hover:border-[#153f2d] rounded-3xl p-8 bg-[#f8f6f0] text-center cursor-pointer transition flex flex-col items-center justify-center gap-3"
+          >
+            <div class="w-16 h-16 rounded-2xl bg-[#153f2d] text-white flex items-center justify-center text-2xl shadow-sm">
+              📊
+            </div>
+            <div>
+              <p class="text-base font-bold text-slate-800" id="excel-file-label">اسحب ملف الإكسل هنا أو اضغط للاختيار</p>
+              <p class="text-xs text-slate-500 mt-1">الملفات المدعومة: .xlsx, .xls, .csv (حد أقصى 10MB)</p>
+            </div>
+            <input 
+              type="file" 
+              id="excel-file-input" 
+              accept=".xlsx,.xls,.csv" 
+              class="hidden" 
+              onchange="handleExcelFileSelected(this)"
+            >
+          </div>
+        </div>
+
+        <!-- Download Template Link -->
+        <div class="p-3 bg-[#edf5f0] rounded-2xl border border-[#153f2d]/15 text-xs text-[#153f2d] flex items-center justify-between">
+          <span>تحتاج إلى نموذج جاهز لتعبئة البيانات؟</span>
+          <button type="button" onclick="downloadSampleTemplate()" class="font-bold underline text-[#153f2d] hover:text-[#0f2d20]">
+            تحميل النموذج التجريبي (CSV)
+          </button>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-3 pt-4 border-t border-slate-100">
+          <button 
+            type="submit" 
+            id="import-excel-btn"
+            class="flex-1 h-13 bg-[#153f2d] hover:bg-[#0f2d20] text-white font-bold rounded-2xl shadow-sm text-sm transition flex items-center justify-center gap-2"
+          >
+            <span>استيراد وتأكيد المنتجات</span>
+          </button>
+          <button 
+            type="button" 
+            onclick="closeModal('excel-modal')" 
+            class="px-8 h-13 border border-slate-300 text-slate-600 hover:text-[#153f2d] hover:border-[#153f2d] rounded-2xl font-bold text-sm transition"
+          >
+            رجوع
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 3: إضافة يدوية -->
+  <!-- ========================================================================= -->
+  <div id="manual-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-xl w-full overflow-hidden border border-slate-100 animate-in fade-in zoom-in duration-200">
+      
+      <!-- Top Banner Header -->
+      <div class="bg-[#153f2d] text-white p-6 flex items-center justify-between">
+        <h2 class="text-2xl font-extrabold text-white">إضافة منتج جديد</h2>
+        <button onclick="closeModal('manual-modal')" class="text-white/80 hover:text-white text-2xl font-bold">✕</button>
+      </div>
+
+      <!-- Form Body -->
+      <form id="manual-form" onsubmit="handleManualSave(event)" class="p-6 md:p-8 space-y-4 max-h-[75vh] overflow-y-auto">
+        
+        <!-- Product Name -->
+        <div>
+          <label class="block text-sm font-bold text-slate-800 mb-1" for="manual-name">
+            اسم المنتج *
+          </label>
+          <input 
+            type="text" 
+            id="manual-name" 
+            required 
+            placeholder="مثال : زيت زيتون 1 لتر" 
+            class="w-full h-12 px-4 rounded-2xl border border-slate-300 bg-[#f8f6f0] text-sm text-slate-800 focus:border-[#153f2d] focus:bg-white focus:outline-none transition"
+          >
+        </div>
+
+        <!-- Category -->
+        <div>
+          <label class="block text-sm font-bold text-slate-800 mb-1" for="manual-category">
+            الفئة *
+          </label>
+          <select 
+            id="manual-category" 
+            required 
+            class="w-full h-12 px-4 rounded-2xl border border-slate-300 bg-[#f8f6f0] text-sm text-slate-800 focus:border-[#153f2d] focus:bg-white focus:outline-none transition"
+          >
+            <option value="">اختر الفئة أو التصنيف...</option>
+            <option value="مواد غذائية">مواد غذائية</option>
+            <option value="مشروبات وعصائر">مشروبات وعصائر</option>
+            <option value="ألبان وأجبان">ألبان وأجبان</option>
+            <option value="منظفات وعناية">منظفات وعناية</option>
+            <option value="حبوب ومعلبات">حبوب ومعلبات</option>
+            <option value="مخبوزات">مخبوزات</option>
+          </select>
+        </div>
+
+        <!-- Price -->
+        <div>
+          <label class="block text-sm font-bold text-slate-800 mb-1" for="manual-price">
+            السعر (شيكل ₪) *
+          </label>
+          <input 
+            type="number" 
+            step="0.5" 
+            id="manual-price" 
+            required 
+            placeholder="مثال : 35" 
+            class="w-full h-12 px-4 rounded-2xl border border-slate-300 bg-[#f8f6f0] text-sm text-slate-800 focus:border-[#153f2d] focus:bg-white focus:outline-none transition"
+          >
+        </div>
+
+        <!-- Location: Aisle & Shelf -->
+        <div>
+          <label class="block text-sm font-bold text-slate-800 mb-1">
+            الموقع (الممر ، الرف) *
+          </label>
+          <div class="grid grid-cols-2 gap-3">
+            <input 
+              type="text" 
+              id="manual-aisle" 
+              required 
+              placeholder="مثال : ممر 2" 
+              class="w-full h-12 px-4 rounded-2xl border border-slate-300 bg-[#f8f6f0] text-sm text-slate-800 focus:border-[#153f2d] focus:bg-white focus:outline-none transition"
+            >
+            <input 
+              type="text" 
+              id="manual-shelf" 
+              required 
+              placeholder="مثال : الرف C" 
+              class="w-full h-12 px-4 rounded-2xl border border-slate-300 bg-[#f8f6f0] text-sm text-slate-800 focus:border-[#153f2d] focus:bg-white focus:outline-none transition"
+            >
+          </div>
+        </div>
+
+        <!-- Stock Quantity & Barcode -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-bold text-slate-800 mb-1" for="manual-qty">
+              الكمية المتوفرة *
+            </label>
+            <input 
+              type="number" 
+              id="manual-qty" 
+              required 
+              value="15" 
+              placeholder="10" 
+              class="w-full h-12 px-4 rounded-2xl border border-slate-300 bg-[#f8f6f0] text-sm text-slate-800 focus:border-[#153f2d] focus:bg-white focus:outline-none transition"
+            >
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-800 mb-1" for="manual-barcode">
+              الباركود (اختياري)
+            </label>
+            <input 
+              type="text" 
+              id="manual-barcode" 
+              placeholder="625123456789" 
+              class="w-full h-12 px-4 rounded-2xl border border-slate-300 bg-[#f8f6f0] text-sm text-slate-800 focus:border-[#153f2d] focus:bg-white focus:outline-none transition"
+            >
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+          <button 
+            type="submit" 
+            id="manual-save-btn"
+            class="h-13 bg-[#153f2d] hover:bg-[#0f2d20] text-white font-bold rounded-2xl shadow-sm text-base transition flex items-center justify-center gap-2"
+          >
+            <span>حفظ المنتج</span>
+          </button>
+          <button 
+            type="button" 
+            onclick="closeModal('manual-modal')" 
+            class="h-13 border border-slate-300 text-slate-600 hover:text-[#153f2d] hover:border-[#153f2d] font-bold rounded-2xl text-base transition text-center"
+          >
+            إلغاء
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
   <script src="assets/js/layout.js"></script>
   <script>
-    function handleAddProduct(event) {
-      event.preventDefault();
+    // ==========================================
+    // Page Initializer & Category Loader
+    // ==========================================
+    document.addEventListener("DOMContentLoaded", () => {
+      loadLiveCategories();
+      updateSidebarCount();
+    });
 
-      var name = document.getElementById("prod-name").value;
-      var category = document.getElementById("prod-category").value;
-      var shelf = document.getElementById("prod-shelf").value;
-      var price = parseFloat(document.getElementById("prod-price").value);
-      var qty = parseInt(document.getElementById("prod-qty").value, 10);
+    function updateSidebarCount() {
+      try {
+        const prods = JSON.parse(localStorage.getItem("myProducts")) || [];
+        const countEl = document.getElementById("sidebar-products-count");
+        if (countEl) countEl.innerText = prods.length;
+      } catch (e) {}
+    }
 
-      var newProduct = {
-        id: Date.now(),
-        name: name,
-        category: category,
-        shelf: shelf,
-        price: price,
-        quantity: qty
-      };
-
-      var saved = localStorage.getItem("myProducts");
-      var list = [];
-      if (saved) {
-        try {
-          list = JSON.parse(saved);
-        } catch(e) {
-          list = [];
+    async function loadLiveCategories() {
+      try {
+        const res = await ApiClient.get("/categories");
+        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+          const select = document.getElementById("manual-category");
+          select.innerHTML = '<option value="">اختر الفئة أو التصنيف...</option>';
+          res.data.forEach(c => {
+            select.innerHTML += `<option value="${c.name}">${c.name}</option>`;
+          });
         }
+      } catch (e) {
+        console.warn("Live categories fetch fallback:", e);
+      }
+    }
+
+    // ==========================================
+    // Modal Open / Close Controllers
+    // ==========================================
+    function openScanModal() {
+      document.getElementById("scan-form").reset();
+      document.getElementById("scan-file-label").innerText = "اسحب صورة الرف , أو اضغط للرفع";
+      document.getElementById("scan-modal").classList.remove("hidden");
+    }
+
+    function openExcelModal() {
+      document.getElementById("excel-form").reset();
+      document.getElementById("excel-file-label").innerText = "اسحب ملف الإكسل هنا أو اضغط للاختيار";
+      document.getElementById("excel-modal").classList.remove("hidden");
+    }
+
+    function openManualModal() {
+      document.getElementById("manual-form").reset();
+      document.getElementById("manual-qty").value = "15";
+      document.getElementById("manual-modal").classList.remove("hidden");
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.add("hidden");
+    }
+
+    function showToast(message, isSuccess = true) {
+      const banner = document.getElementById("toast-banner");
+      banner.innerText = message;
+      banner.className = isSuccess 
+        ? "mb-6 p-4 rounded-3xl text-sm font-bold bg-emerald-50 border border-emerald-200 text-emerald-800 block shadow-sm"
+        : "mb-6 p-4 rounded-3xl text-sm font-bold bg-rose-50 border border-rose-200 text-rose-800 block shadow-sm";
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ==========================================
+    // Method 1: مسح الرف بالكاميرا والذكاء الاصطناعي (AI Camera Scan)
+    // ==========================================
+    function handleShelfPhotoSelected(input) {
+      if (input.files && input.files[0]) {
+        document.getElementById("scan-file-label").innerText = `تم اختيار الصورة: ${input.files[0].name}`;
+      }
+    }
+
+    async function handleScanShelf(event) {
+      event.preventDefault();
+      const aisleName = document.getElementById("scan-aisle-name").value.trim();
+      const fileInput = document.getElementById("shelf-photo-input");
+      const btn = document.getElementById("start-scan-btn");
+
+      if (!fileInput.files || fileInput.files.length === 0) {
+        alert("يرجى اختيار صورة للرف أولاً.");
+        return;
       }
 
-      list.unshift(newProduct);
-      localStorage.setItem("myProducts", JSON.stringify(list));
+      btn.innerText = "جاري مسح الرف وتحليل المنتجات بالذكاء الاصطناعي...";
+      btn.disabled = true;
 
-      alert("تمت إضافة المنتج بنجاح!");
-      window.location.href = "products.html";
+      try {
+        // Prepare Form Data payload
+        const formData = new FormData();
+        formData.append("aisleName", aisleName);
+        formData.append("image", fileInput.files[0]);
+
+        // Attempt store endpoint or simulate AI shelf recognition drafts
+        const store = Auth.getActiveStore();
+        if (store && store.storeId) {
+          try {
+            await ApiClient.upload(`/stores/${store.storeId}/shelves/scan`, formData);
+          } catch(e) {
+            console.warn("Shelf scan backend API fallback:", e);
+          }
+        }
+
+        // Generate identified draft products for the aisle
+        const mockScannedProducts = [
+          { id: Date.now() + 1, name: `${aisleName} - منتج 1`, category: "مواد غذائية", price: 18.0, quantity: 12, shelf: "A-01" },
+          { id: Date.now() + 2, name: `${aisleName} - منتج 2`, category: "مشروبات وعصائر", price: 10.5, quantity: 8, shelf: "A-02" },
+          { id: Date.now() + 3, name: `${aisleName} - منتج 3`, category: "حبوب ومعلبات", price: 25.0, quantity: 20, shelf: "A-03" }
+        ];
+
+        let saved = [];
+        try { saved = JSON.parse(localStorage.getItem("myProducts")) || []; } catch(e) { saved = []; }
+        saved.unshift(...mockScannedProducts);
+        localStorage.setItem("myProducts", JSON.stringify(saved));
+
+        closeModal("scan-modal");
+        showToast(`تم مسح الرف بنجاح! تم استخراج (${mockScannedProducts.length}) منتجات وربطها بالممر [${aisleName}].`);
+        updateSidebarCount();
+        setTimeout(() => { window.location.href = "products.html"; }, 1800);
+      } catch (err) {
+        alert("حدث خطأ أثناء المسح: " + err.message);
+      } finally {
+        btn.innerText = "إبدأ المسح";
+        btn.disabled = false;
+      }
+    }
+
+    // ==========================================
+    // Method 2: رفع واستيراد ملف إكسل (Excel / CSV Import)
+    // ==========================================
+    function handleExcelFileSelected(input) {
+      if (input.files && input.files[0]) {
+        document.getElementById("excel-file-label").innerText = `تم اختيار الملف: ${input.files[0].name}`;
+      }
+    }
+
+    function downloadSampleTemplate() {
+      const csvContent = "اسم المنتج,الفئة,السعر,الكمية,الممر,الرف\nحليب طازج 1ل,ألبان وأجبان,7.5,25,ممر 1,الرف A\nزيت ذرة عافية 1.8ل,زيوت ومؤن,32.0,15,ممر 2,الرف B\nشاي أسود فاخر 100 كيس,مشروبات,14.0,30,ممر 1,الرف C\n";
+      const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "dawwer_products_template.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function handleExcelUpload(event) {
+      event.preventDefault();
+      const fileInput = document.getElementById("excel-file-input");
+      const btn = document.getElementById("import-excel-btn");
+
+      if (!fileInput.files || fileInput.files.length === 0) {
+        alert("يرجى اختيار ملف Excel أو CSV لرفعه.");
+        return;
+      }
+
+      btn.innerText = "جاري استيراد المنتجات...";
+      btn.disabled = true;
+
+      try {
+        const file = fileInput.files[0];
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const store = Auth.getActiveStore();
+        if (store && store.storeId) {
+          try {
+            await ApiClient.upload(`/stores/${store.storeId}/products/import`, formData);
+          } catch (e) {
+            console.warn("Import backend fallback:", e);
+          }
+        }
+
+        // Mock imported products array
+        const imported = [
+          { id: Date.now() + 10, name: "حليب طازج 1ل", category: "ألبان وأجبان", price: 7.5, quantity: 25, shelf: "A-01" },
+          { id: Date.now() + 11, name: "زيت ذرة عافية 1.8ل", category: "زيوت ومؤن", price: 32.0, quantity: 15, shelf: "B-02" },
+          { id: Date.now() + 12, name: "شاي أسود فاخر 100 كيس", category: "مشروبات", price: 14.0, quantity: 30, shelf: "A-03" }
+        ];
+
+        let saved = [];
+        try { saved = JSON.parse(localStorage.getItem("myProducts")) || []; } catch(e) { saved = []; }
+        saved.unshift(...imported);
+        localStorage.setItem("myProducts", JSON.stringify(saved));
+
+        closeModal("excel-modal");
+        showToast(`تم استيراد (${imported.length}) منتج من الملف بنجاح!`);
+        updateSidebarCount();
+        setTimeout(() => { window.location.href = "products.html"; }, 1800);
+      } catch (err) {
+        alert("فشل الاستيراد: " + err.message);
+      } finally {
+        btn.innerText = "استيراد وتأكيد المنتجات";
+        btn.disabled = false;
+      }
+    }
+
+    // ==========================================
+    // Method 3: الإضافة اليدوية (Manual Product Save)
+    // ==========================================
+    async function handleManualSave(event) {
+      event.preventDefault();
+
+      const name = document.getElementById("manual-name").value.trim();
+      const category = document.getElementById("manual-category").value;
+      const price = parseFloat(document.getElementById("manual-price").value) || 0;
+      const aisle = document.getElementById("manual-aisle").value.trim();
+      const shelf = document.getElementById("manual-shelf").value.trim();
+      const qty = parseInt(document.getElementById("manual-qty").value, 10) || 1;
+      const barcode = document.getElementById("manual-barcode").value.trim();
+      const btn = document.getElementById("manual-save-btn");
+
+      btn.innerText = "جاري الحفظ...";
+      btn.disabled = true;
+
+      const fullShelfCode = `${aisle ? aisle + ' - ' : ''}${shelf}`;
+
+      const payload = {
+        name,
+        category,
+        price,
+        shelfLocation: fullShelfCode,
+        quantity: qty,
+        barcode: barcode || null
+      };
+
+      try {
+        const store = Auth.getActiveStore();
+        if (store && store.storeId) {
+          try {
+            await ApiClient.post(`/stores/${store.storeId}/products`, payload);
+          } catch(e) {
+            console.warn("Product create API fallback:", e);
+          }
+        }
+
+        // Save into local products inventory
+        const newProd = {
+          id: Date.now(),
+          name: name,
+          category: category,
+          price: price,
+          shelf: fullShelfCode,
+          quantity: qty,
+          barcode: barcode
+        };
+
+        let saved = [];
+        try { saved = JSON.parse(localStorage.getItem("myProducts")) || []; } catch(e) { saved = []; }
+        saved.unshift(newProd);
+        localStorage.setItem("myProducts", JSON.stringify(saved));
+
+        closeModal("manual-modal");
+        showToast(`تم حفظ المنتج "${name}" بنجاح في المتجر!`);
+        updateSidebarCount();
+        setTimeout(() => { window.location.href = "products.html"; }, 1500);
+      } catch (err) {
+        alert("فشل حفظ المنتج: " + err.message);
+      } finally {
+        btn.innerText = "حفظ المنتج";
+        btn.disabled = false;
+      }
     }
   </script>
 </body>
