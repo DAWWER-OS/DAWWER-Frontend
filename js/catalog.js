@@ -1583,7 +1583,11 @@
         }
       }
 
+      let _catalogInitialized = false;
       async function init() {
+        if (_catalogInitialized) return;
+        _catalogInitialized = true;
+
         initEvents();
         renderCatalog();
         renderFloorPlan();

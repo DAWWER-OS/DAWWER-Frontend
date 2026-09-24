@@ -4,6 +4,9 @@ const DawwerLayout = {
   STORAGE_KEY_STORE_STATUS: 'dawwer_store_status',
 
   init() {
+    if (this._initialized) return;
+    this._initialized = true;
+
     this.injectStyles();
     this.ensureSidebar();
     this.setupUserInfo();

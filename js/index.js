@@ -1,6 +1,10 @@
 
 
+let _indexInitialized = false;
 document.addEventListener('DOMContentLoaded', async () => {
+  if (_indexInitialized) return;
+  _indexInitialized = true;
+
   if (window.Auth && typeof Auth.requireAuth === 'function') {
     Auth.requireAuth();
   }

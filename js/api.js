@@ -477,13 +477,9 @@ const ApiClient = {
       }
     }
 
-    // 2. Handle HTTP 401 Unauthorized with Automatic Token Refresh & Auto-Redirect
+    // 2. Handle HTTP 401 Unauthorized (Auto-Logout and session wiping disabled)
     if (response && response.status === 401) {
-      console.group(`[ApiClient 401 Unauthorized Diagnostic] ${method} ${url}`);
-      console.error(`Status Code: 401 Unauthorized`);
-      console.error(`Endpoint URL: ${url}`);
-      console.error(`Headers Sent:`, headers);
-      console.groupEnd();
+      console.error(`[ApiClient 401 Unauthorized] ${method} ${url}`);
 
       if (!options._isRetry) {
         try {
@@ -498,32 +494,20 @@ const ApiClient = {
             });
           }
         } catch (refreshErr) {
-          console.warn('[ApiClient] Automatic token refresh attempt failed:', refreshErr);
+          console.warn('[ApiClient] Token refresh attempt skipped or failed:', refreshErr);
         }
       }
 
-      // If refresh failed or was already a retry:
-      // Automatically clear invalid session keys from localStorage and redirect user to login view
-      console.warn('[ApiClient] Session invalid or expired (401). Clearing storage and redirecting to login view.');
-      this.clearSession();
-
-      if (typeof window !== 'undefined' && window.location) {
-        const pathname = window.location.pathname || '';
-        const currentFile = pathname.split('/').pop() || 'index.html';
-        const authPages = ['login.html', 'register.html', 'verify-account.html', 'forgot-password.html', 'reset-password.html', 'admin-login.html'];
-        
-        if (!authPages.includes(currentFile)) {
-          const currentUrl = currentFile + (window.location.search || '');
-          window.location.href = `login.html?redirect=${encodeURIComponent(currentUrl)}`;
-        }
-      }
+      // NOTE: Auto-logout and session wiping are explicitly DISABLED.
+      // Retain tokens in localStorage, log error to console, and do not reload/redirect.
+      console.error(`[ApiClient 401 Unauthorized] Session retained. No redirect or storage purge performed for ${url}`);
 
       const errorObj = {
         success: false,
         status: 401,
         statusCode: 401,
         isUnauthorized: true,
-        message: 'انتهت صلاحية الجلسة (401 Unauthorized). يرجى تسجيل الدخول مجدداً.',
+        message: 'غير مصرح به (401 Unauthorized). تم الحفاظ على الجلسة.',
         data: null,
         errors: ['Unauthorized - 401']
       };

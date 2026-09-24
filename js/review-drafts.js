@@ -163,27 +163,6 @@ const JOBS_STORAGE_KEY = 'dawwer_ai_extraction_jobs';
       };
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      initCatalogStorage();
-      loadJobsData();
-
-      const manualCategorySelect = document.getElementById('manual-category');
-      if (manualCategorySelect && typeof ApiClient !== 'undefined' && ApiClient.categories && typeof ApiClient.categories.populateDropdown === 'function') {
-        ApiClient.categories.populateDropdown(manualCategorySelect, 'اختر التصنيف').catch(() => {});
-      }
-
-      const urlParams = new URLSearchParams(window.location.search);
-      const requestedJobId = urlParams.get('jobId');
-
-      if (requestedJobId) {
-        setActiveJob(requestedJobId);
-      } else if (allJobs.length > 0) {
-        setActiveJob(allJobs[0].id);
-      } else {
-        setActiveJob(null);
-      }
-    });
-
     function initCatalogStorage() {
       try {
         if (!localStorage.getItem(CATALOG_STORAGE_KEY)) {
@@ -1310,14 +1289,34 @@ const JOBS_STORAGE_KEY = 'dawwer_ai_extraction_jobs';
     window.publishSelectedToCatalog = publishSelectedToCatalog;
     window.showToast = showToast;
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => {
-        initCatalogStorage();
-        loadJobsData();
-        initReviewEvents();
-      });
-    } else {
+    let _reviewInitialized = false;
+    function bootstrapReview() {
+      if (_reviewInitialized) return;
+      _reviewInitialized = true;
+
       initCatalogStorage();
       loadJobsData();
       initReviewEvents();
+
+      const manualCategorySelect = document.getElementById('manual-category');
+      if (manualCategorySelect && typeof ApiClient !== 'undefined' && ApiClient.categories && typeof ApiClient.categories.populateDropdown === 'function') {
+        ApiClient.categories.populateDropdown(manualCategorySelect, 'اختر التصنيف').catch(() => {});
+      }
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const requestedJobId = urlParams.get('jobId');
+
+      if (requestedJobId) {
+        setActiveJob(requestedJobId);
+      } else if (allJobs.length > 0) {
+        setActiveJob(allJobs[0].id);
+      } else {
+        setActiveJob(null);
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bootstrapReview);
+    } else {
+      bootstrapReview();
     }

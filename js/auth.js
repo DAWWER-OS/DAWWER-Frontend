@@ -67,15 +67,57 @@ const Auth = {
 
   getUser() {
     try {
-      const raw = localStorage.getItem(CONFIG.USER_KEY);
-      return raw ? JSON.parse(raw) : null;
+      const userKey = (typeof CONFIG !== 'undefined' && CONFIG.USER_KEY) ? CONFIG.USER_KEY : "dawwer_user_data";
+      const raw = localStorage.getItem(userKey) ||
+                  localStorage.getItem("dawwer_user_data") ||
+                  localStorage.getItem("user") ||
+                  localStorage.getItem("userData");
+      if (raw) return JSON.parse(raw);
+
+      // If user object not found directly, check if we have token or userId in storage
+      const token = localStorage.getItem("accessToken") || localStorage.getItem("token") || (typeof CONFIG !== 'undefined' && localStorage.getItem(CONFIG.TOKEN_KEY));
+      if (token) {
+        try {
+          const parts = token.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+            const role = payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || payload.role || 2;
+            const email = payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"] || payload.email || "";
+            const userId = payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] || payload.nameid || payload.sub || localStorage.getItem("userId") || "";
+            const fullName = payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] || payload.unique_name || payload.name || "مستخدم دوّر";
+            return {
+              userId,
+              fullName,
+              email,
+              role,
+              storeId: localStorage.getItem("store_id") || localStorage.getItem("storeId") || null,
+              storeName: localStorage.getItem("storeName") || localStorage.getItem("store_name") || null
+            };
+          }
+        } catch (jwtErr) {}
+        return {
+          userId: localStorage.getItem("userId") || "user-default",
+          fullName: "مستخدم دوّر",
+          email: "",
+          role: 2,
+          storeId: localStorage.getItem("store_id") || localStorage.getItem("storeId") || null,
+          storeName: localStorage.getItem("storeName") || localStorage.getItem("store_name") || null
+        };
+      }
+      return null;
     } catch {
       return null;
     }
   },
 
   isAuthenticated() {
-    return !!(localStorage.getItem("token") || (typeof CONFIG !== 'undefined' && localStorage.getItem(CONFIG.TOKEN_KEY)));
+    return !!(
+      localStorage.getItem("accessToken") ||
+      localStorage.getItem("token") ||
+      localStorage.getItem("storeToken") ||
+      localStorage.getItem("dawwer_access_token") ||
+      (typeof CONFIG !== 'undefined' && CONFIG.TOKEN_KEY && localStorage.getItem(CONFIG.TOKEN_KEY))
+    );
   },
 
   async selectStore(storeId) {
@@ -210,23 +252,29 @@ const Auth = {
   },
 
   requireAuth(allowedRoles = []) {
+    // Run authentication check once per page mount to prevent circular re-checks
+    if (this._authChecked) return true;
+    this._authChecked = true;
+
     if (!this.isAuthenticated()) {
-      const currentPath = window.location.pathname.split("/").pop();
-      window.location.href = `login.html?redirect=${encodeURIComponent(currentPath)}`;
+      const currentPath = window.location.pathname.split("/").pop() || 'index.html';
+      const authPages = ['login.html', 'register.html', 'verify-account.html', 'forgot-password.html', 'reset-password.html', 'admin-login.html'];
+      if (!authPages.includes(currentPath)) {
+        window.location.href = `login.html?redirect=${encodeURIComponent(currentPath)}`;
+      }
       return false;
     }
 
     const user = this.getUser();
     if (!user) {
-      this.logout();
-      return false;
+      console.warn('[Auth.requireAuth] User object pending, but session token is present. Preserving session.');
+      return true;
     }
 
     if (allowedRoles && allowedRoles.length > 0) {
       const roleMatches = allowedRoles.some(r => this.hasRole(r));
       if (!roleMatches) {
-        alert("غير مصرح لك بالوصول إلى هذه الصفحة.");
-        window.location.href = (user.role === "Admin" || user.role === 4) ? "admin-dashboard.html" : "index.html";
+        console.warn(`[Auth.requireAuth] User role (${user.role}) does not match required roles:`, allowedRoles);
         return false;
       }
     }

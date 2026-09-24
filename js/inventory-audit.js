@@ -66,28 +66,6 @@ const CATALOG_STORAGE_KEY = 'dawwer_merchant_catalog_products';
       }
     ];
 
-    document.addEventListener('DOMContentLoaded', () => {
-      loadData();
-
-      const urlParams = new URLSearchParams(window.location.search);
-      const requestedTab = urlParams.get('tab');
-      const searchQuery = urlParams.get('search');
-
-      if (requestedTab === 'audit') {
-        switchMainView('audit');
-      }
-
-      if (searchQuery) {
-        const searchInput = document.getElementById('search-inventory');
-        if (searchInput) {
-          searchInput.value = searchQuery;
-          inventorySearchQuery = searchQuery.toLowerCase();
-        }
-      }
-
-      renderAll();
-    });
-
     function loadData() {
       try {
         const storedProducts = localStorage.getItem(CATALOG_STORAGE_KEY);
@@ -935,14 +913,35 @@ const CATALOG_STORAGE_KEY = 'dawwer_merchant_catalog_products';
     window.exportAuditLogCSV = exportAuditLogCSV;
     window.showToast = showToast;
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => {
-        loadData();
-        renderAll();
-        initAuditEvents();
-      });
-    } else {
+    let _auditInitialized = false;
+    function bootstrapInventoryAudit() {
+      if (_auditInitialized) return;
+      _auditInitialized = true;
+
       loadData();
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const requestedTab = urlParams.get('tab');
+      const searchQuery = urlParams.get('search');
+
+      if (requestedTab === 'audit') {
+        switchMainView('audit');
+      }
+
+      if (searchQuery) {
+        const searchInput = document.getElementById('search-inventory');
+        if (searchInput) {
+          searchInput.value = searchQuery;
+          inventorySearchQuery = searchQuery.toLowerCase();
+        }
+      }
+
       renderAll();
       initAuditEvents();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bootstrapInventoryAudit);
+    } else {
+      bootstrapInventoryAudit();
     }

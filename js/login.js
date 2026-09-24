@@ -1,6 +1,10 @@
 if (typeof Auth !== 'undefined' && Auth.isAuthenticated && Auth.isAuthenticated()) {
+  const urlParams = new URLSearchParams(window.location.search);
+  const redirect = urlParams.get('redirect');
   const user = Auth.getUser();
-  if (user && (user.role === 'Admin' || user.role === 4)) {
+  if (redirect && !redirect.includes('login.html')) {
+    window.location.href = redirect;
+  } else if (user && (user.role === 'Admin' || user.role === 4)) {
     window.location.href = 'admin-dashboard.html';
   } else {
     window.location.href = 'index.html';
