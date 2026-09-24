@@ -7,13 +7,16 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <script src="assets/css/tailwind.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
+          fontFamily: {
+            sans: ["'IBM Plex Sans Arabic'", 'sans-serif'],
+          },
           colors: {
             brand: {
               primary: '#1c5335',
@@ -26,11 +29,10 @@
     }
   </script>
 </head>
-<body class="bg-[#f8f6f0] font-['Tajawal',sans-serif] text-slate-800 min-h-screen">
+<body class="bg-[#f8f6f0] font-sans text-slate-800 min-h-screen">
 
   <div class="flex min-h-screen w-full">
     
-    <!-- Right Form Section -->
     <div class="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
       <div class="w-full max-w-md bg-white p-8 sm:p-10 rounded-3xl shadow-sm border border-slate-100">
         
@@ -38,14 +40,12 @@
           <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-12 w-auto">
         </div>
 
-        <!-- Header Section -->
         <div class="mb-6 text-center sm:text-right">
           <div class="inline-block bg-[#edf5f0] text-[#1c5335] border border-[#1c5335]/15 px-3.5 py-1 rounded-full text-xs font-bold mb-2">
             تأكيد البريد الإلكتروني
           </div>
           <h1 class="text-2xl sm:text-3xl font-bold text-[#1c5335] mb-1">رمز التحقق</h1>
           
-          <!-- Static Read-Only Email Badge Display -->
           <div class="mt-2 text-xs text-slate-500 leading-relaxed">
             <span>تم إرسال رمز التحقق المكون من 6 أرقام إلى:</span>
             <div class="mt-1.5 inline-flex items-center gap-1.5 bg-[#edf5f0] border border-[#1c5335]/20 px-3 py-1.5 rounded-xl text-[#1c5335] font-mono font-bold text-xs">
@@ -55,22 +55,19 @@
           </div>
         </div>
 
-        <!-- Testing / Development Preview Code Helper Badge -->
         <div id="preview-badge-container" class="hidden mb-4 p-3.5 rounded-2xl bg-[#edf5f0] border border-[#1c5335]/20 text-[#1c5335] text-xs flex items-center justify-between">
           <div class="flex items-center gap-2">
             <span class="font-bold">رمز التجربة:</span>
             <span id="preview-code-text" class="font-mono font-extrabold text-sm tracking-wider text-[#1c5335] bg-white px-2.5 py-0.5 rounded-lg border border-[#1c5335]/20"></span>
           </div>
-          <button type="button" onclick="autoFillCode()" class="text-xs bg-[#1c5335] text-white px-3 py-1 rounded-lg font-bold hover:bg-[#143e27] transition">
+          <button type="button" id="autofill-btn" class="text-xs bg-[#1c5335] text-white px-3 py-1 rounded-lg font-bold hover:bg-[#143e27] transition">
             تعبئة الرمز
           </button>
         </div>
 
-        <!-- Alert / Feedback Notification -->
         <div id="alert-message" class="hidden mb-4 p-3.5 rounded-xl text-sm font-bold"></div>
 
-        <!-- Verification Form (Code Input Only) -->
-        <form id="verify-form" onsubmit="handleVerifyCode(event)" class="flex flex-col gap-4">
+        <form id="verify-form" class="flex flex-col gap-4">
           
           <div>
             <label class="block text-sm font-bold text-[#1c5335] mb-1.5" for="code-input">أدخل رمز التحقق (6 أرقام)</label>
@@ -82,7 +79,6 @@
               maxlength="6"
               inputmode="numeric"
               pattern="[0-9]*"
-              oninput="this.value = this.value.replace(/\D/g, '')"
               required
               autofocus
             >
@@ -94,7 +90,7 @@
 
           <div class="flex items-center justify-between text-xs text-slate-500 pt-2">
             <span>لم يصلك الرمز؟</span>
-            <button type="button" onclick="handleResendCode()" id="resend-btn" class="text-[#1c5335] hover:text-[#143e27] font-bold hover:underline">
+            <button type="button" id="resend-btn" class="text-[#1c5335] hover:text-[#143e27] font-bold hover:underline">
               إعادة إرسال رمز جديد
             </button>
           </div>
@@ -110,16 +106,12 @@
       </div>
     </div>
 
-    <!-- Left Brand Hero Section (Modern, Dynamic & Feature-Rich) -->
     <div class="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-12 overflow-hidden text-white" style="background: linear-gradient(180deg, #143e27 0%, #1c5335 100%);">
       
-      <!-- Ambient Glow & Subtle Geometric Pattern Overlay -->
       <div class="absolute inset-0 pointer-events-none">
-        <!-- Radial Soft Lighting -->
         <div class="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl"></div>
         <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-[#2a754c]/20 rounded-full blur-3xl"></div>
         
-        <!-- Subtle SVG Pattern (opacity-10) -->
         <svg class="absolute inset-0 w-full h-full opacity-10" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" fill="none">
           <circle cx="400" cy="400" r="300" stroke="white" stroke-width="1.5" stroke-dasharray="8 8" />
           <circle cx="400" cy="400" r="200" stroke="white" stroke-width="1.5" />
@@ -129,10 +121,8 @@
         </svg>
       </div>
 
-      <!-- Main Container (Centered Content) -->
       <div class="relative z-10 my-auto max-w-lg mx-auto w-full flex flex-col gap-7">
         
-        <!-- Header: Logo + Headline -->
         <div class="text-right">
           <div class="flex items-center gap-3 mb-4">
             <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-12 w-auto">
@@ -146,10 +136,8 @@
           </p>
         </div>
 
-        <!-- Feature Highlights (3 Sleek Glassmorphic Cards) -->
         <div class="flex flex-col gap-3">
           
-          <!-- Feature 1 -->
           <div class="bg-white/10 backdrop-blur-md border border-white/10 p-3.5 rounded-2xl flex items-center gap-3.5 transition hover:bg-white/15">
             <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-lg shadow-inner">
               📍
@@ -160,7 +148,6 @@
             </div>
           </div>
 
-          <!-- Feature 2 -->
           <div class="bg-white/10 backdrop-blur-md border border-white/10 p-3.5 rounded-2xl flex items-center gap-3.5 transition hover:bg-white/15">
             <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-lg shadow-inner">
               📦
@@ -171,7 +158,6 @@
             </div>
           </div>
 
-          <!-- Feature 3 -->
           <div class="bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex items-center gap-4 transition hover:bg-white/15">
             <div class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-xl shadow-inner">
               ⚡
@@ -186,7 +172,6 @@
 
       </div>
 
-      <!-- Footer / Mini Branding -->
       <div class="relative z-10 text-center text-xs text-white/50 pt-4">
         منصة دوّر © جميع الحقوق محفوظة لشركاء النجاح
       </div>
@@ -195,217 +180,11 @@
 
   </div>
 
-  <script src="assets/js/config.js"></script>
-  <script src="assets/js/api.js"></script>
-  <script src="assets/js/auth.js"></script>
-  <script>
-    let currentEmail = "";
-    let currentPreviewCode = "";
-
-    function getEnteredCode() {
-      const inputs = document.querySelectorAll('.code-input-digit, .code-digit');
-      if (inputs && inputs.length === 6) {
-        return Array.from(inputs).map(input => input.value.trim()).join('');
-      }
-      const singleInput = document.getElementById("code-input");
-      if (singleInput) {
-        return singleInput.value.trim().replace(/\D/g, '');
-      }
-      return '';
-    }
-
-    function setCodeInputs(codeStr) {
-      if (!codeStr) return;
-      const clean = String(codeStr).trim().replace(/\D/g, '');
-      const inputs = document.querySelectorAll('.code-input-digit, .code-digit');
-      if (inputs && inputs.length === 6) {
-        clean.split('').forEach((digit, idx) => {
-          if (inputs[idx]) inputs[idx].value = digit;
-        });
-      }
-      const singleInput = document.getElementById("code-input");
-      if (singleInput) {
-        singleInput.value = clean;
-      }
-    }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      currentEmail = urlParams.get("email") || sessionStorage.getItem("dawwer_registered_email");
-      const previewCode = urlParams.get("previewCode") || urlParams.get("code");
-
-      console.log("Verification Code to use:", previewCode);
-
-      if (!currentEmail) {
-        alert("لم يتم العثور على بريد إلكتروني للتفعيل. يرجى إنشاء حساب أولاً.");
-        window.location.href = "register.html";
-        return;
-      }
-
-      document.getElementById("display-email-text").innerText = currentEmail;
-
-      if (previewCode) {
-        currentPreviewCode = String(previewCode).trim().replace(/\D/g, '');
-        document.getElementById("preview-code-text").innerText = currentPreviewCode;
-        document.getElementById("preview-badge-container").classList.remove("hidden");
-        setCodeInputs(currentPreviewCode);
-      }
-    });
-
-    function autoFillCode() {
-      if (currentPreviewCode) {
-        setCodeInputs(currentPreviewCode);
-        const input = document.getElementById("code-input");
-        if (input) input.focus();
-      }
-    }
-
-    async function handleVerifyCode(event) {
-      event.preventDefault();
-
-      const alertBox = document.getElementById("alert-message");
-      const btn = document.getElementById("submit-btn");
-
-      const enteredCode = getEnteredCode();
-
-      if (!currentEmail) {
-        alertBox.innerText = "لم يتم العثور على بريد إلكتروني للتفعيل.";
-        alertBox.className = "mb-4 p-3.5 rounded-xl text-sm font-bold bg-red-50 border border-red-200 text-red-700 block";
-        return;
-      }
-
-      if (enteredCode.length !== 6 || !/^\d{6}$/.test(enteredCode)) {
-        alertBox.innerText = "يجب إدخال رمز التحقق كاملاً المكون من 6 أرقام";
-        alertBox.className = "mb-4 p-3.5 rounded-xl text-sm font-bold bg-red-50 border border-red-200 text-red-700 block";
-        return;
-      }
-
-      alertBox.classList.add("hidden");
-      btn.innerText = "جاري التحقق من الرمز...";
-      btn.disabled = true;
-
-      try {
-        const payload = {
-          email: currentEmail.trim(),
-          code: enteredCode.trim(),
-          codeType: 1
-        };
-
-        console.log("Sending Verify Payload:", payload);
-
-        const res = await ApiClient.post("/Auth/verify-code", payload);
-
-        console.log("Full Verify Response:", res);
-
-        sessionStorage.removeItem("dawwer_registered_email");
-
-        // Case 1: Backend returns authentication session tokens directly
-        if (res.data && (res.data.accessToken || res.data.token)) {
-          Auth.saveSession(res.data);
-          alertBox.innerHTML = res.message || "تم تفعيل الحساب بنجاح! جاري تحويلك للوحة التحكم...";
-          alertBox.className = "mb-4 p-3.5 rounded-xl text-sm font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 block";
-
-          setTimeout(() => {
-            if (res.data.role === "Admin" || res.data.role === 4) {
-              window.location.href = "admin-dashboard.html";
-            } else {
-              window.location.href = "index.html";
-            }
-          }, 1200);
-        } else {
-          // Case 2: Verification confirms email without returning auth tokens
-          alertBox.innerHTML = res.message || "تم تأكيد حسابك بنجاح! جاري تحويلك لتسجيل الدخول...";
-          alertBox.className = "mb-4 p-3.5 rounded-xl text-sm font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 block";
-
-          setTimeout(() => {
-            window.location.href = "login.html?verified=true";
-          }, 1400);
-        }
-      } catch (err) {
-        alertBox.innerHTML = err.message || "رمز التحقق غير صحيح أو منتهي الصلاحية.";
-        alertBox.className = "mb-4 p-3.5 rounded-xl text-sm font-bold bg-red-50 border border-red-200 text-red-700 block";
-        btn.innerText = "تأكيد وتفعيل الحساب";
-        btn.disabled = false;
-      }
-    }
-
-    let resendTimer = null;
-    let resendCountdown = 0;
-
-    function startResendCooldown(seconds = 60) {
-      const resendBtn = document.getElementById("resend-btn");
-      if (!resendBtn) return;
-
-      resendCountdown = seconds;
-      resendBtn.disabled = true;
-      resendBtn.classList.add("opacity-50", "cursor-not-allowed");
-
-      if (resendTimer) clearInterval(resendTimer);
-
-      resendBtn.innerText = `إعادة الإرسال بعد (${resendCountdown} ث)`;
-
-      resendTimer = setInterval(() => {
-        resendCountdown--;
-        if (resendCountdown <= 0) {
-          clearInterval(resendTimer);
-          resendTimer = null;
-          resendBtn.disabled = false;
-          resendBtn.classList.remove("opacity-50", "cursor-not-allowed");
-          resendBtn.innerText = "إعادة إرسال رمز جديد";
-        } else {
-          resendBtn.innerText = `إعادة الإرسال بعد (${resendCountdown} ث)`;
-        }
-      }, 1000);
-    }
-
-    async function handleResendCode() {
-      const resendBtn = document.getElementById("resend-btn");
-      const alertBox = document.getElementById("alert-message");
-
-      if (resendCountdown > 0) return;
-
-      if (!currentEmail) {
-        alert("لم يتم العثور على بريد إلكتروني لإعادة الإرسال.");
-        return;
-      }
-
-      resendBtn.innerText = "جاري الإرسال...";
-      resendBtn.disabled = true;
-
-      try {
-        let res = null;
-        try {
-          res = await ApiClient.post("/Auth/resend-code", { email: currentEmail.trim(), codeType: 1 });
-        } catch (e) {
-          res = await ApiClient.post("/Auth/resend-verification-code", { email: currentEmail.trim(), codeType: 1 });
-        }
-
-        console.log("Full Resend Response:", res);
-        const preview = res?.data?.verificationCodePreview || res?.verificationCodePreview || res?.data?.previewCode || res?.data?.code || res?.code || "";
-        console.log("Extracted Code:", preview);
-
-        if (preview) {
-          currentPreviewCode = String(preview).trim().replace(/\D/g, '');
-          const previewText = document.getElementById("preview-code-text");
-          if (previewText) previewText.innerText = currentPreviewCode;
-          
-          const badgeContainer = document.getElementById("preview-badge-container");
-          if (badgeContainer) badgeContainer.classList.remove("hidden");
-
-          setCodeInputs(currentPreviewCode);
-        }
-
-        alertBox.innerHTML = "تم إعادة إرسال رمز التحقق بنجاح";
-        alertBox.className = "mb-4 p-3.5 rounded-xl text-sm font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 block";
-
-        startResendCooldown(60);
-      } catch (err) {
-        alertBox.innerHTML = err.message || "فشل إعادة إرسال رمز التحقق.";
-        alertBox.className = "mb-4 p-3.5 rounded-xl text-sm font-bold bg-red-50 border border-red-200 text-red-700 block";
-        resendBtn.innerText = "إعادة إرسال رمز جديد";
-        resendBtn.disabled = false;
-      }
-    }
-  </script>
+  <script src="js/config.js" defer></script>
+  <script src="js/api.js" defer></script>
+  <script src="js/auth.js" defer></script>
+  <script src="js/notifications.js" defer></script>
+  <script src="js/main.js" defer></script>
+  <script src="js/verify-account.js" defer></script>
 </body>
 </html>

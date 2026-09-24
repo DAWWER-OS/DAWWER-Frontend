@@ -1,18 +1,15 @@
-/**
- * Dawwer Platform - Central Configuration & Enum Specifications
- */
 const CONFIG = {
-  // Protocol & Base API URL
+  AUTH_BASE_URL: "https://dawwer.runasp.net/api",
+  PRODUCTS_BASE_URL: "https://dawwer-backend-fastapi.onrender.com",
   API_BASE_URL: "https://dawwer.runasp.net/api",
 
-  // Storage Keys
   TOKEN_KEY: "dawwer_access_token",
   REFRESH_TOKEN_KEY: "dawwer_refresh_token",
   USER_KEY: "dawwer_user_data",
   STORE_TOKEN_KEY: "dawwer_store_token",
   ACTIVE_STORE_KEY: "dawwer_active_store",
+  DEFAULT_STORE_ID: null,
 
-  // User Roles
   ROLES: {
     CUSTOMER: 1,
     MERCHANT: 2,
@@ -20,7 +17,6 @@ const CONFIG = {
     ADMIN: 4
   },
 
-  // User Account Statuses
   USER_STATUS: {
     PENDING_VERIFICATION: 1,
     ACTIVE: 2,
@@ -28,7 +24,6 @@ const CONFIG = {
     INACTIVE: 4
   },
 
-  // Store Verification Lifecycle Statuses
   STORE_STATUS: {
     DRAFT: 1,
     SUBMITTED: 2,
@@ -38,7 +33,6 @@ const CONFIG = {
     REJECTED: 6
   },
 
-  // Store Document Types
   DOCUMENT_TYPES: {
     COMMERCIAL_REGISTER: 1,
     TAX_CARD: 2,
@@ -47,7 +41,12 @@ const CONFIG = {
     OTHER: 5
   },
 
-  // Granular Store Permissions
+  VERIFICATION_CODE_TYPES: {
+    EMAIL: 1,
+    PHONE: 2,
+    PASSWORD_RESET: 3
+  },
+
   PERMISSIONS: {
     PRODUCTS_VIEW: "Products.View",
     PRODUCTS_MANAGE: "Products.Manage",

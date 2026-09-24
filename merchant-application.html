@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,13 +8,16 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <script src="assets/css/tailwind.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
+          fontFamily: {
+            sans: ["'IBM Plex Sans Arabic'", 'sans-serif'],
+          },
           colors: {
             brand: {
               primary: '#1c5335',
@@ -26,514 +30,327 @@
     }
   </script>
 
-  <!-- Core Architecture & Auth Route Guard -->
-  <script src="assets/js/config.js"></script>
-  <script src="assets/js/api.js"></script>
-  <script src="assets/js/auth.js"></script>
-  <script>
-    Auth.requireAuth(["Merchant", 2, "Admin", 4]);
-  </script>
-</head>
-<body class="bg-[#f8f6f0] font-['Tajawal',sans-serif] text-slate-800 min-h-screen">
+  </head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans md:mr-16" dir="rtl">
 
-  <div class="flex min-h-screen">
-
-    <!-- Mobile Drawer Backdrop -->
-    <div id="sidebar-backdrop" class="fixed inset-0 bg-slate-900/50 z-40 hidden md:hidden"></div>
-
-    <!-- Sidebar Navigation -->
-    <div class="w-64 bg-gradient-to-b from-[#143e27] to-[#1c5335] text-white p-6 hidden md:block" id="sidebar-box">
-      <div class="text-center mb-8">
-        <div class="flex justify-center mb-3">
-          <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-10 w-auto">
+    <aside id="sidebar-box" class="fixed top-0 right-0 h-screen w-16 bg-[#153f2d] text-white flex flex-col justify-between items-center py-3 z-50 shadow-xl border-l border-white/10 select-none overflow-visible">
+      <!-- TOP: Minimal Brand Icon/Logo Only -->
+      <div class="flex flex-col items-center w-full pt-1 px-1.5 shrink-0 overflow-visible">
+        <div class="relative group flex items-center justify-center">
+          <a href="index.html" class="flex items-center justify-center w-11 h-11 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-colors shadow-xs" aria-label="دوّر - الرئيسية">
+            <img src="assets/images/FrameLogo.png" alt="دوّر" class="h-6 w-auto object-contain">
+          </a>
+          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
+            دوّر - الرئيسية
+          </div>
         </div>
-        <div class="text-sm font-bold text-white">بوابة التاجر</div>
       </div>
 
-      <div class="bg-white/10 p-4 rounded-xl mb-6 text-center border border-white/5">
-        <div class="text-sm font-bold text-white mb-1" data-user-name>جاري التحميل...</div>
-        <div class="text-xs text-white/80" data-user-role>تاجر معتمد</div>
-      </div>
-
-      <!-- Navigation Links (Flattened Structure with Section Dividers) -->
-      <div class="flex flex-col gap-5 sidebar-nav flex-1 overflow-y-auto pr-1">
-        
-        <!-- Section 1: Operations -->
-        <div>
-          <div class="text-[10px] font-extrabold uppercase tracking-wider text-white/50 px-3.5 mb-2">الرئيسية والعمليات</div>
-          <div class="flex flex-col gap-1">
-            <a href="index.html" class="flex items-center justify-between py-2 px-3.5 rounded-xl text-white/90 hover:text-white hover:bg-white/10 font-medium transition text-xs">
-              <div class="flex items-center gap-2.5">
-                <svg class="w-4 h-4 opacity-80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-                <span>نظرة عامة</span>
-              </div>
-            </a>
-            <a href="orders.html" class="flex items-center justify-between py-2 px-3.5 rounded-xl text-white/90 hover:text-white hover:bg-white/10 font-medium transition text-xs">
-              <div class="flex items-center gap-2.5">
-                <svg class="w-4 h-4 opacity-80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
-                <span>الطلبات والمبيعات</span>
-              </div>
-              <span class="bg-[#d6a950] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">6</span>
-            </a>
-            <a href="store-staff.html" class="flex items-center justify-between py-2 px-3.5 rounded-xl text-white/90 hover:text-white hover:bg-white/10 font-medium transition text-xs">
-              <div class="flex items-center gap-2.5">
-                <svg class="w-4 h-4 opacity-80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                <span>فريق العمل والأدوار</span>
-              </div>
-            </a>
+      <!-- CENTER: Clean Icon-Only Navigation Buttons -->
+      <nav class="flex flex-col items-center gap-2 my-auto w-full py-2 sidebar-nav overflow-visible">
+        <!-- 1. لوحة التحكم -->
+        <div class="relative group flex items-center justify-center">
+          <a href="index.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="لوحة التحكم">
+            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          </a>
+          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
+            لوحة التحكم الرئيسية
           </div>
         </div>
 
-        <!-- Section 2: Catalog & Shelves -->
-        <div>
-          <div class="text-[10px] font-extrabold uppercase tracking-wider text-white/50 px-3.5 mb-2">الكتالوج والرفوف</div>
-          <div class="flex flex-col gap-1">
-            <a href="catalog.html" class="flex items-center justify-between py-2 px-3.5 rounded-xl text-white/90 hover:text-white hover:bg-white/10 font-medium transition text-xs">
-              <div class="flex items-center gap-2.5">
-                <svg class="w-4 h-4 opacity-80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                <span>الكتالوج والمخططات</span>
-              </div>
-              <span class="bg-[#d6a950] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">2.2</span>
-            </a>
-            <a href="ai-capture.html" class="flex items-center justify-between py-2 px-3.5 rounded-xl text-white/90 hover:text-white hover:bg-white/10 font-medium transition text-xs">
-              <div class="flex items-center gap-2.5">
-                <svg class="w-4 h-4 text-[#d6a950] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.01.01"/></svg>
-                <span>التقاط الرفوف بالذكاء (AI)</span>
-              </div>
-              <span class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-xs">2.3</span>
-            </a>
-            <a href="products.html" class="flex items-center justify-between py-2 px-3.5 rounded-xl text-white/90 hover:text-white hover:bg-white/10 font-medium transition text-xs">
-              <div class="flex items-center gap-2.5">
-                <svg class="w-4 h-4 opacity-80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-                <span>المنتجات والمخزون</span>
-              </div>
-              <span class="bg-white/10 text-white text-xs px-2 py-0.5 rounded-full">6</span>
-            </a>
-            <a href="add-product.html" class="flex items-center justify-between py-2 px-3.5 rounded-xl text-white/90 hover:text-white hover:bg-white/10 font-medium transition text-xs">
-              <div class="flex items-center gap-2.5">
-                <svg class="w-4 h-4 opacity-80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <span>إضافة منتج جديد</span>
-              </div>
-            </a>
-            <a href="shelves.html" class="flex items-center justify-between py-2 px-3.5 rounded-xl text-white/90 hover:text-white hover:bg-white/10 font-medium transition text-xs">
-              <div class="flex items-center gap-2.5">
-                <svg class="w-4 h-4 opacity-80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
-                <span>مواقع الممرات والرفوف</span>
-              </div>
-            </a>
+        <!-- 2. الكتالوج والمخططات -->
+        <div class="relative group flex items-center justify-center">
+          <a href="catalog.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الكتالوج والمخططات">
+            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+          </a>
+          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
+            إدارة الكتالوج والمخطط
           </div>
         </div>
 
-        <!-- Section 3: Store & Account -->
-        <div>
-          <div class="text-[10px] font-extrabold uppercase tracking-wider text-white/50 px-3.5 mb-2">إعدادات المتجر والحساب</div>
-          <div class="flex flex-col gap-1">
-            <a href="merchant-application.html" class="flex items-center justify-between py-2 px-3.5 rounded-xl text-white/90 hover:text-white hover:bg-white/10 font-medium transition text-xs">
-              <div class="flex items-center gap-2.5">
-                <svg class="w-4 h-4 opacity-80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
-                <span>تسجيل واعتماد المتجر</span>
-              </div>
-            </a>
-            <a href="profile.html" class="flex items-center justify-between py-2 px-3.5 rounded-xl text-white/90 hover:text-white hover:bg-white/10 font-medium transition text-xs">
-              <div class="flex items-center gap-2.5">
-                <svg class="w-4 h-4 opacity-80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                <span>الملف الشخصي</span>
-              </div>
-            </a>
+        <!-- 3. مسح الرفوف بالذكاء الاصطناعي (AI) -->
+        <div class="relative group flex items-center justify-center">
+          <a href="ai-capture.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="مسح الرفوف بالذكاء">
+            <svg class="w-5 h-5 text-[#d6a950] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.01.01"/></svg>
+          </a>
+          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
+            مسح الرفوف بالذكاء الاصطناعي
           </div>
         </div>
 
-      </div>
+        <!-- 4. مراجعة المسودات المستخرجة -->
+        <div class="relative group flex items-center justify-center">
+          <a href="review-drafts.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="مراجعة المسودات">
+            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          </a>
+          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
+            مراجعة واعتماد المسودات
+          </div>
+        </div>
 
-      <div class="pt-8 mt-12 border-t border-white/20">
-        <button onclick="Auth.logout()" class="w-full bg-red-500/20 hover:bg-red-500/30 text-white p-2.5 rounded-xl text-sm font-bold text-center transition">
-          تسجيل الخروج
-        </button>
-      </div>
-    </div>
+        <!-- 5. المخزون وسجل التدقيق -->
+        <div class="relative group flex items-center justify-center">
+          <a href="inventory-audit.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="المخزون والتدقيق">
+            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+          </a>
+          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
+            المخزون وسجل التدقيق
+          </div>
+        </div>
 
-    <!-- Main Content Area -->
-    <div class="flex-1 p-6 md:p-8 max-w-5xl">
-      
-      <div class="flex items-center justify-between mb-8 pb-4 border-b border-slate-200">
-        <div class="flex items-center gap-3">
-          <button id="mobile-menu-btn" class="p-2 rounded-xl bg-white border border-slate-200 text-[#1c5335] md:hidden">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        <!-- 6. الطلبات والمبيعات -->
+        <div class="relative group flex items-center justify-center">
+          <a href="orders.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الطلبات والمبيعات">
+            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+          </a>
+          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
+            الطلبات والمبيعات
+          </div>
+        </div>
+
+        <!-- 7. الممرات والرفوف -->
+        <div class="relative group flex items-center justify-center">
+          <a href="shelves.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الممرات والرفوف">
+            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+          </a>
+          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
+            مواقع الممرات والرفوف
+          </div>
+        </div>
+
+        <!-- 8. فريق العمل والصلاحيات -->
+        <div class="relative group flex items-center justify-center">
+          <a href="store-staff.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="فريق العمل">
+            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+          </a>
+          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
+            فريق العمل والأدوار
+          </div>
+        </div>
+
+        <!-- 9. تسجيل واعتماد المتجر -->
+        <div class="relative group flex items-center justify-center">
+          <a href="merchant-application.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="بيانات المتجر">
+            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z"/></svg>
+          </a>
+          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
+            تسجيل واعتماد المتجر
+          </div>
+        </div>
+
+        <!-- 10. الملف الشخصي والإعدادات -->
+        <div class="relative group flex items-center justify-center">
+          <a href="profile.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الملف الشخصي">
+            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          </a>
+          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
+            الملف الشخصي والإعدادات
+          </div>
+        </div>
+      </nav>
+
+      <!-- BOTTOM: Single Logout Button Only -->
+      <div class="flex flex-col items-center w-full pt-2 pb-1 border-t border-white/10 px-1.5 shrink-0 overflow-visible">
+        <div class="relative group flex items-center justify-center">
+          <button id="logout-btn" data-action="logout" class="flex items-center justify-center w-11 h-11 rounded-xl text-rose-300 hover:text-white hover:bg-rose-500/20 transition-colors cursor-pointer active:scale-95" aria-label="تسجيل الخروج">
+            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
           </button>
-          <div>
-            <h1 class="text-xl md:text-2xl font-bold text-[#1c5335]">تسجيل واعتماد المتجر</h1>
-            <p class="text-xs text-slate-500 mt-0.5">تقديم وتتبع طلب انضمام متجرك لمنظومة دوّر</p>
+          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-rose-200 border border-rose-900/60 text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
+            تسجيل الخروج
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <div id="sidebar-backdrop" class="backdrop-hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40"></div>
+<header
+    class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-6 py-3.5 flex items-center justify-between gap-4 shadow-2xs">
+    <div class="flex items-center gap-3">
+      <button id="sidebar-toggle-btn"
+        class="sidebar-toggle-btn p-2 text-slate-600 hover:text-[#153f2d] hover:bg-slate-100 rounded-xl transition flex items-center justify-center cursor-pointer active:scale-95"
+        title="القائمة الجانبية (Ctrl+B)">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+      </button>
+      <div>
+        <div class="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+          <span>إعدادات المتجر والحساب</span>
+          <span class="text-slate-300">/</span>
+          <span class="text-[#1c5335] font-bold">تسجيل واعتماد المتجر</span>
+        </div>
+        <h1 class="text-lg font-black text-slate-900 leading-tight">تسجيل واعتماد المتجر</h1>
+      </div>
+    </div>
+
+    <button id="create-draft-btn"
+      class="text-xs bg-[#1c5335] text-white px-4 py-2 rounded-xl font-bold hover:bg-[#143e27] shadow-2xs transition cursor-pointer">
+      + طلب جديد
+    </button>
+  </header>
+
+  <main class="flex-1 max-w-5xl w-full mx-auto p-6 md:p-8 space-y-6">
+
+    <div id="status-card" class="hidden mb-8 p-6 rounded-3xl border transition">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-3">
+            <span id="status-badge" class="px-3.5 py-1 rounded-full text-xs font-bold"></span>
+            <h2 id="store-title" class="text-lg font-bold text-slate-900"></h2>
+          </div>
+          <p id="status-desc" class="text-xs text-slate-600 mt-2 leading-relaxed"></p>
+        </div>
+        <div id="status-actions" class="flex gap-2"></div>
+      </div>
+    </div>
+
+    <div id="alert-banner" class="hidden mb-6 p-4 rounded-2xl text-sm font-bold"></div>
+
+    <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm">
+
+      <form id="store-app-form" class="flex flex-col gap-6">
+        <input type="hidden" id="app-id">
+
+        <div>
+          <h3 class="text-md font-bold text-[#1c5335] mb-4 pb-2 border-b border-slate-100">
+            ١. المعلومات الأساسية للمتجر
+          </h3>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-bold text-slate-700 mb-1" for="store-name">اسم المتجر الرسمي *</label>
+              <input type="text" id="store-name" required placeholder="مثال: سوبرماركت الأمل المركزية"
+                class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-bold text-slate-700 mb-1" for="store-desc">وصف المتجر ونشاطه</label>
+              <textarea id="store-desc" rows="2" placeholder="نبذة عن المنتجات والخدمات التي يقدمها المتجر..."
+                class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none"></textarea>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1" for="store-cr">رقم السجل التجاري *</label>
+              <input type="text" id="store-cr" required placeholder="1010123456"
+                class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1" for="store-tax">الرقم الضريبي *</label>
+              <input type="text" id="store-tax" required placeholder="300012345600003"
+                class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
+            </div>
           </div>
         </div>
 
-        <button onclick="createNewDraft()" class="text-xs bg-[#1c5335] text-white px-4 py-2.5 rounded-xl font-bold hover:bg-[#143e27] shadow-sm transition">
-          + طلب جديد
-        </button>
-      </div>
+        <div>
+          <h3 class="text-md font-bold text-[#1c5335] mb-4 pb-2 border-b border-slate-100">
+            ٢. بيانات التواصل والموقع الجغرافي
+          </h3>
 
-      <!-- Application Status Banner (Hidden until loaded) -->
-      <div id="status-card" class="hidden mb-8 p-6 rounded-3xl border transition">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div class="flex items-center gap-3">
-              <span id="status-badge" class="px-3.5 py-1 rounded-full text-xs font-bold"></span>
-              <h2 id="store-title" class="text-lg font-bold text-slate-900"></h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1" for="store-phone">هاتف المتجر *</label>
+              <input type="tel" id="store-phone" required placeholder="+966112223344"
+                class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
             </div>
-            <p id="status-desc" class="text-xs text-slate-600 mt-2 leading-relaxed"></p>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1" for="store-email">البريد الإلكتروني التجاري
+                *</label>
+              <input type="email" id="store-email" required placeholder="info@store.com"
+                class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1" for="store-city">المدينة *</label>
+              <input type="text" id="store-city" required placeholder="الرياض / رام الله"
+                class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1" for="store-address">العنوان التفصيلي *</label>
+              <input type="text" id="store-address" required placeholder="شارع الملك فهد - مجمع النخيل"
+                class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
+            </div>
           </div>
-          <div id="status-actions" class="flex gap-2"></div>
         </div>
-      </div>
 
-      <div id="alert-banner" class="hidden mb-6 p-4 rounded-2xl text-sm font-bold"></div>
+        <div id="docs-section">
+          <h3
+            class="text-md font-bold text-[#1c5335] mb-4 pb-2 border-b border-slate-100 flex items-center justify-between">
+            <span>٣. المستندات والوثائق الرسمية</span>
+            <span class="text-xs text-slate-400 font-normal">PDF أو صور (PNG, JPG) حتى 10MB</span>
+          </h3>
 
-      <!-- Application Form (Sections) -->
-      <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm">
-        
-        <form id="store-app-form" onsubmit="handleSaveStore(event)" class="flex flex-col gap-6">
-          <input type="hidden" id="app-id">
-
-          <!-- Step 1: Store Basic Information -->
-          <div>
-            <h3 class="text-md font-bold text-[#1c5335] mb-4 pb-2 border-b border-slate-100">
-              ١. المعلومات الأساسية للمتجر
-            </h3>
-            
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div class="sm:col-span-2">
-                <label class="block text-xs font-bold text-slate-700 mb-1" for="store-name">اسم المتجر الرسمي *</label>
-                <input type="text" id="store-name" required placeholder="مثال: سوبرماركت الأمل المركزية" class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
-              </div>
-
-              <div class="sm:col-span-2">
-                <label class="block text-xs font-bold text-slate-700 mb-1" for="store-desc">وصف المتجر ونشاطه</label>
-                <textarea id="store-desc" rows="2" placeholder="نبذة عن المنتجات والخدمات التي يقدمها المتجر..." class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none"></textarea>
-              </div>
-
+          <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1" for="store-cr">رقم السجل التجاري *</label>
-                <input type="text" id="store-cr" required placeholder="1010123456" class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
+                <label class="block text-xs font-bold text-slate-700 mb-1">نوع المستند</label>
+                <select id="doc-type"
+                  class="w-full p-2.5 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none">
+                  <option value="1">السجل التجاري (Commercial Register)</option>
+                  <option value="2">البطاقة الضريبية (Tax Card)</option>
+                  <option value="3">رخصة البلدية / المتجر (Store License)</option>
+                  <option value="4">إثبات الهوية (Identity Document)</option>
+                  <option value="5">أخرى (Other Document)</option>
+                </select>
               </div>
-
               <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1" for="store-tax">الرقم الضريبي *</label>
-                <input type="text" id="store-tax" required placeholder="300012345600003" class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
+                <label class="block text-xs font-bold text-slate-700 mb-1">اختيار الملف</label>
+                <input type="file" id="doc-file" class="w-full p-2 text-xs bg-white rounded-xl border border-slate-200">
+              </div>
+              <div class="flex items-end">
+                <button type="button" id="upload-doc-btn"
+                  class="w-full bg-slate-800 text-white font-bold p-2.5 rounded-xl text-xs hover:bg-slate-900 transition">
+                  + رفع المستند
+                </button>
               </div>
             </div>
           </div>
 
-          <!-- Step 2: Contact & Location -->
-          <div>
-            <h3 class="text-md font-bold text-[#1c5335] mb-4 pb-2 border-b border-slate-100">
-              ٢. بيانات التواصل والموقع الجغرافي
-            </h3>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1" for="store-phone">هاتف المتجر *</label>
-                <input type="tel" id="store-phone" required placeholder="+966112223344" class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
-              </div>
-
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1" for="store-email">البريد الإلكتروني التجاري *</label>
-                <input type="email" id="store-email" required placeholder="info@store.com" class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
-              </div>
-
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1" for="store-city">المدينة *</label>
-                <input type="text" id="store-city" required placeholder="الرياض / رام الله" class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
-              </div>
-
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1" for="store-address">العنوان التفصيلي *</label>
-                <input type="text" id="store-address" required placeholder="شارع الملك فهد - مجمع النخيل" class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
-              </div>
-            </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-right border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-100 text-slate-700 font-bold">
+                  <th class="p-3 rounded-r-xl">نوع الوثيقة</th>
+                  <th class="p-3">اسم الملف</th>
+                  <th class="p-3">الحجم</th>
+                  <th class="p-3 rounded-l-xl">الإجراء</th>
+                </tr>
+              </thead>
+              <tbody id="docs-list" class="divide-y divide-slate-100">
+                <tr>
+                  <td colspan="4" class="p-4 text-center text-slate-400">لم يتم رفع أي مستندات بعد</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
+        </div>
 
-          <!-- Step 3: Document Uploads -->
-          <div id="docs-section">
-            <h3 class="text-md font-bold text-[#1c5335] mb-4 pb-2 border-b border-slate-100 flex items-center justify-between">
-              <span>٣. المستندات والوثائق الرسمية</span>
-              <span class="text-xs text-slate-400 font-normal">PDF أو صور (PNG, JPG) حتى 10MB</span>
-            </h3>
+        <div class="flex flex-wrap items-center gap-3 pt-4 border-t border-slate-100">
+          <button type="submit" id="save-draft-btn"
+            class="bg-slate-100 border border-slate-300 text-slate-700 font-bold px-6 py-3 rounded-xl text-sm hover:bg-slate-200 transition">
+            حفظ كمسودة
+          </button>
+          <button type="button" id="submit-app-btn"
+            class="bg-[#1c5335] hover:bg-[#143e27] text-white font-bold px-8 py-3 rounded-xl text-sm shadow transition">
+            إرسال الطلب للاعتماد الرسمي ➔
+          </button>
+        </div>
 
-            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-4">
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label class="block text-xs font-bold text-slate-700 mb-1">نوع المستند</label>
-                  <select id="doc-type" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none">
-                    <option value="1">السجل التجاري (Commercial Register)</option>
-                    <option value="2">البطاقة الضريبية (Tax Card)</option>
-                    <option value="3">رخصة البلدية / المتجر (Store License)</option>
-                    <option value="4">إثبات الهوية (Identity Document)</option>
-                    <option value="5">أخرى (Other Document)</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-xs font-bold text-slate-700 mb-1">اختيار الملف</label>
-                  <input type="file" id="doc-file" class="w-full p-2 text-xs bg-white rounded-xl border border-slate-200">
-                </div>
-                <div class="flex items-end">
-                  <button type="button" onclick="uploadDocument()" id="upload-doc-btn" class="w-full bg-slate-800 text-white font-bold p-2.5 rounded-xl text-xs hover:bg-slate-900 transition">
-                    + رفع المستند
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Uploaded Documents Table -->
-            <div class="overflow-x-auto">
-              <table class="w-full text-right border-collapse text-xs">
-                <thead>
-                  <tr class="bg-slate-100 text-slate-700 font-bold">
-                    <th class="p-3 rounded-r-xl">نوع الوثيقة</th>
-                    <th class="p-3">اسم الملف</th>
-                    <th class="p-3">الحجم</th>
-                    <th class="p-3 rounded-l-xl">الإجراء</th>
-                  </tr>
-                </thead>
-                <tbody id="docs-list" class="divide-y divide-slate-100">
-                  <tr>
-                    <td colspan="4" class="p-4 text-center text-slate-400">لم يتم رفع أي مستندات بعد</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Actions Bar -->
-          <div class="flex flex-wrap items-center gap-3 pt-4 border-t border-slate-100">
-            <button type="submit" id="save-draft-btn" class="bg-slate-100 border border-slate-300 text-slate-700 font-bold px-6 py-3 rounded-xl text-sm hover:bg-slate-200 transition">
-              حفظ كمسودة
-            </button>
-            <button type="button" onclick="submitApplication()" id="submit-app-btn" class="bg-[#1c5335] hover:bg-[#143e27] text-white font-bold px-8 py-3 rounded-xl text-sm shadow transition">
-              إرسال الطلب للاعتماد الرسمي ➔
-            </button>
-          </div>
-
-        </form>
-
-      </div>
+      </form>
 
     </div>
-  </div>
+  </main>
 
-  <script src="assets/js/layout.js"></script>
-  <script>
-    let currentStore = null;
-    let uploadedDocs = [];
-
-    async function loadApplications() {
-      try {
-        const res = await ApiClient.get("/merchant/stores");
-        if (res.success && res.data && res.data.length > 0) {
-          // Select the latest application
-          currentStore = res.data[0];
-          populateForm(currentStore);
-          renderStatusCard(currentStore);
-        }
-      } catch (err) {
-        console.warn("Could not load applications:", err);
-      }
-    }
-
-    function populateForm(s) {
-      document.getElementById("app-id").value = s.id || "";
-      document.getElementById("store-name").value = s.name || "";
-      document.getElementById("store-desc").value = s.description || "";
-      document.getElementById("store-cr").value = s.commercialRegistrationNumber || "";
-      document.getElementById("store-tax").value = s.taxNumber || "";
-      document.getElementById("store-phone").value = s.phoneNumber || "";
-      document.getElementById("store-email").value = s.email || "";
-      document.getElementById("store-city").value = s.city || "";
-      document.getElementById("store-address").value = s.address || "";
-
-      if (s.documents && Array.isArray(s.documents)) {
-        uploadedDocs = s.documents;
-        renderDocsTable();
-      }
-    }
-
-    function renderStatusCard(s) {
-      const card = document.getElementById("status-card");
-      const badge = document.getElementById("status-badge");
-      const title = document.getElementById("store-title");
-      const desc = document.getElementById("status-desc");
-
-      card.classList.remove("hidden");
-      title.innerText = s.name;
-
-      const statusMap = {
-        1: { text: "مسودة (Draft)", bg: "bg-slate-100 text-slate-700", border: "border-slate-200", desc: "طلبك محفوظ كمسودة. يمكنك تعديل البيانات وإرفاق المستندات ثم الضغط على إرسال الطلب." },
-        2: { text: "تم التقديم (Submitted)", bg: "bg-blue-100 text-blue-800", border: "border-blue-200", desc: "تم إرسال الطلب بنجاح وهو بانتظار بدء مراجعة فريق الإدارة." },
-        3: { text: "قيد المراجعة والتدقيق", bg: "bg-amber-100 text-amber-800", border: "border-amber-200", desc: "يقوم فريق إدارة دوّر حالياً بمراجعة بيانات المتجر والوثائق المرفقة." },
-        4: { text: "مطلوب معلومات إضافية", bg: "bg-orange-100 text-orange-800", border: "border-orange-200", desc: s.adminNotes || "يرجى تعديل بعض البيانات أو إعادة رفع مستندات واضحة حسب ملاحظات الإدارة." },
-        5: { text: "معتمد ونشط ✓", bg: "bg-emerald-100 text-emerald-800", border: "border-emerald-200", desc: "تهانينا! تم اعتماد متجرك بنجاح وأصبح جاهزاً لإضافة المنتجات واستقبال الطلبات." },
-        6: { text: "تم رفض الطلب", bg: "bg-rose-100 text-rose-800", border: "border-rose-200", desc: s.rejectionReason || "نعتذر، لم يستوفِ الطلب شروط التسجيل المعتمدة." }
-      };
-
-      const info = statusMap[s.verificationStatus || 1] || statusMap[1];
-      badge.className = `px-3.5 py-1 rounded-full text-xs font-bold ${info.bg}`;
-      badge.innerText = info.text;
-      card.className = `mb-8 p-6 rounded-3xl border ${info.border} bg-white shadow-sm`;
-      desc.innerText = info.desc;
-    }
-
-    async function handleSaveStore(event) {
-      event.preventDefault();
-      const appId = document.getElementById("app-id").value;
-      const alertBox = document.getElementById("alert-banner");
-      const btn = document.getElementById("save-draft-btn");
-
-      alertBox.classList.add("hidden");
-      btn.innerText = "جاري الحفظ...";
-      btn.disabled = true;
-
-      const payload = {
-        name: document.getElementById("store-name").value.trim(),
-        description: document.getElementById("store-desc").value.trim(),
-        commercialRegistrationNumber: document.getElementById("store-cr").value.trim(),
-        taxNumber: document.getElementById("store-tax").value.trim(),
-        phoneNumber: document.getElementById("store-phone").value.trim(),
-        email: document.getElementById("store-email").value.trim(),
-        city: document.getElementById("store-city").value.trim(),
-        address: document.getElementById("store-address").value.trim()
-      };
-
-      try {
-        let res;
-        if (appId) {
-          res = await ApiClient.put(`/merchant/stores/${appId}`, payload);
-        } else {
-          res = await ApiClient.post("/merchant/stores", payload);
-          if (res.data && res.data.id) {
-            document.getElementById("app-id").value = res.data.id;
-          }
-        }
-
-        alertBox.innerHTML = res.message || "تم حفظ بيانات المتجر بنجاح!";
-        alertBox.className = "mb-6 p-4 rounded-2xl text-sm font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 block";
-        loadApplications();
-      } catch (err) {
-        alertBox.innerHTML = err.message;
-        alertBox.className = "mb-6 p-4 rounded-2xl text-sm font-bold bg-red-50 border border-red-200 text-red-700 block";
-      } finally {
-        btn.innerText = "حفظ كمسودة";
-        btn.disabled = false;
-      }
-    }
-
-    async function uploadDocument() {
-      const appId = document.getElementById("app-id").value;
-      if (!appId) {
-        alert("يرجى حفظ بيانات المتجر أولاً قبل رفع المستندات.");
-        return;
-      }
-
-      const fileInput = document.getElementById("doc-file");
-      const docType = document.getElementById("doc-type").value;
-      const btn = document.getElementById("upload-doc-btn");
-
-      if (!fileInput.files || fileInput.files.length === 0) {
-        alert("يرجى اختيار ملف لرفعه.");
-        return;
-      }
-
-      const file = fileInput.files[0];
-      if (file.size > 10 * 1024 * 1024) {
-        alert("حجم الملف يتجاوز الحد المسموح به (10MB).");
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("documentType", docType);
-
-      btn.innerText = "جاري الرفع...";
-      btn.disabled = true;
-
-      try {
-        const res = await ApiClient.upload(`/merchant/stores/${appId}/documents`, formData);
-        alert("تم رفع المستند بنجاح!");
-        fileInput.value = "";
-        loadApplications();
-      } catch (err) {
-        alert("فشل رفع المستند: " + err.message);
-      } finally {
-        btn.innerText = "+ رفع المستند";
-        btn.disabled = false;
-      }
-    }
-
-    async function deleteDoc(docId) {
-      const appId = document.getElementById("app-id").value;
-      if (!confirm("هل تريد حذف هذا المستند؟")) return;
-
-      try {
-        await ApiClient.delete(`/merchant/stores/${appId}/documents/${docId}`);
-        alert("تم حذف المستند بنجاح.");
-        loadApplications();
-      } catch (err) {
-        alert(err.message);
-      }
-    }
-
-    function renderDocsTable() {
-      const tbody = document.getElementById("docs-list");
-      tbody.innerHTML = "";
-
-      if (uploadedDocs.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='4' class='p-4 text-center text-slate-400'>لم يتم رفع أي مستندات بعد</td></tr>";
-        return;
-      }
-
-      const typeNames = { 1: "السجل التجاري", 2: "البطاقة الضريبية", 3: "رخصة المتجر", 4: "إثبات الهوية", 5: "أخرى" };
-
-      uploadedDocs.forEach(d => {
-        const tr = document.createElement("tr");
-        tr.className = "hover:bg-slate-50";
-        tr.innerHTML = `
-          <td class="p-3 font-bold text-slate-800">${typeNames[d.documentType] || "مستند"}</td>
-          <td class="p-3 text-slate-600 font-mono">${d.fileName || "document.pdf"}</td>
-          <td class="p-3 text-slate-500">${d.fileSize ? (d.fileSize / 1024).toFixed(1) + " KB" : "-"}</td>
-          <td class="p-3">
-            <button type="button" onclick="deleteDoc('${d.id}')" class="text-red-600 hover:text-red-800 font-bold">حذف</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    async function submitApplication() {
-      const appId = document.getElementById("app-id").value;
-      if (!appId) {
-        alert("يرجى حفظ بيانات المتجر أولاً.");
-        return;
-      }
-
-      if (!confirm("هل أنت متأكد من إرسال الطلب للاعتماد الرسمي؟ لن تتمكن من تعديل البيانات أثناء فترة المراجعة.")) {
-        return;
-      }
-
-      try {
-        const res = await ApiClient.post(`/merchant/stores/${appId}/submit`, {});
-        alert(res.message || "تم إرسال الطلب للاعتماد بنجاح!");
-        loadApplications();
-      } catch (err) {
-        alert("فشل إرسال الطلب: " + err.message);
-      }
-    }
-
-    function createNewDraft() {
-      document.getElementById("app-id").value = "";
-      document.getElementById("store-app-form").reset();
-      document.getElementById("status-card").classList.add("hidden");
-      uploadedDocs = [];
-      renderDocsTable();
-    }
-
-    loadApplications();
-  </script>
+  <script src="js/config.js" defer></script>
+  <script src="js/api.js" defer></script>
+  <script src="js/auth.js" defer></script>
+  <script src="js/layout.js" defer></script>
+  <script src="js/notifications.js" defer></script>
+  <script src="js/main.js" defer></script>
+  <script src="js/merchant-application.js" defer></script>
 </body>
+
 </html>

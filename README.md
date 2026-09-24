@@ -16,7 +16,7 @@
 | Layer | Technology | Purpose & Details |
 |---|---|---|
 | **Frontend Core** | **HTML5 & Vanilla JavaScript (ES6+)** | Lightweight, framework-free client architecture with modular object namespaces (`ApiClient`, `Auth`, `CONFIG`, `Layout`). |
-| **Typography & RTL** | **Google Fonts (`Tajawal`) & Native RTL** | Arabic-first Right-to-Left design optimized for regional usability and clarity. |
+| **Typography & RTL** | **Google Fonts (`IBM Plex Sans Arabic`) & Native RTL** | Arabic-first Right-to-Left design optimized for regional retail management, inventory tables, and high clarity. |
 | **Styling Engine** | **Tailwind CSS v3 (Standalone Engine)** | Dynamic utility classes with custom brand color extensions (`#1c5335` primary, `#143e27` dark, `#edf5f0` soft, `#d6a950` accent). |
 | **Authentication** | **JWT Bearer + Token Rotation** | Dual token strategy (Access Token + Refresh Token) with automatic `401 Unauthorized` interception and silent renewal. |
 | **Authorization** | **Fine-Grained RBAC & Store Contexts** | Multi-tenant store context switching (`/api/Auth/select-store`) and declarative UI trimming via `data-require-role` and `data-require-perm`. |
@@ -42,8 +42,8 @@
 - **Custom Role Builder**: Create bespoke store roles tailored to dispatchers, stockers, or shift managers.
 - **Client Route Guards & DOM Trimming**: Strict head-level script checks (`Auth.requireAuth()`) and dynamic component removal for unauthorized elements.
 
-### 4. Product Catalog & Inventory (`products.html`, `add-product.html`)
-- **Product Management**: Multi-attribute product creation including barcodes, SKU, pricing, stock levels, category relations, and physical shelf assignments.
+### 4. Product Catalog & Inventory (`catalog.html`)
+- **Product Management**: Unified catalog interface for managing all products, SKU barcodes, pricing, stock levels, category relations, AI shelf vision scanning, and physical shelf assignments.
 - **Stock Status Badges**: Visual indicators for in-stock, low-stock, and out-of-stock inventory thresholds.
 
 ### 5. Order Management & Fulfillment (`orders.html`)
@@ -77,10 +77,9 @@ dawwer/
 │       ├── config.js             # Global environment config, API URLs, user roles & permission constants
 │       └── layout.js             # Shared layout controller, mobile sidebar drawer & dynamic badge renderer
 ├── index.html                    # Merchant operations dashboard & store KPI overview
+├── catalog.html                  # Unified Product Catalog, Inventory, AI Camera Shelf Scanner & Blueprint
 ├── merchant-application.html     # Store onboarding wizard & legal document verification submission
 ├── store-staff.html              # Multi-user staff directory, permission matrix & custom role creator
-├── products.html                 # Product inventory table with search, stock counts & shelf links
-├── add-product.html              # Product creation form with category tree & physical shelf assignment
 ├── orders.html                   # Order fulfillment manager with lifecycle status tracking
 ├── shelves.html                  # Visual in-store aisle & shelf layout mapping interface
 ├── profile.html                  # User profile settings, contact info updates & password change
@@ -109,8 +108,8 @@ Because Dawwer is built with vanilla modern web technologies, it requires **zero
   - VS Code Extension: *Live Server* (`ritwickdey.liveserver`)
   - Caddy / Nginx / Apache
 
-### Environment Configuration (`assets/js/config.js`):
-The application connects to the central REST API configured in `assets/js/config.js`:
+### Environment Configuration (`js/config.js`):
+The application connects to the central REST API configured in `js/config.js`:
 
 ```javascript
 const CONFIG = {
@@ -190,7 +189,7 @@ http://localhost:3000/admin-login.html
 
 ## 🔌 API & Integration Architecture
 
-The frontend communicates with the backend via the unified `ApiClient` located in `assets/js/api.js`.
+The frontend communicates with the backend via the unified `ApiClient` located in `js/api.js`.
 
 ### 1. Standard Response Handling (`ApiResponse<T>`)
 Every request automatically validates the standard backend envelope:
@@ -244,9 +243,9 @@ For complete endpoint specifications, JSON request/response schemas, and role ma
 ### Route Guard Usage
 Protect any page by specifying authorized roles at the top of the `<head>` section:
 ```html
-<script src="assets/js/config.js"></script>
-<script src="assets/js/api.js"></script>
-<script src="assets/js/auth.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
 <script>
   // Enforce Merchant & Admin access only
   Auth.requireAuth(["Merchant", 2, "Admin", 4]);

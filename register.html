@@ -7,13 +7,16 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <script src="assets/css/tailwind.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
+          fontFamily: {
+            sans: ["'IBM Plex Sans Arabic'", 'sans-serif'],
+          },
           colors: {
             brand: {
               primary: '#1c5335',
@@ -26,7 +29,7 @@
     }
   </script>
 </head>
-<body class="bg-[#f8f6f0] font-['Tajawal',sans-serif] text-slate-800 min-h-screen">
+<body class="bg-[#f8f6f0] font-sans text-slate-800 min-h-screen">
 
   <div class="flex min-h-screen w-full">
     
@@ -44,7 +47,7 @@
 
         <div id="register-msg-box" class="hidden mb-4 p-3.5 rounded-xl text-sm font-bold"></div>
 
-        <form id="register-form" onsubmit="handleRegister(event)" class="flex flex-col gap-4">
+        <form id="register-form" class="flex flex-col gap-4">
           
           <div>
             <label class="block text-sm font-bold text-[#1c5335] mb-1" for="store-name-input">الاسم الكامل / اسم المتجر</label>
@@ -59,12 +62,12 @@
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block text-sm font-bold text-[#1c5335] mb-1" for="register-email-input">البريد الالكتروني</label>
+              <label class="block text-sm font-bold text-[#1c5335] mb-1" for="register-email-input">البريد الإلكتروني</label>
               <input 
                 type="email" 
                 id="register-email-input" 
                 class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335]" 
-                placeholder="owner@market.com" 
+                placeholder="store@example.com" 
                 required
               >
             </div>
@@ -84,24 +87,46 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="block text-sm font-bold text-[#1c5335] mb-1" for="register-pass-input">كلمة المرور</label>
-              <input 
-                type="password" 
-                id="register-pass-input" 
-                class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335]" 
-                placeholder="••••••••" 
-                required
-              >
+              <div class="relative">
+                <input 
+                  type="password" 
+                  id="register-pass-input" 
+                  class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] pr-3 pl-10" 
+                  placeholder="••••••••" 
+                  required
+                >
+                <button 
+                  type="button" 
+                  data-toggle-password="register-pass-input"
+                  class="password-toggle-btn absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#1c5335] p-1 rounded-lg transition"
+                  title="إظهار/إخفاء كلمة المرور"
+                  aria-label="إظهار/إخفاء كلمة المرور"
+                >
+                  <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                </button>
+              </div>
             </div>
 
             <div>
               <label class="block text-sm font-bold text-[#1c5335] mb-1" for="register-confirm-input">تأكيد كلمة المرور</label>
-              <input 
-                type="password" 
-                id="register-confirm-input" 
-                class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335]" 
-                placeholder="••••••••" 
-                required
-              >
+              <div class="relative">
+                <input 
+                  type="password" 
+                  id="register-confirm-input" 
+                  class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] pr-3 pl-10" 
+                  placeholder="••••••••" 
+                  required
+                >
+                <button 
+                  type="button" 
+                  data-toggle-password="register-confirm-input"
+                  class="password-toggle-btn absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#1c5335] p-1 rounded-lg transition"
+                  title="إظهار/إخفاء كلمة المرور"
+                  aria-label="إظهار/إخفاء كلمة المرور"
+                >
+                  <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                </button>
+              </div>
             </div>
           </div>
           <p class="text-[11px] text-slate-500">كلمة المرور يجب أن تتكون من 8 خانات وتحتوي على حرف كبير، حرف صغير، رقم، ورمز خاص.</p>
@@ -127,16 +152,12 @@
       </div>
     </div>
 
-    <!-- Left Brand Hero Section (Modern, Dynamic & Feature-Rich) -->
     <div class="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-12 overflow-hidden text-white" style="background: linear-gradient(180deg, #143e27 0%, #1c5335 100%);">
       
-      <!-- Ambient Glow & Subtle Geometric Pattern Overlay -->
       <div class="absolute inset-0 pointer-events-none">
-        <!-- Radial Soft Lighting -->
         <div class="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl"></div>
         <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-[#2a754c]/20 rounded-full blur-3xl"></div>
         
-        <!-- Subtle SVG Pattern (opacity-10) -->
         <svg class="absolute inset-0 w-full h-full opacity-10" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" fill="none">
           <circle cx="400" cy="400" r="300" stroke="white" stroke-width="1.5" stroke-dasharray="8 8" />
           <circle cx="400" cy="400" r="200" stroke="white" stroke-width="1.5" />
@@ -146,10 +167,8 @@
         </svg>
       </div>
 
-      <!-- Main Container (Centered Content) -->
       <div class="relative z-10 my-auto max-w-lg mx-auto w-full flex flex-col gap-7">
         
-        <!-- Header: Logo + Headline -->
         <div class="text-right">
           <div class="flex items-center gap-3 mb-4">
             <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-12 w-auto">
@@ -163,10 +182,8 @@
           </p>
         </div>
 
-        <!-- Feature Highlights (3 Sleek Glassmorphic Cards) -->
         <div class="flex flex-col gap-3">
           
-          <!-- Feature 1 -->
           <div class="bg-white/10 backdrop-blur-md border border-white/10 p-3.5 rounded-2xl flex items-center gap-3.5 transition hover:bg-white/15">
             <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-lg shadow-inner">
               📍
@@ -177,7 +194,6 @@
             </div>
           </div>
 
-          <!-- Feature 2 -->
           <div class="bg-white/10 backdrop-blur-md border border-white/10 p-3.5 rounded-2xl flex items-center gap-3.5 transition hover:bg-white/15">
             <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-lg shadow-inner">
               📦
@@ -188,7 +204,6 @@
             </div>
           </div>
 
-          <!-- Feature 3 -->
           <div class="bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex items-center gap-4 transition hover:bg-white/15">
             <div class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-xl shadow-inner">
               ⚡
@@ -203,7 +218,6 @@
 
       </div>
 
-      <!-- Footer / Mini Branding -->
       <div class="relative z-10 text-center text-xs text-white/50 pt-4">
         منصة دوّر © جميع الحقوق محفوظة لشركاء النجاح
       </div>
@@ -212,64 +226,11 @@
 
   </div>
 
-  <script src="assets/js/config.js"></script>
-  <script src="assets/js/api.js"></script>
-  <script>
-    async function handleRegister(event) {
-      event.preventDefault();
-
-      const fullName = document.getElementById("store-name-input").value.trim();
-      const email = document.getElementById("register-email-input").value.trim();
-      const phoneNumber = document.getElementById("register-phone-input").value.trim();
-      const password = document.getElementById("register-pass-input").value;
-      const confirmPass = document.getElementById("register-confirm-input").value;
-      const msgBox = document.getElementById("register-msg-box");
-      const btn = document.getElementById("register-btn");
-
-      if (password !== confirmPass) {
-        msgBox.innerText = "كلمتا المرور غير متطابقتين.";
-        msgBox.className = "mb-4 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-bold block";
-        return;
-      }
-
-      msgBox.classList.add("hidden");
-      btn.innerText = "جاري إنشاء الحساب...";
-      btn.disabled = true;
-
-      try {
-        const payload = {
-          fullName,
-          email,
-          phoneNumber,
-          password,
-          role: CONFIG.ROLES.MERCHANT
-        };
-
-        const response = await ApiClient.post("/Auth/register", payload);
-        
-        console.log("Full Register Response:", response);
-        const preview = response?.data?.verificationCodePreview || response?.verificationCodePreview || response?.data?.previewCode || response?.data?.code || response?.code || "";
-        console.log("Extracted Code:", preview);
-
-        sessionStorage.setItem("dawwer_registered_email", email);
-
-        msgBox.innerHTML = response.message || "تم إنشاء الحساب بنجاح! جاري تحويلك لصفحة تفعيل الحساب...";
-        msgBox.className = "mb-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-bold block";
-
-        setTimeout(() => {
-          if (preview) {
-            window.location.href = `verify-account.html?email=${encodeURIComponent(email)}&previewCode=${encodeURIComponent(preview)}`;
-          } else {
-            window.location.href = `verify-account.html?email=${encodeURIComponent(email)}`;
-          }
-        }, 1200);
-      } catch (err) {
-        msgBox.innerHTML = err.message;
-        msgBox.className = "mb-4 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-bold block";
-        btn.innerText = "إنشاء حساب المتجر";
-        btn.disabled = false;
-      }
-    }
-  </script>
+  <script src="js/config.js" defer></script>
+  <script src="js/api.js" defer></script>
+  <script src="js/auth.js" defer></script>
+  <script src="js/notifications.js" defer></script>
+  <script src="js/main.js" defer></script>
+  <script src="js/register.js" defer></script>
 </body>
 </html>
