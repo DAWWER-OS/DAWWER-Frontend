@@ -416,7 +416,7 @@ async function deleteProduct(id) {
   }
 
   // 2. Dispatch DELETE to backend with error muted/suppressed if failed
-  const storeId = (typeof ApiClient !== 'undefined' && ApiClient.getActiveStoreId()) || '7b8f6a91-45c2-48df-bc88-825dfa234123';
+  const storeId = typeof ApiClient !== 'undefined' ? ApiClient.getActiveStoreId() : null;
   try {
     if (typeof ApiClient !== 'undefined' && ApiClient.products && ApiClient.products.delete) {
       await ApiClient.products.delete(storeId, id, { suppressToastOnError: true, throwOnError: false });

@@ -935,7 +935,7 @@ const JOBS_STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         return;
       }
 
-      const storeId = (typeof ApiClient !== 'undefined' && ApiClient.getActiveStoreId()) || '7b8f6a91-45c2-48df-bc88-825dfa234123';
+      const storeId = typeof ApiClient !== 'undefined' ? ApiClient.getActiveStoreId() : null;
       const itemsToPublish = draftItems.filter(d => selectedDraftIds.has(d.id));
       const nowFormatted = new Date().toISOString().slice(0, 16).replace('T', ' ');
 

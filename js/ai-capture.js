@@ -49,14 +49,14 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
     let currentFilter = 'all';
     let currentModalJob = null;
 
-    const FALLBACK_DEFAULT_STORE_ID = '7b8f6a91-45c2-48df-bc88-825dfa234123';
-
     function resolveActiveStoreId() {
+      const isInvalid = (id) => !id || id === 'null' || id === 'undefined' || id === '7b8f6a91-45c2-48df-bc88-825dfa234123' || id === '11111111-1111-1111-1111-111111111111';
+
       // 1. Search first in URL Query Params (?store_id=... or ?storeId=...)
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const qStoreId = urlParams.get('store_id') || urlParams.get('storeId');
-        if (qStoreId && qStoreId.trim() && qStoreId !== 'null' && qStoreId !== 'undefined') {
+        if (qStoreId && !isInvalid(qStoreId.trim())) {
           const clean = qStoreId.trim();
           persistActiveStoreId(clean);
           return clean;
@@ -67,19 +67,24 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
       try {
         const direct = localStorage.getItem('store_id') ||
                        localStorage.getItem('active_store_id') ||
+                       localStorage.getItem('storeId') ||
                        localStorage.getItem('dawwer_active_store_id') ||
                        localStorage.getItem('dawwer_store_id');
-        if (direct && direct.trim() && direct !== 'null' && direct !== 'undefined') {
+        if (direct && !isInvalid(direct.trim())) {
           const clean = direct.trim();
           persistActiveStoreId(clean);
           return clean;
+        } else if (direct && isInvalid(direct.trim())) {
+          localStorage.removeItem('store_id');
+          localStorage.removeItem('active_store_id');
+          localStorage.removeItem('storeId');
         }
 
         const activeStoreRaw = localStorage.getItem('dawwer_active_store');
         if (activeStoreRaw) {
           const parsed = JSON.parse(activeStoreRaw);
           const sid = parsed?.storeId || parsed?.id || parsed?.store_id;
-          if (sid && sid.trim() && sid !== 'null' && sid !== 'undefined') {
+          if (sid && !isInvalid(sid.trim())) {
             const clean = sid.trim();
             persistActiveStoreId(clean);
             return clean;
@@ -90,7 +95,7 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         if (userDataRaw) {
           const parsed = JSON.parse(userDataRaw);
           const sid = parsed?.storeId || parsed?.store_id || parsed?.store?.id;
-          if (sid && sid.trim() && sid !== 'null' && sid !== 'undefined') {
+          if (sid && !isInvalid(sid.trim())) {
             const clean = sid.trim();
             persistActiveStoreId(clean);
             return clean;
@@ -99,17 +104,20 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
 
         if (typeof ApiClient !== 'undefined' && typeof ApiClient.getActiveStoreId === 'function') {
           const clientSid = ApiClient.getActiveStoreId();
-          if (clientSid && clientSid.trim() && clientSid !== 'null' && clientSid !== 'undefined') {
+          if (clientSid && !isInvalid(clientSid.trim())) {
             persistActiveStoreId(clientSid.trim());
             return clientSid.trim();
           }
         }
       } catch (e) {}
 
-      // 3. Fallback: Automatically set fallback store ID and persist it
-      const fallbackId = (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_STORE_ID) ? CONFIG.DEFAULT_STORE_ID : FALLBACK_DEFAULT_STORE_ID;
-      persistActiveStoreId(fallbackId);
-      return fallbackId;
+      // 3. Fallback: Only use configured default if valid
+      const fallbackId = (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_STORE_ID) ? CONFIG.DEFAULT_STORE_ID : null;
+      if (fallbackId && !isInvalid(fallbackId)) {
+        persistActiveStoreId(fallbackId);
+        return fallbackId;
+      }
+      return null;
     }
 
     function persistActiveStoreId(id) {

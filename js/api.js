@@ -132,12 +132,31 @@ const ApiClient = {
    * Retrieves the currently active store ID from persistent storage.
    * If none is found, provisions a valid default active store ID to prevent UI actions from halting.
    */
+  /**
+   * Helper to check if a given store ID string is invalid, dummy, or broken.
+   */
+  isInvalidStoreId(id) {
+    if (!id || typeof id !== 'string') return true;
+    const clean = id.trim().toLowerCase();
+    return (
+      clean === '' ||
+      clean === 'null' ||
+      clean === 'undefined' ||
+      clean === '7b8f6a91-45c2-48df-bc88-825dfa234123' ||
+      clean === '11111111-1111-1111-1111-111111111111'
+    );
+  },
+
+  /**
+   * Retrieves the currently active store ID from persistent storage.
+   * Never returns a broken dummy UUID.
+   */
   getActiveStoreId() {
     try {
       if (typeof window !== 'undefined' && window.location && window.location.search) {
         const urlParams = new URLSearchParams(window.location.search);
         const qStoreId = urlParams.get('store_id') || urlParams.get('storeId');
-        if (qStoreId && qStoreId.trim() && qStoreId !== 'null' && qStoreId !== 'undefined') {
+        if (qStoreId && !this.isInvalidStoreId(qStoreId)) {
           const clean = qStoreId.trim();
           this.setActiveStoreId(clean);
           return clean;
@@ -149,15 +168,19 @@ const ApiClient = {
                      localStorage.getItem('storeId') ||
                      localStorage.getItem('dawwer_active_store_id') ||
                      localStorage.getItem('dawwer_store_id');
-      if (direct && direct !== 'null' && direct !== 'undefined') {
-        return direct;
+      if (direct) {
+        if (!this.isInvalidStoreId(direct)) {
+          return direct;
+        } else {
+          this.clearInvalidStoreId(direct);
+        }
       }
 
       const activeStoreRaw = localStorage.getItem('dawwer_active_store');
       if (activeStoreRaw) {
         const activeStore = JSON.parse(activeStoreRaw);
         const sid = activeStore?.storeId || activeStore?.id || activeStore?.store_id;
-        if (sid && sid !== 'null' && sid !== 'undefined') {
+        if (sid && !this.isInvalidStoreId(sid)) {
           this.setActiveStoreId(sid);
           return sid;
         }
@@ -167,23 +190,128 @@ const ApiClient = {
       if (userDataRaw) {
         const userData = JSON.parse(userDataRaw);
         const sid = userData?.storeId || userData?.store_id;
-        if (sid && sid !== 'null' && sid !== 'undefined') {
+        if (sid && !this.isInvalidStoreId(sid)) {
           this.setActiveStoreId(sid);
           return sid;
         }
       }
     } catch (e) {}
 
-    const fallbackId = (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_STORE_ID) ? CONFIG.DEFAULT_STORE_ID : '7b8f6a91-45c2-48df-bc88-825dfa234123';
-    this.setActiveStoreId(fallbackId);
-    return fallbackId;
+    const configuredDefault = (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_STORE_ID) ? CONFIG.DEFAULT_STORE_ID : null;
+    if (configuredDefault && !this.isInvalidStoreId(configuredDefault)) {
+      return configuredDefault;
+    }
+    return null;
+  },
+
+  /**
+   * Clears invalid or stale store references from persistent storage.
+   */
+  clearInvalidStoreId(invalidId = null) {
+    try {
+      const keys = [
+        'store_id',
+        'active_store_id',
+        'storeId',
+        'dawwer_active_store_id',
+        'dawwer_store_id',
+        'storeToken',
+        'store_token',
+        'dawwer_store_token'
+      ];
+      keys.forEach(k => {
+        const val = localStorage.getItem(k);
+        if (!invalidId || val === invalidId || this.isInvalidStoreId(val)) {
+          localStorage.removeItem(k);
+        }
+      });
+      localStorage.removeItem('dawwer_active_store');
+      if (typeof CONFIG !== 'undefined') {
+        if (CONFIG.STORE_TOKEN_KEY) localStorage.removeItem(CONFIG.STORE_TOKEN_KEY);
+        if (CONFIG.ACTIVE_STORE_KEY) localStorage.removeItem(CONFIG.ACTIVE_STORE_KEY);
+      }
+    } catch (e) {}
+  },
+
+  /**
+   * Prompts or routes the user to re-select an active store when the current store ID is missing or returned 404.
+   */
+  async handleInvalidStoreId(invalidId = null) {
+    if (this._storeResolutionActive) return;
+    this._storeResolutionActive = true;
+
+    try {
+      if (invalidId) {
+        this.clearInvalidStoreId(invalidId);
+      }
+
+      // 1. Try to fetch available stores for the authenticated merchant to auto-recover
+      if (typeof window !== 'undefined' && this.auth) {
+        const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+        if (token) {
+          const res = await this.get('/merchant/stores', {}, { service: 'auth', throwOnError: false }).catch(() => null);
+          if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+            const validStores = res.data.filter(s => s.id && !this.isInvalidStoreId(s.id));
+            if (validStores.length > 0) {
+              const targetStore = validStores[0];
+              console.info(`[ApiClient] Auto-recovering store context to "${targetStore.name || targetStore.id}"...`);
+              if (typeof window.Auth !== 'undefined' && window.Auth.selectStore) {
+                await window.Auth.selectStore(targetStore.id).catch(() => {});
+              } else {
+                this.setActiveStoreId(targetStore.id);
+              }
+              if (typeof window.showToast === 'function') {
+                window.showToast({
+                  title: 'تم تحديث المتجر النشط',
+                  message: `تم التبديل تلقائياً إلى متجر "${targetStore.name || 'المتجر المتاح'}".`,
+                  type: 'info'
+                });
+              }
+              this._storeResolutionActive = false;
+              return;
+            }
+          }
+        }
+      }
+
+      // 2. If no valid store exists or auto-recovery not possible:
+      // Show user-friendly interactive prompt or route to store selection
+      if (typeof window !== 'undefined') {
+        const currentPath = (window.location.pathname || '').split('/').pop() || 'index.html';
+        const isAuthPage = ['login.html', 'register.html', 'verify-account.html', 'forgot-password.html', 'reset-password.html'].includes(currentPath);
+
+        if (!isAuthPage) {
+          if (typeof window.showToast === 'function') {
+            window.showToast({
+              title: 'تنبيه: يلزم اختيار متجر نشط',
+              message: 'معرّف المتجر غير صالح أو غير موجود (404). يرجى اختيار متجر من القائمة.',
+              type: 'warning',
+              duration: 8000
+            });
+          }
+
+          // If on a store-dependent view and not on index/merchant-application, route smoothly to index for store selection
+          if (!['index.html', 'merchant-application.html', ''].includes(currentPath)) {
+            setTimeout(() => {
+              window.location.href = 'index.html?selectStore=true';
+            }, 1800);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[ApiClient] handleInvalidStoreId resolution note:', err);
+    } finally {
+      setTimeout(() => {
+        this._storeResolutionActive = false;
+      }, 5000);
+    }
   },
 
   /**
    * Sets the active store ID across all relevant storage keys.
    */
   setActiveStoreId(storeId) {
-    if (storeId && storeId !== 'null' && storeId !== 'undefined') {
+    if (storeId && !this.isInvalidStoreId(storeId)) {
       try {
         localStorage.setItem('store_id', storeId);
         localStorage.setItem('active_store_id', storeId);
@@ -192,13 +320,7 @@ const ApiClient = {
         localStorage.setItem('dawwer_store_id', storeId);
       } catch (e) {}
     } else {
-      try {
-        localStorage.removeItem('store_id');
-        localStorage.removeItem('active_store_id');
-        localStorage.removeItem('storeId');
-        localStorage.removeItem('dawwer_active_store_id');
-        localStorage.removeItem('dawwer_store_id');
-      } catch (e) {}
+      this.clearInvalidStoreId(storeId);
     }
   },
 
@@ -388,8 +510,8 @@ const ApiClient = {
     let response = null;
     let networkError = null;
 
-    // Default timeout: 150,000ms (2.5 minutes >= 2 minutes) for FormData / AI extractions, 15,000ms for lightweight JSON requests
-    const defaultTimeout = isFormData ? 150000 : 15000;
+    // Default timeout: 150,000ms (2.5 minutes >= 2 minutes) for FormData / AI extractions, 90,000ms (90 seconds) for JSON requests (allows Render cold-starts)
+    const defaultTimeout = isFormData ? 150000 : 90000;
     const timeoutMs = options.timeout !== undefined ? options.timeout : defaultTimeout;
 
     try {
@@ -525,6 +647,19 @@ const ApiClient = {
 
     // 3. Handle HTTP Error Response (!response.ok)
     if (response && !response.ok) {
+      // Handle 404 Store Not Found: Stop retrying with stale/broken store ID and prompt user
+      if (response.status === 404) {
+        const storeMatch = url.match(/\/stores\/([a-zA-Z0-9\-_]+)/i);
+        if (storeMatch && storeMatch[1]) {
+          const failedStoreId = storeMatch[1];
+          if (!['products', 'documents', 'shelf-jobs', 'draft-products'].includes(failedStoreId.toLowerCase())) {
+            console.warn(`[ApiClient] Store ID "${failedStoreId}" returned 404 Not Found. Purging stale store ID from storage.`);
+            this.clearInvalidStoreId(failedStoreId);
+            this.handleInvalidStoreId(failedStoreId);
+          }
+        }
+      }
+
       let errorMsg = `حدث خطأ في الخادم (${response.status})`;
       let responseData = null;
 
@@ -952,9 +1087,10 @@ const ApiClient = {
     getStore(storeId = null) {
       const id = storeId || ApiClient.getActiveStoreId();
       if (!id) {
+        ApiClient.handleInvalidStoreId();
         return Promise.resolve({
           success: false,
-          status: 400,
+          status: 404,
           message: "لم يتم تحديد معرّف متجر نشط (store_id).",
           data: null,
           errors: ["Missing store_id"]

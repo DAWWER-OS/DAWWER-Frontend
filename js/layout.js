@@ -657,6 +657,7 @@ const DawwerLayout = {
   async fetchStoreProfile(storeId = null) {
     try {
       const targetId = storeId || (typeof ApiClient !== 'undefined' && ApiClient.getActiveStoreId ? ApiClient.getActiveStoreId() : null);
+      if (!targetId) return null;
 
       let profile = null;
 

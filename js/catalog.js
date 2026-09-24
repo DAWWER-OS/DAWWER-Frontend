@@ -1365,7 +1365,7 @@
 
         async function deleteCatalogProduct(prodId, targetProduct) {
           const pName = targetProduct ? targetProduct.name : `منتج #${prodId}`;
-          const storeId = (typeof ApiClient !== 'undefined' && ApiClient.getActiveStoreId()) || '7b8f6a91-45c2-48df-bc88-825dfa234123';
+          const storeId = typeof ApiClient !== 'undefined' ? ApiClient.getActiveStoreId() : null;
 
           // 1. Immediately delete from local state and re-render table
           state.products = state.products.filter(p => String(p.id) !== String(prodId));
@@ -1439,7 +1439,7 @@
           };
 
           const id = DOM.formProductId.value;
-          const storeId = (typeof ApiClient !== 'undefined' && ApiClient.getActiveStoreId()) || '7b8f6a91-45c2-48df-bc88-825dfa234123';
+          const storeId = typeof ApiClient !== 'undefined' ? ApiClient.getActiveStoreId() : null;
 
           const cleanZone = payload.location.zone || "المنطقة أ";
           const cleanAisle = payload.location.aisle.replace(/[^0-9]/g, '') || "01";
@@ -1533,7 +1533,11 @@
       }
 
       async function fetchLiveProducts() {
-        const storeId = (typeof ApiClient !== 'undefined' && ApiClient.getActiveStoreId()) || '7b8f6a91-45c2-48df-bc88-825dfa234123';
+        const storeId = typeof ApiClient !== 'undefined' ? ApiClient.getActiveStoreId() : null;
+        if (!storeId) {
+          console.info('[Catalog] Awaiting active store selection before loading products.');
+          return;
+        }
         if (typeof ApiClient === 'undefined' || !ApiClient.products) return;
 
         try {
