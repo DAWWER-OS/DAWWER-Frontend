@@ -245,6 +245,12 @@
         errorDetailsTbody: document.getElementById('error-details-tbody'),
         btnDownloadErrorCsv: document.getElementById('btn-download-error-csv'),
         finalImportCount: document.getElementById('final-import-count'),
+        mappingSkuWarning: document.getElementById('mapping-sku-warning'),
+        mappingSkuWarningText: document.getElementById('mapping-sku-warning-text'),
+        btnAutoCorrectMapping: document.getElementById('btn-auto-correct-mapping'),
+        step3SkuWarning: document.getElementById('step3-sku-warning'),
+        step3SkuWarningText: document.getElementById('step3-sku-warning-text'),
+        btnFixStep3Mapping: document.getElementById('btn-fix-step3-mapping'),
 
         btnAiShelfScan: document.getElementById('btn-ai-shelf-scan'),
         aiCameraModal: document.getElementById('ai-camera-modal'),
@@ -432,10 +438,38 @@
                         localStorage.getItem('store_id') ||
                         localStorage.getItem('dawwer_active_store_id') || '';
 
-        if (!storeId) {
-          if (DOM.aiCameraAnalyzing) DOM.aiCameraAnalyzing.classList.add('hidden');
-          showToast('معرف المتجر غير متوفر. يرجى اختيار المتجر أولاً.', 'error');
-          return;
+        // Validate Token & Store Context Before Upload (Requirement 2)
+        let uploadToken = null;
+        if (typeof ApiClient !== 'undefined' && typeof ApiClient.validateUploadContext === 'function') {
+          const contextValidation = await ApiClient.validateUploadContext(storeId);
+          if (!contextValidation.valid) {
+            if (DOM.aiCameraAnalyzing) DOM.aiCameraAnalyzing.classList.add('hidden');
+            return;
+          }
+          uploadToken = contextValidation.token;
+        } else {
+          const isStoreValid = typeof ApiClient !== 'undefined' ? ApiClient.isValidStoreId(storeId) : (storeId && storeId !== 'null' && storeId !== 'undefined');
+          if (!isStoreValid) {
+            if (DOM.aiCameraAnalyzing) DOM.aiCameraAnalyzing.classList.add('hidden');
+            showToast('معرف المتجر غير متوفر أو غير صالح. يرجى اختيار المتجر أولاً.', 'error');
+            if (typeof ApiClient !== 'undefined' && typeof ApiClient.handleStoreVerification404 === 'function') {
+              ApiClient.handleStoreVerification404(storeId);
+            }
+            return;
+          }
+
+          uploadToken = (typeof ApiClient !== 'undefined' && ApiClient.getUploadAuthToken)
+            ? ApiClient.getUploadAuthToken()
+            : (localStorage.getItem('storeToken') || localStorage.getItem('accessToken') || '');
+          if (!uploadToken || uploadToken === 'null' || uploadToken === 'undefined' || (typeof ApiClient !== 'undefined' && ApiClient.isTokenExpired(uploadToken))) {
+            if (DOM.aiCameraAnalyzing) DOM.aiCameraAnalyzing.classList.add('hidden');
+            if (typeof ApiClient !== 'undefined' && ApiClient.promptReauthentication) {
+              ApiClient.promptReauthentication('انتهت صلاحية جلسة العمل. يرجى تسجيل الدخول مجدداً لمعالجة صورة الرف.');
+            } else {
+              showToast('جلسة العمل منتهية أو غير مسجلة. يرجى تسجيل الدخول مجدداً للمتابعة.', 'warning');
+            }
+            return;
+          }
         }
 
         try {
@@ -459,7 +493,7 @@
             const res = await fetch(`https://dawwer-backend-fastapi.onrender.com/api/v1/stores/${encodeURIComponent(storeId)}/shelf-jobs`, {
               method: 'POST',
               headers: {
-                'Authorization': `Bearer ${(typeof ApiClient !== 'undefined' ? ApiClient.getAuthToken(true) : null) || localStorage.getItem('accessToken') || localStorage.getItem('token') || localStorage.getItem('storeToken') || ''}`
+                'Authorization': `Bearer ${uploadToken}`
               },
               body: formData
             });
@@ -513,6 +547,15 @@
 
         } catch (jobErr) {
           if (DOM.aiCameraAnalyzing) DOM.aiCameraAnalyzing.classList.add('hidden');
+          const is401 = jobErr?.status === 401 || (jobErr?.message && (jobErr.message.includes('401') || jobErr.message.includes('Unauthorized')));
+          if (is401) {
+            if (typeof ApiClient !== 'undefined' && ApiClient.promptReauthentication) {
+              ApiClient.promptReauthentication('انتهت صلاحية جلسة العمل أو غير مصرح. يرجى تسجيل الدخول مجدداً.');
+            } else {
+              showToast('جلسة العمل منتهية أو غير مسجلة. يرجى تسجيل الدخول مجدداً للمتابعة.', 'warning');
+            }
+            return;
+          }
           const isTimeout = jobErr?.isTimeout || (jobErr?.message && jobErr.message.toLowerCase().includes('timeout'));
           const isCORS = jobErr?.isCORS || (jobErr?.message && jobErr.message.includes('Failed to fetch'));
           let errMsg = jobErr?.message || 'فشلت معالجة صورة الرف عبر خادم الذكاء الاصطناعي.';
@@ -643,30 +686,347 @@
         reader.readAsText(file);
       }
 
+      // Category taxonomy terms for header matching
+      const CATEGORY_TERMS = [
+        'category', 'category_id', 'category_name', 'categoryid', 'categoryname', 'category_title',
+        'cat_id', 'cat_name', 'cat', 'taxonomy', 'department', 'dept', 'dept_name', 'classification',
+        'section', 'group', 'family', 'التصنيف', 'تصنيف', 'اسم التصنيف', 'معرف التصنيف', 'كود التصنيف',
+        'رمز التصنيف', 'القسم', 'قسم', 'اسم القسم', 'الفئة', 'فئة', 'اسم الفئة', 'المجموعة', 'نوع الصنف',
+        'نوع المنتج', 'تصنيف الصنف', 'تصنيف المنتج'
+      ];
+
+      // Known category values and descriptive taxonomy words
+      const KNOWN_CATEGORY_VALUES = [
+        'خضار وفواكه', 'خضار و فواكه', 'خضار', 'فواكه', 'خضروات', 'خضروات وفواكه',
+        'ألبان وأجبان', 'ألبان و أجبان', 'ألبان', 'أجبان', 'حليب وألبان', 'حليب',
+        'مخبوزات وحلويات', 'مخبوزات', 'حلويات', 'معجنات',
+        'لحوم ودواجن', 'لحوم', 'دواجن', 'دجاج', 'أسماك', 'مأكولات بحرية',
+        'مشروبات وعصائر', 'مشروبات', 'عصائر', 'مياه', 'مشروبات باردة', 'مشروبات ساخنة',
+        'تسالي وحلويات', 'تسالي', 'سناكات', 'مقرمشات', 'شيبس', 'شوكولاتة',
+        'زيوت ومؤونة', 'مواد غذائية', 'بقالة', 'تمور', 'عطارة', 'بهارات', 'مكسرات',
+        'معلبات', 'مجمدات', 'أطعمة مجمدة', 'صلصات وتوابل',
+        'عناية شخصية', 'منظفات منزلية', 'منظفات', 'إلكترونيات', 'أجهزة منزلية',
+        'طازج', 'منتجات طازجة', 'أغذية طازجة',
+        'vegetables & fruits', 'vegetables and fruits', 'vegetables', 'fruits', 'produce', 'fresh produce',
+        'dairy & eggs', 'dairy and eggs', 'dairy', 'cheese', 'milk',
+        'bakery & pastry', 'bakery and pastry', 'bakery', 'bread', 'pastry',
+        'meat & poultry', 'meat and poultry', 'meat', 'poultry', 'chicken', 'seafood', 'fish',
+        'beverages & juices', 'beverages and juices', 'beverages', 'drinks', 'juices', 'water',
+        'snacks & sweets', 'snacks and sweets', 'snacks', 'sweets', 'candy', 'confectionery',
+        'pantry & groceries', 'pantry', 'groceries', 'grocery', 'food', 'frozen food', 'frozen', 'canned goods',
+        'personal care', 'household & cleaning', 'household', 'cleaning', 'electronics'
+      ];
+
+      // Strict SKU / Barcode keywords
+      const STRICT_SKU_KEYWORDS = [
+        'sku', 'product_sku', 'store_sku', 'item_sku', 'barcode', 'bar_code', 'upc', 'ean', 'ean13', 'gtin',
+        'رمز الصنف', 'رمز المنتج', 'رمز الباركود', 'باركود الصنف', 'باركود المنتج', 'الباركود', 'باركود',
+        'كود الصنف', 'كود المنتج', 'رمز_الصنف', 'كود_الصنف', 'الرمز', 'item_code', 'product_code'
+      ];
+
+      function isDescriptiveCategoryText(val) {
+        if (!val || typeof val !== 'string') return false;
+        const s = val.trim().toLowerCase();
+        if (!s) return false;
+
+        // Check if value is a known category name
+        for (const cat of KNOWN_CATEGORY_VALUES) {
+          if (s === cat || s.includes(cat) || (cat.includes(s) && s.length >= 4)) return true;
+        }
+
+        // Check common Arabic category words
+        const arabicWords = ['خضار', 'فواكه', 'ألبان', 'أجبان', 'مخبوزات', 'لحوم', 'دواجن', 'مشروبات', 'عصائر', 'تسالي', 'حلويات', 'معلبات', 'مجمدات', 'منظفات', 'عناية', 'طازج', 'تمور', 'بهارات', 'مكسرات', 'بقالة', 'مؤونة'];
+        for (const w of arabicWords) {
+          if (s.includes(w)) return true;
+        }
+
+        // Check English category words
+        const englishWords = ['vegetable', 'fruit', 'dairy', 'bakery', 'meat', 'poultry', 'beverage', 'drink', 'snack', 'grocery', 'produce', 'frozen', 'cleaning', 'pantry'];
+        for (const w of englishWords) {
+          if (s.includes(w)) return true;
+        }
+
+        return false;
+      }
+
+      function showSkuWarning(message) {
+        if (DOM.mappingSkuWarning) {
+          DOM.mappingSkuWarning.classList.remove('hidden');
+          if (DOM.mappingSkuWarningText && message) {
+            DOM.mappingSkuWarningText.textContent = message;
+          }
+        }
+      }
+
+      function hideSkuWarning() {
+        if (DOM.mappingSkuWarning) {
+          DOM.mappingSkuWarning.classList.add('hidden');
+        }
+      }
+
+      function showStep3SkuWarning(message) {
+        if (DOM.step3SkuWarning) {
+          DOM.step3SkuWarning.classList.remove('hidden');
+          if (DOM.step3SkuWarningText && message) {
+            DOM.step3SkuWarningText.textContent = message;
+          }
+        }
+      }
+
+      function hideStep3SkuWarning() {
+        if (DOM.step3SkuWarning) {
+          DOM.step3SkuWarning.classList.add('hidden');
+        }
+      }
+
+      function autoCorrectColumnSelection(interactive = false) {
+        const sampleRows = state.wizard.rawRows.slice(0, 50);
+
+        // Find which column is the true category column
+        let trueCatHeader = '';
+        for (const h of state.wizard.headers) {
+          const normH = h.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '');
+          const isCatH = CATEGORY_TERMS.some(t => {
+            const normT = t.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '');
+            return normH === normT || normH.includes(normT);
+          });
+          const colIdx = state.wizard.headers.indexOf(h);
+          const colVals = sampleRows.map(r => (r[colIdx] || '').trim()).filter(v => v);
+          const catHits = colVals.filter(v => isDescriptiveCategoryText(v)).length;
+          if (isCatH || (colVals.length > 0 && catHits / colVals.length >= 0.25)) {
+            trueCatHeader = h;
+            break;
+          }
+        }
+
+        // Find which column is the true barcode/SKU column
+        let trueBarcodeHeader = '';
+        for (const h of state.wizard.headers) {
+          if (h === trueCatHeader) continue;
+          const normH = h.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '');
+          const isCatH = CATEGORY_TERMS.some(t => {
+            const normT = t.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '');
+            return normH === normT || normH.includes(normT);
+          });
+          if (isCatH) continue;
+
+          const colIdx = state.wizard.headers.indexOf(h);
+          const colVals = sampleRows.map(r => (r[colIdx] || '').trim()).filter(v => v);
+          if (colVals.some(v => isDescriptiveCategoryText(v))) continue;
+
+          const strictH = STRICT_SKU_KEYWORDS.some(k => normH.includes(k.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '')));
+          const barcodeHits = colVals.filter(v => /^\d{6,18}$/.test(v.replace(/\s+/g, '')) || /^[A-Za-z0-9\-_]{3,30}$/.test(v)).length;
+          if (strictH || (colVals.length > 0 && barcodeHits / colVals.length >= 0.4)) {
+            trueBarcodeHeader = h;
+            break;
+          }
+        }
+
+        if (trueCatHeader) {
+          state.wizard.mappings.category = trueCatHeader;
+          if (DOM.mapCategory) DOM.mapCategory.value = trueCatHeader;
+        }
+
+        if (trueBarcodeHeader) {
+          state.wizard.mappings.sku = trueBarcodeHeader;
+          if (DOM.mapSku) DOM.mapSku.value = trueBarcodeHeader;
+        }
+
+        updateMappingPreviewTable();
+        hideSkuWarning();
+        hideStep3SkuWarning();
+
+        if (interactive) {
+          showToast(`تم تصحيح المطابقة: الرمز ➔ "${trueBarcodeHeader || 'غير محدد'}"، التصنيف ➔ "${trueCatHeader || 'غير محدد'}"`, 'success');
+        }
+        return true;
+      }
+
+      function checkAndAutoCorrectSkuMapping(interactive = false) {
+        const selectedSku = DOM.mapSku ? DOM.mapSku.value : state.wizard.mappings.sku;
+        if (!selectedSku) {
+          hideSkuWarning();
+          return false;
+        }
+
+        const skuIdx = state.wizard.headers.indexOf(selectedSku);
+        if (skuIdx === -1) {
+          hideSkuWarning();
+          return false;
+        }
+
+        const sampleRows = state.wizard.rawRows.slice(0, 50);
+        const categoryHits = sampleRows.filter(r => isDescriptiveCategoryText(r[skuIdx] || '')).length;
+        const normSkuHeader = selectedSku.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '');
+        const headerIsCategory = CATEGORY_TERMS.some(t => {
+          const normT = t.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '');
+          return normSkuHeader === normT || normSkuHeader.includes(normT);
+        });
+        const hasCategoryData = categoryHits > 0 && (categoryHits / sampleRows.length >= 0.15 || headerIsCategory);
+
+        if (hasCategoryData) {
+          console.warn(`[Catalog] Selected SKU column "${selectedSku}" contains descriptive category values! Auto-correcting column mapping.`);
+
+          // Look for an actual barcode column
+          let trueBarcodeHeader = '';
+          for (let i = 0; i < state.wizard.headers.length; i++) {
+            if (i === skuIdx) continue;
+            const h = state.wizard.headers[i];
+            const normH = h.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '');
+            const isCategoryHeader = CATEGORY_TERMS.some(t => {
+              const normT = t.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '');
+              return normH === normT || normH.includes(normT);
+            });
+            if (isCategoryHeader) continue;
+
+            const vals = sampleRows.map(r => (r[i] || '').trim()).filter(v => v);
+            const containsCatText = vals.some(v => isDescriptiveCategoryText(v));
+            if (containsCatText) continue;
+
+            const strictMatch = STRICT_SKU_KEYWORDS.some(k => normH.includes(k.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '')));
+            const barcodeCount = vals.filter(v => /^\d{6,18}$/.test(v.replace(/\s+/g, '')) || /^[A-Za-z0-9\-_]{3,30}$/.test(v)).length;
+            if (strictMatch || (vals.length > 0 && barcodeCount / vals.length >= 0.5)) {
+              trueBarcodeHeader = h;
+              break;
+            }
+          }
+
+          // Auto-route: Route taxonomy values to the Category field
+          state.wizard.mappings.category = selectedSku;
+          if (DOM.mapCategory) DOM.mapCategory.value = selectedSku;
+
+          // Auto-correct SKU field to true barcode or clear it
+          state.wizard.mappings.sku = trueBarcodeHeader;
+          if (DOM.mapSku) DOM.mapSku.value = trueBarcodeHeader;
+
+          showSkuWarning(
+            `تم رصد قيم تصنيف نصية ('${escapeHtml(selectedSku)}') في حقل رمز الصنف (SKU). تم توجيه التصنيف تلقائياً إلى حقل "التصنيف"${trueBarcodeHeader ? ` واختيار '${escapeHtml(trueBarcodeHeader)}' كرمز باركود.` : '، يرجى اختيار عمود الباركود.'}`
+          );
+
+          if (interactive) {
+            showToast('تم تصحيح مطابقة الأعمدة تلقائياً: توجيه التصنيف إلى حقل التصنيف', 'warning');
+          }
+          return true;
+        } else {
+          hideSkuWarning();
+          return false;
+        }
+      }
+
       function processParsedData(headers, rows) {
         state.wizard.headers = headers;
         state.wizard.rawRows = rows;
         DOM.detectedColumnsCount.textContent = `تم التعرف على ${headers.length} أعمدة`;
 
-        const smartMatch = (keywords) => {
-          for (let h of headers) {
-            const normalized = h.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '');
-            for (let kw of keywords) {
-              if (normalized.includes(kw)) return h;
-            }
-          }
-          return '';
-        };
+        // 1. Analyze each column's header and sample values
+        const sampleRows = rows.slice(0, 50);
+        const colStats = headers.map((header, colIdx) => {
+          const normHeader = header.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '');
+          const values = sampleRows.map(r => (r[colIdx] || '').trim()).filter(v => v !== '');
+          const totalVals = values.length || 1;
 
-        state.wizard.mappings.name = smartMatch(['name', 'title', 'item', 'product', 'اسم', 'صنف', 'منتج']) || headers[0];
-        state.wizard.mappings.sku = smartMatch(['sku', 'barcode', 'code', 'id', 'رمز', 'باركود']) || (headers[1] || '');
-        state.wizard.mappings.price = smartMatch(['price', 'cost', 'unitprice', 'msrp', 'rate', 'سعر']) || (headers[2] || '');
-        state.wizard.mappings.category = smartMatch(['category', 'department', 'dept', 'type', 'تصنيف', 'قسم']) || '';
-        state.wizard.mappings.zone = smartMatch(['zone', 'section', 'area', 'منطقة', 'جناح']) || '';
-        state.wizard.mappings.aisle = smartMatch(['aisle', 'bay', 'corridor', 'ممر', 'رف']) || '';
+          // Check category traits
+          const categoryHeaderMatch = CATEGORY_TERMS.some(t => {
+            const normTerm = t.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '');
+            return normHeader === normTerm || normHeader.includes(normTerm);
+          });
+          const categoryHits = values.filter(v => isDescriptiveCategoryText(v)).length;
+          const categoryRatio = categoryHits / totalVals;
+
+          // Check SKU / barcode traits
+          const isCategoryCol = categoryHeaderMatch || categoryRatio > 0.2;
+          const strictSkuHeaderMatch = !isCategoryCol && STRICT_SKU_KEYWORDS.some(k => {
+            const normK = k.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '');
+            return normHeader === normK || normHeader.includes(normK);
+          });
+
+          const barcodeHits = values.filter(v => {
+            const cleanVal = v.replace(/\s+/g, '');
+            return /^\d{6,18}$/.test(cleanVal) || /^[A-Za-z0-9\-_]{3,30}$/.test(v);
+          }).length;
+          const barcodeRatio = barcodeHits / totalVals;
+
+          // Check price traits
+          const priceHeaderMatch = ['price', 'cost', 'unitprice', 'rate', 'سعر', 'السعر', 'سعر الوحدة', 'تكلفة'].some(p => {
+            const normP = p.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '');
+            return normHeader === normP || normHeader.includes(normP);
+          });
+          const numericHits = values.filter(v => {
+            const n = parseFloat(v.replace(/[^0-9.-]/g, ''));
+            return !isNaN(n) && n > 0 && n < 100000;
+          }).length;
+          const numericRatio = numericHits / totalVals;
+
+          return {
+            header,
+            colIdx,
+            normHeader,
+            isCategoryCol,
+            categoryHeaderMatch,
+            categoryRatio,
+            strictSkuHeaderMatch,
+            barcodeRatio,
+            priceHeaderMatch,
+            numericRatio
+          };
+        });
+
+        // 2. Identify Category column (Route taxonomy values strictly to Category)
+        let catCol = colStats.find(c => c.categoryHeaderMatch);
+        if (!catCol) {
+          catCol = colStats.find(c => c.categoryRatio > 0.3);
+        }
+        const categoryHeader = catCol ? catCol.header : '';
+
+        // 3. Identify SKU column (Strictly maps to unique identifiers/barcodes, NEVER category)
+        let skuCol = colStats.find(c => c.header !== categoryHeader && !c.isCategoryCol && c.strictSkuHeaderMatch);
+        if (!skuCol) {
+          // Find column with highest barcode ratio and 0 category matches
+          skuCol = colStats
+            .filter(c => c.header !== categoryHeader && !c.isCategoryCol && c.categoryRatio === 0)
+            .sort((a, b) => b.barcodeRatio - a.barcodeRatio)[0];
+        }
+        const skuHeader = skuCol ? skuCol.header : '';
+
+        // 4. Identify Name column
+        let nameCol = colStats.find(c => {
+          if (c.header === categoryHeader || c.header === skuHeader) return false;
+          return ['name', 'title', 'item', 'product', 'اسم', 'اسم الصنف', 'اسم المنتج', 'منتج', 'صنف'].some(k => {
+            const normK = k.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '');
+            return c.normHeader === normK || c.normHeader.includes(normK);
+          });
+        });
+        if (!nameCol) {
+          nameCol = colStats.find(c => c.header !== categoryHeader && c.header !== skuHeader);
+        }
+        const nameHeader = nameCol ? nameCol.header : headers[0];
+
+        // 5. Identify Price column
+        let priceCol = colStats.find(c => c.header !== categoryHeader && c.header !== skuHeader && c.header !== nameHeader && c.priceHeaderMatch);
+        if (!priceCol) {
+          priceCol = colStats.find(c => c.header !== categoryHeader && c.header !== skuHeader && c.header !== nameHeader && c.numericRatio > 0.6);
+        }
+        const priceHeader = priceCol ? priceCol.header : '';
+
+        // 6. Identify Zone and Aisle
+        const zoneCol = colStats.find(c => {
+          if ([categoryHeader, skuHeader, nameHeader, priceHeader].includes(c.header)) return false;
+          return ['zone', 'section', 'area', 'منطقة', 'جناح'].some(k => c.normHeader.includes(k.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '')));
+        });
+        const aisleCol = colStats.find(c => {
+          if ([categoryHeader, skuHeader, nameHeader, priceHeader, zoneCol?.header].includes(c.header)) return false;
+          return ['aisle', 'bay', 'corridor', 'ممر', 'رف', 'shelf', 'rack'].some(k => c.normHeader.includes(k.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '')));
+        });
+
+        state.wizard.mappings.name = nameHeader || '';
+        state.wizard.mappings.sku = skuHeader || '';
+        state.wizard.mappings.price = priceHeader || '';
+        state.wizard.mappings.category = categoryHeader || '';
+        state.wizard.mappings.zone = zoneCol ? zoneCol.header : '';
+        state.wizard.mappings.aisle = aisleCol ? aisleCol.header : '';
 
         setWizardStep(2);
-        showToast(`تمت معالجة ${rows.length} سجلاً بنجاح!`);
+        showToast(`تمت معالجة ${rows.length} سجلاً ومطابقة الحقول بدقة!`);
       }
 
       function renderStep2Mapping() {
@@ -687,6 +1047,9 @@
         populateSelect(DOM.mapCategory, state.wizard.mappings.category);
         populateSelect(DOM.mapZone, state.wizard.mappings.zone);
         populateSelect(DOM.mapAisle, state.wizard.mappings.aisle);
+
+        // Run auto-correction and warning check
+        checkAndAutoCorrectSkuMapping(false);
 
         updateMappingPreviewTable();
       }
@@ -729,13 +1092,14 @@
         state.wizard.validRows = [];
         state.wizard.errorRows = [];
 
-        const existingSkus = new Set(state.products.map(p => p.sku.toUpperCase()));
+        const existingSkus = new Set(state.products.map(p => (p.sku || '').toUpperCase()));
         const seenImportSkus = new Set();
+        let categoryAsSkuCount = 0;
 
         state.wizard.rawRows.forEach((row, index) => {
           const rowNum = index + 2;
           const rawName = nameIdx !== -1 ? (row[nameIdx] || '').trim() : '';
-          const rawSku = skuIdx !== -1 ? (row[skuIdx] || '').trim().toUpperCase() : '';
+          const rawSku = skuIdx !== -1 ? (row[skuIdx] || '').trim() : '';
           const rawPrice = priceIdx !== -1 ? parseFloat(row[priceIdx]) : NaN;
           const rawCat = catIdx !== -1 ? (row[catIdx] || 'عام').trim() : 'عام';
           const rawZone = zoneIdx !== -1 ? (row[zoneIdx] || 'المنطقة أ').trim() : 'المنطقة أ';
@@ -744,9 +1108,20 @@
           let errors = [];
 
           if (!rawName) errors.push('اسم المنتج فارغ أو غير متوفر.');
-          if (!rawSku) errors.push('رمز الباركود / SKU غير متوفر.');
-          if (rawSku && existingSkus.has(rawSku)) errors.push(`رمز الصنف '${rawSku}' مسجل مسبقاً في كتالوج المتجر.`);
-          if (rawSku && seenImportSkus.has(rawSku)) errors.push(`تكرار رمز الصنف '${rawSku}' داخل نفس الملف.`);
+          if (!rawSku) {
+            errors.push('رمز الباركود / SKU غير متوفر.');
+          } else {
+            // Validate: SKU must not be descriptive category text!
+            if (isDescriptiveCategoryText(rawSku)) {
+              categoryAsSkuCount++;
+              errors.push(`رمز الصنف '${rawSku}' غير صالح لأنه يمثل تصنيفاً للمنتج وليس باركود أو رمز فريد. يرجى توجيه عمود التصنيفات إلى حقل 'التصنيف' واختيار عمود الباركود لحقل SKU.`);
+            } else {
+              const skuUpper = rawSku.toUpperCase();
+              if (existingSkus.has(skuUpper)) errors.push(`رمز الصنف '${rawSku}' مسجل مسبقاً في كتالوج المتجر.`);
+              if (seenImportSkus.has(skuUpper)) errors.push(`تكرار رمز الصنف '${rawSku}' داخل نفس الملف.`);
+            }
+          }
+
           if (isNaN(rawPrice) || rawPrice <= 0) errors.push(`السعر يجب أن يكون قيمة رقمية موجبة.`);
 
           if (errors.length > 0) {
@@ -758,7 +1133,7 @@
               reason: errors.join(' ')
             });
           } else {
-            seenImportSkus.add(rawSku);
+            seenImportSkus.add(rawSku.toUpperCase());
             state.wizard.validRows.push({
               id: `prod-imp-${Date.now()}-${index}`,
               name: rawName,
@@ -776,6 +1151,13 @@
         DOM.metricTotalRows.textContent = state.wizard.rawRows.length;
         DOM.metricValidRows.textContent = state.wizard.validRows.length;
         DOM.metricErrorRows.textContent = state.wizard.errorRows.length;
+
+        // Step 3 warning banner if category was mapped to SKU
+        if (categoryAsSkuCount > 0) {
+          showStep3SkuWarning(`تم رصد ${categoryAsSkuCount} صنف يحتوي على تصنيف في حقل رمز الصنف (SKU). يرجى الرجوع لتصحيح اختيار عمود الرمز.`);
+        } else {
+          hideStep3SkuWarning();
+        }
 
         const errorContainer = document.getElementById('error-details-container');
         if (state.wizard.errorRows.length === 0) {
@@ -817,16 +1199,68 @@
         showToast('تم تحميل ملف تقرير الأخطاء (.csv)');
       }
 
-      function commitImport() {
+      async function commitImport() {
         if (!state.wizard.validRows.length) {
           showToast('لا توجد أصناف صالحة للاستيراد', 'error');
           return;
         }
 
+        // 1. Client-side validation: verify that no valid row has descriptive category text in SKU
+        const categorySkuRows = state.wizard.validRows.filter(r => isDescriptiveCategoryText(r.sku));
+        if (categorySkuRows.length > 0) {
+          showToast(`تعذر الاستيراد: تم رصد ${categorySkuRows.length} صنف يحتوي على تصنيف في حقل SKU. يرجى تصحيح مطابقة الأعمدة.`, 'error');
+          setWizardStep(2);
+          checkAndAutoCorrectSkuMapping(true);
+          return;
+        }
+
+        // 2. Validate Token & Store Context Before Upload (Requirement 2)
+        const storeId = (typeof ApiClient !== 'undefined' && ApiClient.getActiveStoreId()) ||
+                        localStorage.getItem('store_id') ||
+                        localStorage.getItem('dawwer_active_store_id') || '';
+
+        if (typeof ApiClient !== 'undefined' && typeof ApiClient.validateUploadContext === 'function') {
+          const contextValidation = await ApiClient.validateUploadContext(storeId);
+          if (!contextValidation.valid) {
+            return;
+          }
+        } else {
+          if (!storeId || (typeof ApiClient !== 'undefined' && ApiClient.isInvalidStoreId(storeId))) {
+            showToast('يلزم اختيار متجر نشط قبل استيراد الكتالوج', 'error');
+            if (typeof ApiClient !== 'undefined' && ApiClient.handleStoreVerification404) {
+              ApiClient.handleStoreVerification404(storeId);
+            }
+            return;
+          }
+          const token = (typeof ApiClient !== 'undefined' && ApiClient.getUploadAuthToken)
+            ? ApiClient.getUploadAuthToken()
+            : (localStorage.getItem('storeToken') || localStorage.getItem('accessToken') || '');
+          if (!token || token === 'null' || token === 'undefined' || (typeof ApiClient !== 'undefined' && ApiClient.isTokenExpired(token))) {
+            if (typeof ApiClient !== 'undefined' && ApiClient.promptReauthentication) {
+              ApiClient.promptReauthentication('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مجدداً لاستيراد الكتالوج.');
+            } else {
+              showToast('جلسة العمل منتهية أو غير مسجلة. يرجى تسجيل الدخول مجدداً للمتابعة.', 'warning');
+            }
+            return;
+          }
+        }
+
         const count = state.wizard.validRows.length;
         if (typeof ApiClient !== 'undefined' && ApiClient.products && state.wizard.currentFile) {
-          const storeId = ApiClient.getActiveStoreId();
-          ApiClient.products.bulkImport(storeId, state.wizard.currentFile).catch(e => console.warn('Bulk import backend sync:', e));
+          // Construct normalized CSV content so backend parser receives clean standard columns
+          const normalizedCsvLines = [
+            'Product Name,Product SKU,Unit Price,Category,Store Zone,Aisle Name',
+            ...state.wizard.validRows.map(p =>
+              `"${(p.name || '').replace(/"/g, '""')}","${(p.sku || '').replace(/"/g, '""')}",${p.price},"${(p.category || '').replace(/"/g, '""')}","${(p.location?.zone || '').replace(/"/g, '""')}","${(p.location?.aisle || '').replace(/"/g, '""')}"`
+            )
+          ];
+          const normalizedBlob = new Blob(["\uFEFF" + normalizedCsvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+          const uploadFileName = (state.wizard.currentFile.name || 'catalog_import.csv').replace(/\.[^/.]+$/, "") + "_mapped.csv";
+          const uploadFile = new File([normalizedBlob], uploadFileName, { type: 'text/csv' });
+
+          ApiClient.products.bulkImport(storeId, uploadFile).catch(e => {
+            console.warn('[Catalog] Bulk import backend sync note:', e);
+          });
         }
 
         state.products.unshift(...state.wizard.validRows);
@@ -1224,9 +1658,38 @@
           processParsedData(headers, rows);
         });
 
-        [DOM.mapName, DOM.mapSku, DOM.mapPrice, DOM.mapCategory, DOM.mapZone, DOM.mapAisle].forEach(sel => {
-          sel.addEventListener('change', updateMappingPreviewTable);
+        [DOM.mapName, DOM.mapPrice, DOM.mapZone, DOM.mapAisle].forEach(sel => {
+          if (sel) sel.addEventListener('change', updateMappingPreviewTable);
         });
+
+        if (DOM.mapSku) {
+          DOM.mapSku.addEventListener('change', () => {
+            checkAndAutoCorrectSkuMapping(true);
+            updateMappingPreviewTable();
+          });
+        }
+
+        if (DOM.mapCategory) {
+          DOM.mapCategory.addEventListener('change', () => {
+            if (DOM.mapSku && DOM.mapSku.value && DOM.mapSku.value === DOM.mapCategory.value) {
+              showToast('تم اختيار نفس العمود لحقلي رمز الصنف والتصنيف. يرجى اختيار عمود منفصل لكل حقل.', 'warning');
+            }
+            updateMappingPreviewTable();
+          });
+        }
+
+        if (DOM.btnAutoCorrectMapping) {
+          DOM.btnAutoCorrectMapping.addEventListener('click', () => {
+            autoCorrectColumnSelection(true);
+          });
+        }
+
+        if (DOM.btnFixStep3Mapping) {
+          DOM.btnFixStep3Mapping.addEventListener('click', () => {
+            setWizardStep(2);
+            autoCorrectColumnSelection(true);
+          });
+        }
 
         DOM.btnWizardNext.addEventListener('click', () => {
           if (state.wizard.currentStep === 1) {
@@ -1238,6 +1701,16 @@
           } else if (state.wizard.currentStep === 2) {
             if (!DOM.mapName.value || !DOM.mapSku.value || !DOM.mapPrice.value) {
               showToast('يرجى مطابقة الحقول الأساسية المطلوبة (الاسم، الرمز، السعر)', 'error');
+              return;
+            }
+            if (DOM.mapSku.value && DOM.mapCategory.value && DOM.mapSku.value === DOM.mapCategory.value) {
+              showToast('لا يمكن ربط حقل رمز الصنف (SKU) وحقل التصنيف بنفس العمود', 'error');
+              return;
+            }
+            // Auto-check if SKU column contains descriptive category text
+            const corrected = checkAndAutoCorrectSkuMapping(true);
+            if (corrected && (!DOM.mapSku.value || !state.wizard.mappings.sku)) {
+              showToast('تم توجيه التصنيف إلى حقل التصنيف تلقائياً. يرجى اختيار عمود الباركود / SKU للمتابعة.', 'warning');
               return;
             }
             setWizardStep(3);

@@ -2,6 +2,17 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
 
     const SAMPLE_SHELF_IMAGE = 'assets/images/sample_shelf.jpg';
 
+    function escapeHtml(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    if (typeof window !== 'undefined') {
+      window.escapeHtml = escapeHtml;
+    }
+
     function generateMockShelfSVG(zoneName, count) {
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400" fill="#f8fafc">
         <rect width="600" height="400" fill="#1e293b"/>
@@ -242,9 +253,51 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         jobsList = [];
       }
 
-      if (typeof ApiClient !== 'undefined' && ApiClient.shelfJobs) {
+      // Requirement 2: Graceful Fallback for Background Job Fetch:
+      // Wrap initial job history fetch (GET ...?skip=0&limit=50) in a try/catch block.
+      // If it returns 401, DO NOT trigger the global session logout/refresh loop immediately.
+      // Instead, allow the user to proceed with uploading images, logging a localized warning in the jobs list container rather than blocking the whole view.
+      (async function fetchInitialJobHistory() {
+        if (typeof ApiClient === 'undefined' || !ApiClient.shelfJobs) return;
         const storeId = resolveActiveStoreId();
-        ApiClient.shelfJobs.list(storeId).then(res => {
+        if (!storeId || storeId === 'null' || storeId === 'undefined') return;
+
+        // 1. Retrieve the token from localStorage:
+        const rawToken = localStorage.getItem('storeToken') || localStorage.getItem('accessToken');
+        const token = rawToken ? String(rawToken).trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '') : null;
+
+        // Verify before sending that token is non-empty. If token is missing, stop the request immediately and notify user to log in.
+        if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
+          console.warn('[AI Capture] fetchInitialJobHistory aborted: Missing Authorization Bearer token. Prompting user to log in.');
+          showJobsWarningBanner('يرجى تسجيل الدخول لعرض ومزامنة سجل عمليات الرفوف السابقة.');
+          if (typeof ApiClient !== 'undefined' && ApiClient.promptReauthentication) {
+            ApiClient.promptReauthentication('يرجى تسجيل الدخول للمتابعة.');
+          }
+          validateInputs();
+          return;
+        }
+
+        try {
+          // Ensure the headers object includes: 'Authorization': `Bearer ${token}`
+          const reqHeaders = {
+            'Authorization': `Bearer ${token}`
+          };
+
+          // Initial job history fetch: GET /api/v1/stores/{id}/shelf-jobs?skip=0&limit=50
+          const res = await ApiClient.shelfJobs.list(storeId, { skip: 0, limit: 50 }, {
+            headers: reqHeaders,
+            suppressAuthPrompt: true // Prevent global session logout/refresh loop on background job fetch
+          });
+
+          if (res && (res.status === 401 || res.error === 'Unauthorized' || (res.success === false && res.status === 401))) {
+            console.warn('[AI Capture] Background job history returned 401 Unauthorized.');
+            console.warn('[Backend Secret Sync Diagnostic] Alert: Verify that JWT_SECRET_KEY, Issuer, and Audience match exactly between the ASP.NET Core auth server and the FastAPI Render deployment.');
+            showJobsWarningBanner('تنبيه المزامنة: تعذر مزامنة سجل العمليات السابقة من خادم الذكاء الاصطناعي (401 Unauthorized). يمكنك الاستمرار في رفع صور الرفوف واستخراج الأصناف مباشرة دون انقطاع.');
+            // Non-blocking UI: ensure extraction upload button & controls remain active
+            validateInputs();
+            return;
+          }
+
           const serverJobs = res?.data || (Array.isArray(res) ? res : null);
           if (Array.isArray(serverJobs) && serverJobs.length > 0) {
             const existingIds = new Set(jobsList.map(j => String(j.id)));
@@ -261,7 +314,38 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
               updateKPIs();
             }
           }
-        }).catch(() => {});
+        } catch (err) {
+          console.warn('[AI Capture] Initial job history fetch encountered error:', err);
+          if (err?.status === 401 || err?.statusCode === 401 || (err?.message && (err.message.includes('401') || err.message.includes('Unauthorized')))) {
+            console.warn('[Backend Secret Sync Diagnostic] Alert: Verify that JWT_SECRET_KEY, Issuer, and Audience match between ASP.NET Core auth server and FastAPI Render deployment.');
+            showJobsWarningBanner('تنبيه المزامنة: تعذر مزامنة سجل العمليات السابقة من خادم الذكاء الاصطناعي (401 Unauthorized). يمكنك الاستمرار في رفع صور الرفوف واستخراج الأصناف مباشرة دون انقطاع.');
+          }
+          // Non-blocking UI: ensure manual extraction upload button is not broken or disabled
+          validateInputs();
+        }
+      })();
+    }
+
+    function showJobsWarningBanner(message) {
+      let banner = document.getElementById('jobs-warning-banner');
+      if (!banner) {
+        const tableContainer = document.querySelector('.overflow-x-auto') || document.getElementById('jobs-table-body')?.parentElement;
+        if (tableContainer && tableContainer.parentElement) {
+          banner = document.createElement('div');
+          banner.id = 'jobs-warning-banner';
+          tableContainer.parentElement.insertBefore(banner, tableContainer);
+        }
+      }
+      if (banner) {
+        banner.className = 'mb-4 p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200/80 text-amber-800 text-xs font-bold flex items-center justify-between gap-3 shadow-xs';
+        banner.innerHTML = `
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <span>${escapeHtml(message)}</span>
+          </div>
+          <span class="text-[11px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded-lg shrink-0">جاهز لرفع الصور</span>
+        `;
+        banner.classList.remove('hidden');
       }
     }
 
@@ -811,14 +895,38 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
     }
 
     async function startAIExtraction() {
-      // 1. Resolve store_id with full hierarchy (URL Params -> localStorage -> Fallback)
+      // 1. Resolve and verify active storeId exists
       const storeId = resolveActiveStoreId();
+      if (!storeId || (typeof ApiClient !== 'undefined' && !ApiClient.isValidStoreId(storeId))) {
+        const storeErrMsg = 'معرّف المتجر غير متوفر أو غير صالح. يرجى اختيار المتجر النشط أولاً.';
+        if (typeof showToast === 'function') {
+          showToast('المتجر مطلوب', storeErrMsg, 'warning');
+        }
+        if (typeof ApiClient !== 'undefined' && typeof ApiClient.handleStoreVerification404 === 'function') {
+          ApiClient.handleStoreVerification404(storeId || null);
+        }
+        return;
+      }
 
-      // 2. Resolve active token
-      let token = (typeof ApiClient !== 'undefined' ? ApiClient.getAuthToken(true) : null) ||
-                  localStorage.getItem('accessToken') ||
-                  localStorage.getItem('token') ||
-                  localStorage.getItem('storeToken');
+      // 2. Token Attachment Check & Pre-flight verification (Requirement 1):
+      // Retrieve the token from localStorage:
+      const rawToken = localStorage.getItem('storeToken') || localStorage.getItem('accessToken');
+      const token = rawToken ? String(rawToken).trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '') : null;
+
+      // Verify before sending that token is non-empty. If token is missing, stop the request immediately and notify the user to log in.
+      if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
+        console.warn(`[AI Capture] Extraction stopped immediately: Missing Authorization Bearer token for store "${storeId}". Prompting user to log in.`);
+        const unauthMsg = 'جلسة العمل منتهية أو غير مسجلة. يرجى تسجيل الدخول للمتابعة ورفع صور الرفوف.';
+        if (typeof showToast === 'function') {
+          showToast('تسجيل الدخول مطلوب', unauthMsg, 'warning');
+        } else if (typeof showAlert === 'function') {
+          showAlert(unauthMsg, 'تنبيه تسجيل الدخول', 'warning');
+        }
+        if (typeof ApiClient !== 'undefined' && ApiClient.promptReauthentication) {
+          ApiClient.promptReauthentication(unauthMsg);
+        }
+        return;
+      }
 
       // 3. Ensure files are attached (including Image.jpg)
       const fileInput = document.getElementById('file-input');
@@ -905,27 +1013,32 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         if (statusSpan && title) statusSpan.textContent = title;
       }
 
-      setProgressState(15, 'جاري رفع صور الرف إلى الخادم...', `يتم إرسال ${preparedFiles.length} صورة (معرف المتجر: ${storeId.slice(0, 8)}...)...`);
+      const storePreview = (storeId || '').slice(0, 8) ? `${(storeId || '').slice(0, 8)}...` : 'غير محدد';
+      setProgressState(15, 'جاري رفع صور الرف إلى الخادم...', `يتم إرسال ${(preparedFiles || []).length} صورة (معرف المتجر: ${storePreview})...`);
 
       // 7. Construct FormData with primary and multiple image fields
       const formData = new FormData();
-      const primaryFile = preparedFiles[0];
-      const primaryFileName = primaryFile.name || 'shelf_scan.jpg';
+      const primaryFile = (preparedFiles && preparedFiles[0]) || {};
+      const primaryFileName = primaryFile?.name || 'shelf_scan.jpg';
 
       // 1. Attach file with the expected field name 'file'
-      formData.append('file', primaryFile.file, primaryFileName);
-      // Keep 'image' as backwards-compatible alias
-      formData.append('image', primaryFile.file, primaryFileName);
+      if (primaryFile?.file) {
+        formData.append('file', primaryFile.file, primaryFileName);
+        // Keep 'image' as backwards-compatible alias
+        formData.append('image', primaryFile.file, primaryFileName);
+      }
 
-      preparedFiles.forEach((pf, idx) => {
-        const pfName = pf.name || `shelf_image_${idx + 1}.jpg`;
-        formData.append('files', pf.file, pfName);
-        formData.append('images', pf.file, pfName);
+      (preparedFiles || []).forEach((pf, idx) => {
+        if (pf?.file) {
+          const pfName = pf?.name || `shelf_image_${idx + 1}.jpg`;
+          formData.append('files', pf.file, pfName);
+          formData.append('images', pf.file, pfName);
+        }
       });
 
       // 2. Attach store_id required with request
-      formData.append('store_id', storeId);
-      formData.append('storeId', storeId);
+      formData.append('store_id', storeId || '');
+      formData.append('storeId', storeId || '');
 
       formData.append('zone', zone);
       formData.append('aisle', aisle);
@@ -936,12 +1049,13 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
       formData.append('ocr_enabled', document.getElementById('opt-ocr')?.checked ? 'true' : 'false');
       formData.append('auto_match', document.getElementById('opt-auto-match')?.checked ? 'true' : 'false');
 
-      // 3. Prepare request headers with Bearer authentication only (Strictly NO manual Content-Type!)
-      // Letting the browser automatically configure 'multipart/form-data; boundary=...'
-      const uploadHeaders = {};
-      if (token) {
-        uploadHeaders['Authorization'] = `Bearer ${token}`;
-      }
+      // Ensure the headers object includes:
+      // headers: { ...existingHeaders, 'Authorization': `Bearer ${token}` }
+      // When uploading images via FormData, do NOT remove or omit the 'Authorization' header.
+      // Keep 'Authorization': `Bearer ${token}` while leaving Content-Type unset so the browser sets the boundary automatically.
+      const uploadHeaders = {
+        'Authorization': `Bearer ${token}`
+      };
       delete uploadHeaders['Content-Type'];
       delete uploadHeaders['content-type'];
       delete uploadHeaders['Content-type'];
@@ -1033,7 +1147,12 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
           await new Promise(r => setTimeout(r, 2500));
 
           try {
-            const pollRes = await ApiClient.shelfJobs.get(storeId, resolvedJobId, { timeout: 60000 });
+            const pollRes = await ApiClient.shelfJobs.get(storeId, resolvedJobId, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              },
+              timeout: 60000
+            });
             const updatedJob = pollRes?.data || pollRes;
             if (updatedJob) {
               serverJob = updatedJob;
@@ -1056,7 +1175,12 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         let extractedDrafts = [];
         if (typeof ApiClient !== 'undefined' && ApiClient.draftProducts && ApiClient.draftProducts.list) {
           try {
-            const draftsRes = await ApiClient.draftProducts.list(storeId, { shelf_job_id: resolvedJobId, limit: 100 }, { timeout: 60000 });
+            const draftsRes = await ApiClient.draftProducts.list(storeId, { shelf_job_id: resolvedJobId, limit: 100 }, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              },
+              timeout: 60000
+            });
             const rawDrafts = draftsRes?.data || (Array.isArray(draftsRes) ? draftsRes : []);
             if (Array.isArray(rawDrafts) && rawDrafts.length > 0) {
               extractedDrafts = rawDrafts;
@@ -1232,6 +1356,13 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
           errorCategory = 'CORS_OR_CONNECTION_REFUSED (خطأ CORS أو تعذر الوصول للخادم)';
           userTitle = 'تعذر الاتصال بالخادم (CORS/Network)';
           userMessage = 'تعذر الاتصال بخادم الذكاء الاصطناعي على Render بسبب سياسة مشاركة الموارد (CORS) أو توقف السيرفر. يرجى التحقق من الخادم.';
+        } else if (statusCode === 401 || (err?.message && (err.message.includes('401') || err.message.includes('Unauthorized')))) {
+          errorCategory = 'UNAUTHORIZED (401 Unauthorized)';
+          userTitle = 'انتهت صلاحية الجلسة';
+          userMessage = 'انتهت صلاحية جلسة العمل أو غير مصرح. يرجى تسجيل الدخول مجدداً للمتابعة.';
+          if (typeof ApiClient !== 'undefined' && ApiClient.promptReauthentication) {
+            ApiClient.promptReauthentication(userMessage);
+          }
         } else if (isServerRejection) {
           errorCategory = `SERVER_REJECTION (رفض من السيرفر - HTTP ${statusCode})`;
           userTitle = `رفض من الخادم (HTTP ${statusCode})`;
@@ -1863,6 +1994,8 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
     window.unhighlightItemRow = unhighlightItemRow;
     window.focusItemRow = focusItemRow;
     window.showToast = showToast;
+    window.escapeHtml = escapeHtml;
+    window.validateInputs = validateInputs;
 
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initCaptureEvents);

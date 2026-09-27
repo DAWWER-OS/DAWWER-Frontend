@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>اختيار المتجر - دوّر</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <script src="assets/css/tailwind.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ["'IBM Plex Sans Arabic'", 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              primary: '#1c5335',
+              dark: '#143e27',
+              soft: '#edf5f0'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-[#f8f6f0] text-slate-800 font-sans min-h-screen flex flex-col justify-between">
+
+  <!-- Top Navigation Bar -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <a href="index.html" class="flex items-center gap-2">
+          <img src="assets/images/FrameLogo.png" alt="دوّر" class="h-9 w-auto">
+        </a>
+        <div class="h-6 w-px bg-slate-200 hidden sm:block"></div>
+        <span class="text-xs sm:text-sm font-bold text-slate-600 hidden sm:inline-block">بوابة التجار والشركاء</span>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div id="user-pill" class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full py-1.5 px-3">
+          <div class="w-6 h-6 rounded-full bg-[#1c5335] text-white flex items-center justify-center text-xs font-bold" id="user-avatar">
+            ت
+          </div>
+          <span class="text-xs font-bold text-slate-700 max-w-[140px] truncate" id="user-name">التاجر</span>
+        </div>
+
+        <button id="logout-btn" type="button" class="text-xs font-bold text-slate-500 hover:text-red-600 py-1.5 px-3 rounded-lg hover:bg-red-50 transition border border-transparent hover:border-red-200">
+          تسجيل الخروج
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="max-w-4xl w-full mx-auto px-4 sm:px-6 py-10 flex-grow">
+    
+    <!-- Header Section -->
+    <div class="text-center max-w-xl mx-auto mb-10">
+      <div class="inline-flex items-center gap-1.5 bg-[#edf5f0] text-[#1c5335] border border-[#1c5335]/15 px-3 py-1 rounded-full text-xs font-bold mb-3">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+        <span>مساحات العمل والمتاجر</span>
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-[#1c5335] tracking-tight mb-2">
+        اختر مساحة عمل المتجر
+      </h1>
+      <p class="text-slate-500 text-sm leading-relaxed">
+        حدد المتجر الذي ترغب بإدارته للبدء في إدارة الكتالوج، رفع المنتجات، ومتابعة الطلبات.
+      </p>
+    </div>
+
+    <!-- Alert / Toast placeholder -->
+    <div id="status-alert" class="hidden max-w-xl mx-auto mb-6 p-4 rounded-2xl text-sm font-medium border"></div>
+
+    <!-- Loading Skeleton State -->
+    <div id="loading-state" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs animate-pulse">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-12 h-12 bg-slate-200 rounded-xl"></div>
+          <div class="flex-1 space-y-2">
+            <div class="h-4 bg-slate-200 rounded w-3/4"></div>
+            <div class="h-3 bg-slate-200 rounded w-1/2"></div>
+          </div>
+        </div>
+        <div class="h-10 bg-slate-100 rounded-xl"></div>
+      </div>
+      <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs animate-pulse">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-12 h-12 bg-slate-200 rounded-xl"></div>
+          <div class="flex-1 space-y-2">
+            <div class="h-4 bg-slate-200 rounded w-3/4"></div>
+            <div class="h-3 bg-slate-200 rounded w-1/2"></div>
+          </div>
+        </div>
+        <div class="h-10 bg-slate-100 rounded-xl"></div>
+      </div>
+    </div>
+
+    <!-- Store Cards Grid -->
+    <div id="stores-grid" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="hidden max-w-md mx-auto bg-white rounded-3xl p-8 border border-slate-200 text-center shadow-xs">
+      <div class="w-16 h-16 bg-[#edf5f0] text-[#1c5335] rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">
+        🏪
+      </div>
+      <h3 class="text-lg font-bold text-slate-800 mb-1">لا يوجد متاجر مسجلة بعد</h3>
+      <p class="text-slate-500 text-xs sm:text-sm mb-6 leading-relaxed">
+        لم تقم بإنشاء متجر بعد أو أن طلب الانضمام لم يكتمل. يمكنك تقديم طلب تسجيل متجرك الجديد الآن.
+      </p>
+      <a href="merchant-application.html" class="inline-flex items-center justify-center gap-2 w-full bg-[#1c5335] hover:bg-[#143e27] text-white font-bold py-3.5 px-6 rounded-xl transition text-sm shadow">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        <span>تقديم طلب فتح متجر جديد</span>
+      </a>
+    </div>
+
+    <!-- Actions / New Store Link -->
+    <div id="bottom-actions" class="mt-8 text-center hidden">
+      <a href="merchant-application.html" class="inline-flex items-center gap-2 text-sm font-bold text-[#1c5335] hover:text-[#143e27] hover:underline bg-white border border-[#1c5335]/20 py-2.5 px-5 rounded-xl shadow-xs transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        <span>إنشاء أو تقديم طلب لمتجر آخر</span>
+      </a>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="py-6 border-t border-slate-200 text-center text-xs text-slate-400">
+    منصة دوّر © نظام إدارة كتالوج ومتاجر التجزئة الذكي
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/main.js"></script>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // 1. Guard: Verify user is authenticated
+      if (typeof Auth !== 'undefined' && typeof Auth.isAuthenticated === 'function') {
+        if (!Auth.isAuthenticated()) {
+          const loginTarget = (window.location.protocol === 'file:') ? 'login.html' : '/login.html';
+          window.location.replace(`${loginTarget}?redirect=select-store.html`);
+          return;
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        initSelectStorePage();
+      });
+
+      async function initSelectStorePage() {
+        // Setup User Info
+        if (typeof Auth !== 'undefined' && typeof Auth.getUser === 'function') {
+          const user = Auth.getUser();
+          if (user) {
+            const userNameEl = document.getElementById('user-name');
+            const userAvatarEl = document.getElementById('user-avatar');
+            if (userNameEl && user.fullName) userNameEl.textContent = user.fullName;
+            if (userAvatarEl && user.fullName) userAvatarEl.textContent = user.fullName.trim().charAt(0);
+          }
+        }
+
+        // Setup Logout
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', async () => {
+            if (typeof Auth !== 'undefined' && typeof Auth.logout === 'function') {
+              await Auth.logout();
+            } else if (typeof ApiClient !== 'undefined' && typeof ApiClient.clearSession === 'function') {
+              ApiClient.clearSession();
+              window.location.href = 'login.html';
+            } else {
+              localStorage.clear();
+              window.location.href = 'login.html';
+            }
+          });
+        }
+
+        // Fetch Stores
+        await loadMerchantStores();
+      }
+
+      async function loadMerchantStores() {
+        const loadingEl = document.getElementById('loading-state');
+        const gridEl = document.getElementById('stores-grid');
+        const emptyEl = document.getElementById('empty-state');
+        const actionsEl = document.getElementById('bottom-actions');
+
+        try {
+          let stores = [];
+          if (typeof ApiClient !== 'undefined') {
+            const res = await ApiClient.get('/merchant/stores');
+            if (res && res.success && Array.isArray(res.data)) {
+              stores = res.data;
+            } else if (Array.isArray(res)) {
+              stores = res;
+            }
+          }
+
+          if (loadingEl) loadingEl.classList.add('hidden');
+
+          if (!stores || stores.length === 0) {
+            if (emptyEl) emptyEl.classList.remove('hidden');
+            if (gridEl) gridEl.classList.add('hidden');
+            if (actionsEl) actionsEl.classList.add('hidden');
+            return;
+          }
+
+          if (gridEl) {
+            gridEl.innerHTML = '';
+            gridEl.classList.remove('hidden');
+          }
+          if (actionsEl) actionsEl.classList.remove('hidden');
+
+          const currentActiveStoreId = localStorage.getItem('activeStoreId') || localStorage.getItem('storeId') || localStorage.getItem('store_id');
+
+          stores.forEach((store) => {
+            const card = renderStoreCard(store, currentActiveStoreId);
+            if (gridEl) gridEl.appendChild(card);
+          });
+
+        } catch (err) {
+          console.error('[Select Store] Error loading stores:', err);
+          if (loadingEl) loadingEl.classList.add('hidden');
+          showAlertMessage('تعذر جلب قائمة المتاجر حالياً. يرجى المحاولة لاحقاً أو إعادة تسجيل الدخول.', 'error');
+        }
+      }
+
+      function renderStoreCard(store, currentActiveStoreId) {
+        const card = document.createElement('div');
+        const isActive = (currentActiveStoreId && String(store.id) === String(currentActiveStoreId));
+        
+        // Status formatting
+        const statusMap = {
+          1: { text: 'مسودة', bg: 'bg-slate-100 text-slate-700 border-slate-200' },
+          2: { text: 'قيد المراجعة', bg: 'bg-amber-50 text-amber-700 border-amber-200' },
+          3: { text: 'مطلوب معلومات', bg: 'bg-orange-50 text-orange-700 border-orange-200' },
+          4: { text: 'مرفوض', bg: 'bg-red-50 text-red-700 border-red-200' },
+          5: { text: 'معتمد ونشط', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+        };
+        const statusInfo = statusMap[store.verificationStatus] || { text: 'معتمد', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+
+        card.className = `bg-white rounded-2xl p-6 border transition shadow-xs hover:shadow-md flex flex-col justify-between ${
+          isActive ? 'border-[#1c5335] ring-2 ring-[#1c5335]/15' : 'border-slate-200 hover:border-[#1c5335]/40'
+        }`;
+
+        card.innerHTML = `
+          <div>
+            <div class="flex items-start justify-between gap-3 mb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-[#edf5f0] text-[#1c5335] font-bold flex items-center justify-center text-lg shrink-0">
+                  🏪
+                </div>
+                <div>
+                  <h3 class="font-bold text-slate-800 text-base leading-snug">${escapeHtml(store.name || 'متجر بدون اسم')}</h3>
+                  <p class="text-xs text-slate-400 mt-0.5">رمز المتجر: <span class="font-mono">${escapeHtml(String(store.id || '').substring(0, 8))}...</span></p>
+                </div>
+              </div>
+              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${statusInfo.bg}">
+                ${statusInfo.text}
+              </span>
+            </div>
+
+            ${store.commercialRegistrationNumber ? `
+              <div class="text-xs text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-100 mb-4 flex items-center justify-between">
+                <span>السجل التجاري:</span>
+                <span class="font-mono font-bold text-slate-700">${escapeHtml(store.commercialRegistrationNumber)}</span>
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="mt-4 pt-4 border-t border-slate-100 flex items-center gap-3">
+            <button type="button" data-store-id="${escapeHtml(store.id)}" class="select-btn flex-1 bg-[#1c5335] hover:bg-[#143e27] text-white font-bold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-xs">
+              <span>${isActive ? 'متابعة بالمتجر الحالي' : 'اختيار ومتابعة'}</span>
+              <svg class="w-4 h-4 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+            </button>
+            ${store.verificationStatus === 1 || store.verificationStatus === 3 ? `
+              <a href="merchant-application.html?appId=${encodeURIComponent(store.id)}" class="p-2.5 text-slate-400 hover:text-[#1c5335] hover:bg-slate-50 rounded-xl border border-slate-200 transition" title="تعديل بيانات الطلب">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+              </a>
+            ` : ''}
+          </div>
+        `;
+
+        const btn = card.querySelector('.select-btn');
+        if (btn) {
+          btn.addEventListener('click', () => handleSelectStore(store, btn));
+        }
+
+        return card;
+      }
+
+      async function handleSelectStore(store, btnElement) {
+        if (!store || !store.id) return;
+
+        const originalText = btnElement.innerHTML;
+        btnElement.innerHTML = `
+          <svg class="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+          <span>جاري التفعيل...</span>
+        `;
+        btnElement.disabled = true;
+
+        try {
+          if (typeof Auth !== 'undefined' && typeof Auth.selectStore === 'function') {
+            await Auth.selectStore(store.id);
+          } else if (typeof ApiClient !== 'undefined' && ApiClient.auth && typeof ApiClient.auth.selectStore === 'function') {
+            await ApiClient.auth.selectStore(store.id);
+          } else if (typeof ApiClient !== 'undefined') {
+            await ApiClient.post('/Auth/select-store', { storeId: store.id });
+          }
+
+          if (typeof showToast === 'function') {
+            showToast({ title: 'تم اختيار المتجر', message: `تم تفعيل مساحة عمل: ${store.name}`, type: 'success' });
+          }
+
+          const urlParams = new URLSearchParams(window.location.search);
+          const redirect = urlParams.get('redirect') || urlParams.get('returnUrl');
+          const targetUrl = (redirect && !redirect.includes('select-store.html') && !redirect.includes('login.html'))
+            ? redirect
+            : ((window.location.protocol === 'file:') ? 'index.html' : '/index.html');
+
+          setTimeout(() => {
+            window.location.href = targetUrl;
+          }, 350);
+
+        } catch (err) {
+          console.error('[Select Store] Error selecting store:', err);
+          btnElement.innerHTML = originalText;
+          btnElement.disabled = false;
+          showAlertMessage(err.message || 'تعذر تحديد المتجر. يرجى المحاولة مرة أخرى.', 'error');
+        }
+      }
+
+      function showAlertMessage(msg, type = 'error') {
+        const alertBox = document.getElementById('status-alert');
+        if (!alertBox) return;
+        alertBox.textContent = msg;
+        alertBox.className = `max-w-xl mx-auto mb-6 p-4 rounded-2xl text-sm font-medium border block ${
+          type === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+        }`;
+      }
+
+      function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+    })();
+  </script>
+</body>
+</html>

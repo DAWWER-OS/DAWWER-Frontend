@@ -2,6 +2,8 @@ const CONFIG = {
   AUTH_BASE_URL: "https://dawwer.runasp.net/api",
   PRODUCTS_BASE_URL: "https://dawwer-backend-fastapi.onrender.com",
   API_BASE_URL: "https://dawwer.runasp.net/api",
+  REQUEST_TIMEOUT: 90000,
+  TIMEOUT_MS: 90000,
 
   TOKEN_KEY: "dawwer_access_token",
   REFRESH_TOKEN_KEY: "dawwer_refresh_token",

@@ -373,7 +373,7 @@ const DawwerLayout = {
   },
 
   ensureSidebar() {
-    const isSpecialPage = /login|register|verify-account|forgot-password|reset-password|admin-login|admin-dashboard/i.test(window.location.pathname);
+    const isSpecialPage = /login|register|verify-account|forgot-password|reset-password|admin-login|admin-dashboard|select-store/i.test(window.location.pathname);
     if (isSpecialPage) return;
 
     const lingeringDrawer = document.getElementById('sidebar-drawer');
@@ -682,6 +682,81 @@ const DawwerLayout = {
       console.warn('[DawwerLayout] fetchStoreProfile background fetch error:', err);
     }
     return null;
+  },
+
+  async openStoreSwitcher() {
+    let modal = document.getElementById('dawwer-store-selector-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      return;
+    }
+
+    modal = document.createElement('div');
+    modal.id = 'dawwer-store-selector-modal';
+    modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+        <div class="p-6 bg-gradient-to-r from-[#153f2d] to-[#1c5335] text-white">
+          <h3 class="text-lg font-bold">اختيار المتجر النشط</h3>
+          <p class="text-xs text-white/80 mt-1">يرجى اختيار أحد المتاجر المسجلة للوصول إلى المنتجات وإدارة الرفوف.</p>
+        </div>
+        <div id="dawwer-store-selector-list" class="p-6 space-y-3 max-h-80 overflow-y-auto">
+          <div class="flex items-center justify-center py-6 text-slate-400">
+            <svg class="animate-spin h-6 w-6 text-[#1c5335]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+          </div>
+        </div>
+        <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+          <a href="merchant-application.html" class="text-xs font-bold text-[#1c5335] hover:underline">+ تسجيل متجر جديد</a>
+          <button type="button" id="dawwer-store-selector-close-btn" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200/60 transition cursor-pointer">إغلاق</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const closeBtn = document.getElementById('dawwer-store-selector-close-btn');
+    if (closeBtn) {
+      closeBtn.onclick = () => modal.remove();
+    }
+
+    try {
+      const res = (typeof ApiClient !== 'undefined') ? await ApiClient.get('/merchant/stores').catch(() => null) : null;
+      const listContainer = document.getElementById('dawwer-store-selector-list');
+      if (listContainer) {
+        if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+          listContainer.innerHTML = res.data.map(s => `
+            <button type="button" data-store-select-id="${s.id}" class="w-full text-right p-3.5 rounded-xl border border-slate-200 hover:border-[#1c5335] hover:bg-[#1c5335]/5 transition flex items-center justify-between group cursor-pointer">
+              <div>
+                <div class="font-bold text-sm text-slate-800 group-hover:text-[#1c5335]">${s.name || 'متجر غير معنون'}</div>
+                <div class="text-[11px] text-slate-400 font-mono mt-0.5">${s.id}</div>
+              </div>
+              <span class="text-xs text-[#1c5335] font-bold opacity-0 group-hover:opacity-100 transition">اختيار ←</span>
+            </button>
+          `).join('');
+
+          listContainer.querySelectorAll('[data-store-select-id]').forEach(btn => {
+            btn.onclick = async () => {
+              const sid = btn.getAttribute('data-store-select-id');
+              if (sid && typeof Auth !== 'undefined' && Auth.selectStore) {
+                await Auth.selectStore(sid);
+                window.location.reload();
+              } else if (sid && typeof ApiClient !== 'undefined') {
+                ApiClient.setActiveStoreId(sid);
+                window.location.reload();
+              }
+            };
+          });
+        } else {
+          listContainer.innerHTML = `
+            <div class="text-center py-6">
+              <p class="text-sm text-slate-600 font-semibold mb-3">لا توجد متاجر نشطة مرتبطة بحسابك</p>
+              <a href="merchant-application.html" class="inline-block px-4 py-2 bg-[#1c5335] text-white rounded-xl text-xs font-bold hover:bg-[#153f2d] transition">تقديم طلب اعتماد متجر جديد</a>
+            </div>
+          `;
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load stores into selector modal:', err);
+    }
   },
 
   setupUserInfo() {

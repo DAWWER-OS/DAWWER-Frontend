@@ -39,13 +39,16 @@ const Auth = {
     }
 
     const storeId = authData.storeId || authData.store_id || null;
+    const cleanStoreId = (storeId && typeof storeId === 'string' && storeId.trim() !== 'null' && storeId.trim() !== 'undefined' && storeId !== '11111111-1111-1111-1111-111111111111')
+      ? storeId.trim()
+      : null;
     const user = {
       userId: authData.userId,
       fullName: authData.fullName,
       email: authData.email,
       phoneNumber: authData.phoneNumber || "",
       role: authData.role,
-      storeId: (storeId && storeId !== '11111111-1111-1111-1111-111111111111') ? storeId : null,
+      storeId: cleanStoreId,
       storeName: storeName
     };
     if (typeof CONFIG !== 'undefined' && CONFIG.USER_KEY) {
@@ -53,14 +56,25 @@ const Auth = {
     }
     localStorage.setItem("dawwer_user_data", JSON.stringify(user));
 
-    if (user.storeId) {
-      localStorage.setItem('store_id', user.storeId);
-      localStorage.setItem('storeId', user.storeId);
-      localStorage.setItem('active_store_id', user.storeId);
-      localStorage.setItem('dawwer_active_store_id', user.storeId);
-      localStorage.setItem('dawwer_store_id', user.storeId);
+    if (cleanStoreId) {
+      localStorage.setItem('activeStoreId', cleanStoreId);
+      localStorage.setItem('store_id', cleanStoreId);
+      localStorage.setItem('storeId', cleanStoreId);
+      localStorage.setItem('active_store_id', cleanStoreId);
+      localStorage.setItem('dawwer_active_store_id', cleanStoreId);
+      localStorage.setItem('dawwer_store_id', cleanStoreId);
       if (typeof ApiClient !== 'undefined' && ApiClient.setActiveStoreId) {
-        ApiClient.setActiveStoreId(user.storeId);
+        ApiClient.setActiveStoreId(cleanStoreId);
+      }
+    } else {
+      localStorage.removeItem('activeStoreId');
+      localStorage.removeItem('store_id');
+      localStorage.removeItem('storeId');
+      localStorage.removeItem('active_store_id');
+      localStorage.removeItem('dawwer_active_store_id');
+      localStorage.removeItem('dawwer_store_id');
+      if (typeof ApiClient !== 'undefined' && ApiClient.clearInvalidStoreId) {
+        ApiClient.clearInvalidStoreId();
       }
     }
   },
@@ -144,6 +158,7 @@ const Auth = {
           if (typeof ApiClient !== 'undefined' && ApiClient.setActiveStoreId) {
             ApiClient.setActiveStoreId(res.data.storeId);
           } else {
+            localStorage.setItem('activeStoreId', res.data.storeId);
             localStorage.setItem('store_id', res.data.storeId);
             localStorage.setItem('active_store_id', res.data.storeId);
           }
@@ -156,7 +171,9 @@ const Auth = {
           permissions: res.data.permissions || []
         };
 
-        localStorage.setItem(CONFIG.ACTIVE_STORE_KEY, JSON.stringify(activeData));
+        if (typeof CONFIG !== 'undefined' && CONFIG.ACTIVE_STORE_KEY) {
+          localStorage.setItem(CONFIG.ACTIVE_STORE_KEY, JSON.stringify(activeData));
+        }
         localStorage.setItem('dawwer_active_store', JSON.stringify(activeData));
 
         document.querySelectorAll('#current-store-name, [data-store-name], #store-name-text').forEach(el => {
@@ -178,8 +195,43 @@ const Auth = {
 
   getActiveStore() {
     try {
-      const raw = localStorage.getItem(CONFIG.ACTIVE_STORE_KEY);
-      return raw ? JSON.parse(raw) : null;
+      const activeStoreKey = (typeof CONFIG !== 'undefined' && CONFIG.ACTIVE_STORE_KEY) ? CONFIG.ACTIVE_STORE_KEY : "dawwer_active_store";
+      const raw = localStorage.getItem(activeStoreKey) || localStorage.getItem("dawwer_active_store");
+      let activeObj = null;
+      if (raw) {
+        try {
+          activeObj = JSON.parse(raw);
+        } catch (e) {}
+      }
+
+      // Read active_store_id and storeToken directly from localStorage
+      const activeStoreId = localStorage.getItem('active_store_id') ||
+                            localStorage.getItem('activeStoreId') ||
+                            localStorage.getItem('store_id') ||
+                            localStorage.getItem('storeId') ||
+                            activeObj?.storeId || activeObj?.id;
+
+      const storeToken = localStorage.getItem('storeToken') ||
+                         localStorage.getItem('store_token') ||
+                         localStorage.getItem('dawwer_store_token') ||
+                         activeObj?.storeToken;
+
+      const storeName = localStorage.getItem('storeName') ||
+                        localStorage.getItem('store_name') ||
+                        activeObj?.storeName || activeObj?.name || 'المتجر الحالي';
+
+      if (activeStoreId && activeStoreId !== 'null' && activeStoreId !== 'undefined') {
+        return {
+          storeId: activeStoreId,
+          id: activeStoreId,
+          storeName: storeName,
+          name: storeName,
+          storeToken: storeToken || null,
+          roleName: activeObj?.roleName || 'Merchant',
+          permissions: activeObj?.permissions || []
+        };
+      }
+      return activeObj;
     } catch {
       return null;
     }
@@ -189,16 +241,18 @@ const Auth = {
     const user = this.getUser();
     if (!user) return false;
     if (typeof role === "number") {
-      if (role === CONFIG.ROLES.ADMIN && (user.role === "Admin" || user.role === 4)) return true;
-      if (role === CONFIG.ROLES.MERCHANT && (user.role === "Merchant" || user.role === 2)) return true;
-      if (role === CONFIG.ROLES.STAFF && (user.role === "Staff" || user.role === 3)) return true;
-      if (role === CONFIG.ROLES.CUSTOMER && (user.role === "Customer" || user.role === 1)) return true;
+      const roles = (typeof CONFIG !== 'undefined' && CONFIG.ROLES) ? CONFIG.ROLES : { ADMIN: 4, MERCHANT: 2, STAFF: 3, CUSTOMER: 1 };
+      if (role === roles.ADMIN && (user.role === "Admin" || user.role === 4)) return true;
+      if (role === roles.MERCHANT && (user.role === "Merchant" || user.role === 2)) return true;
+      if (role === roles.STAFF && (user.role === "Staff" || user.role === 3)) return true;
+      if (role === roles.CUSTOMER && (user.role === "Customer" || user.role === 1)) return true;
     }
     return (user.role || "").toString().toLowerCase() === role.toString().toLowerCase();
   },
 
   hasPermission(permissionCode) {
-    if (this.hasRole(CONFIG.ROLES.ADMIN)) return true;
+    const adminRole = (typeof CONFIG !== 'undefined' && CONFIG.ROLES) ? CONFIG.ROLES.ADMIN : 4;
+    if (this.hasRole(adminRole)) return true;
     const store = this.getActiveStore();
     if (!store || !Array.isArray(store.permissions)) return false;
     return store.permissions.includes(permissionCode);
@@ -256,11 +310,24 @@ const Auth = {
     if (this._authChecked) return true;
     this._authChecked = true;
 
+    const currentPath = window.location.pathname.split("/").pop() || 'index.html';
+    const loginTarget = (window.location.protocol === 'file:') ? 'login.html' : '/login.html';
+
     if (!this.isAuthenticated()) {
-      const currentPath = window.location.pathname.split("/").pop() || 'index.html';
-      const authPages = ['login.html', 'register.html', 'verify-account.html', 'forgot-password.html', 'reset-password.html', 'admin-login.html'];
+      const authPages = ['login.html', 'register.html', 'verify-account.html', 'forgot-password.html', 'reset-password.html', 'admin-login.html', 'select-store.html'];
       if (!authPages.includes(currentPath)) {
-        window.location.href = `login.html?redirect=${encodeURIComponent(currentPath)}`;
+        if (currentPath === 'admin-dashboard.html') {
+          try {
+            sessionStorage.setItem('dawwer_pending_toast', JSON.stringify({
+              title: 'تنبيه أمني',
+              message: 'يرجى تسجيل الدخول بحساب مسؤول للوصول إلى لوحة الإدارة.',
+              type: 'warning'
+            }));
+          } catch (e) {}
+          window.location.replace(`${loginTarget}?unauthorized=true`);
+        } else {
+          window.location.href = `login.html?redirect=${encodeURIComponent(currentPath)}`;
+        }
       }
       return false;
     }
@@ -275,6 +342,16 @@ const Auth = {
       const roleMatches = allowedRoles.some(r => this.hasRole(r));
       if (!roleMatches) {
         console.warn(`[Auth.requireAuth] User role (${user.role}) does not match required roles:`, allowedRoles);
+        if (currentPath === 'admin-dashboard.html' || allowedRoles.includes(4) || allowedRoles.includes("Admin")) {
+          try {
+            sessionStorage.setItem('dawwer_pending_toast', JSON.stringify({
+              title: 'تنبيه الصلاحيات',
+              message: 'غير مصرح: هذا الحساب لا يملك صلاحيات مسؤول للوصول إلى لوحة الإدارة.',
+              type: 'warning'
+            }));
+          } catch (e) {}
+          window.location.replace(`${loginTarget}?unauthorized=true`);
+        }
         return false;
       }
     }

@@ -3,166 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>دخول الإدارة - دوّر</title>
+  <meta http-equiv="refresh" content="0; url=login.html">
+  <title>تحويل لتسجيل الدخول - دوّر</title>
+
+  <script>
+    (function () {
+      const target = (typeof window !== 'undefined' && window.location && window.location.protocol === 'file:')
+        ? 'login.html'
+        : '/login.html';
+      window.location.replace(target);
+    })();
+  </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="assets/css/tailwind.min.js"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ["'IBM Plex Sans Arabic'", 'sans-serif'],
-          },
-          colors: {
-            brand: {
-              primary: '#1c5335',
-              dark: '#143e27',
-              soft: '#edf5f0'
-            }
-          }
-        }
-      }
-    }
-  </script>
 </head>
-<body class="bg-[#f8f6f0] font-sans text-slate-800 min-h-screen">
-
-  <div class="flex min-h-screen w-full">
-    
-    <div class="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
-      <div class="w-full max-w-md bg-white p-8 sm:p-10 rounded-3xl shadow-sm border border-slate-100">
-        
-        <div class="flex justify-center mb-6 lg:hidden">
-          <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-12 w-auto">
-        </div>
-
-        <div class="mb-6 text-center sm:text-right">
-          <div class="inline-block bg-[#edf5f0] text-[#1c5335] border border-[#1c5335]/15 px-3 py-1 rounded-full text-xs font-bold mb-2">
-            بوابة الإدارة المركزية
-          </div>
-          <h1 class="text-2xl sm:text-3xl font-bold text-[#1c5335] mb-1">دخول الإدارة</h1>
-          <p class="text-slate-500 text-sm">لوحة تحكم المشرفين والمدراء</p>
-        </div>
-
-        <div id="admin-error-box" class="hidden mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-bold"></div>
-
-        <form id="admin-login-form" class="flex flex-col gap-4">
-          
-          <div>
-            <label class="block text-sm font-bold text-[#1c5335] mb-1" for="admin-email-input">بريد المدير</label>
-            <input 
-              type="email" 
-              id="admin-email-input" 
-              class="w-full p-3.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335]" 
-              placeholder="admin@dawwer.com" 
-              value="admin@dawwer.com"
-              required
-            >
-          </div>
-
-          <div>
-            <label class="block text-sm font-bold text-[#1c5335] mb-1" for="admin-password-input">كلمة المرور</label>
-            <div class="relative">
-              <input 
-                type="password" 
-                id="admin-password-input" 
-                class="w-full p-3.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] pr-3.5 pl-10" 
-                placeholder="••••••••" 
-                value="StrongPassword123!"
-                required
-              >
-              <button 
-                type="button" 
-                data-toggle-password="admin-password-input"
-                class="password-toggle-btn absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#1c5335] p-1 rounded-lg transition"
-                title="إظهار/إخفاء كلمة المرور"
-                aria-label="إظهار/إخفاء كلمة المرور"
-              >
-                <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-              </button>
-            </div>
-          </div>
-
-          <button type="submit" id="admin-submit-btn" class="w-full bg-[#1c5335] hover:bg-[#143e27] text-white font-bold p-3.5 rounded-xl shadow text-sm transition mt-2">
-            تسجيل دخول كمدير
-          </button>
-
-          <div class="text-center mt-4 text-sm text-slate-600">
-            <span>هل أنت تاجر؟</span>
-            <a href="login.html" class="text-[#1c5335] font-bold hover:underline">دخول بوابة التاجر</a>
-          </div>
-
-        </form>
-
-      </div>
+<body class="bg-[#f8f6f0] font-sans text-slate-800 min-h-screen flex items-center justify-center p-6">
+  <div class="max-w-md w-full bg-white rounded-3xl p-8 shadow-sm border border-slate-100 text-center">
+    <div class="w-16 h-16 mx-auto mb-4 bg-emerald-50 rounded-2xl flex items-center justify-center text-2xl">
+      🔄
     </div>
-
-    <div class="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-12 overflow-hidden text-white" style="background: linear-gradient(180deg, #143e27 0%, #1c5335 100%);">
-      
-      <div class="absolute inset-0 pointer-events-none">
-        <div class="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl"></div>
-        <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-[#2a754c]/20 rounded-full blur-3xl"></div>
-        <svg class="absolute inset-0 w-full h-full opacity-10" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" fill="none">
-          <circle cx="400" cy="400" r="300" stroke="white" stroke-width="1.5" stroke-dasharray="8 8" />
-          <circle cx="400" cy="400" r="200" stroke="white" stroke-width="1.5" />
-          <circle cx="400" cy="400" r="100" stroke="white" stroke-width="1.5" stroke-dasharray="4 4" />
-          <path d="M0 400h800M400 0v800" stroke="white" stroke-width="1" stroke-dasharray="6 6" />
-        </svg>
-      </div>
-
-      <div class="relative z-10 my-auto max-w-lg mx-auto w-full flex flex-col gap-7">
-        <div class="text-right">
-          <div class="flex items-center gap-3 mb-4">
-            <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-12 w-auto">
-          </div>
-          <h2 class="text-3xl font-extrabold text-white leading-tight tracking-tight">
-            الإدارة والرقابة المركزية،<br>
-            <span class="text-emerald-200">لمنظومة دوّر.</span>
-          </h2>
-          <p class="text-white/80 text-sm mt-2 leading-relaxed">
-            متابعة طلبات انضمام المتاجر الجديدة، حوكمة التصنيفات، وإدارة صلاحيات المشرفين بدقة متناهية.
-          </p>
-        </div>
-
-        <div class="flex flex-col gap-3.5">
-          <div class="bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex items-center gap-4">
-            <div class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-xl">
-              🏢
-            </div>
-            <div class="text-right">
-              <h3 class="font-bold text-sm text-white">اعتماد وتوثيق المتاجر</h3>
-              <p class="text-xs text-white/75 mt-0.5">فحص السجلات التجارية والوثائق الرسمية قبل النشر.</p>
-            </div>
-          </div>
-
-          <div class="bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex items-center gap-4">
-            <div class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-xl">
-              ⚡
-            </div>
-            <div class="text-right">
-              <h3 class="font-bold text-sm text-white">حوكمة التصنيفات</h3>
-              <p class="text-xs text-white/75 mt-0.5">إدارة شجرة التصنيفات والسمات القياسية لجميع المتاجر.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="relative z-10 text-center text-xs text-white/50 pt-4">
-        منصة دوّر © بوابة الإدارة العليا والتحكم
-      </div>
-    </div>
-
+    <h1 class="text-xl font-bold text-[#1c5335] mb-2">تم توحيد بوابة تسجيل الدخول</h1>
+    <p class="text-slate-500 text-sm mb-6 leading-relaxed">
+      تم دمج تسجيل دخول المشرفين والمدراء مع بوابة الدخول الموحدة لمنظومة دوّر. جاري تحويلك تلقائياً...
+    </p>
+    <a href="login.html" class="inline-block w-full bg-[#1c5335] hover:bg-[#143e27] text-white font-bold py-3 px-6 rounded-xl transition text-sm shadow">
+      الانتقال إلى صفحة الدخول الموحدة
+    </a>
   </div>
 
-  <script src="js/config.js" defer></script>
-  <script src="js/api.js" defer></script>
-  <script src="js/auth.js" defer></script>
-  <script src="js/notifications.js" defer></script>
-  <script src="js/main.js" defer></script>
-  <script src="js/admin-login.js" defer></script>
+  <script src="js/admin-login.js"></script>
 </body>
 </html>

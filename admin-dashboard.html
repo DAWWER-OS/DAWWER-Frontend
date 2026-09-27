@@ -5,6 +5,89 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>لوحة الإدارة المركزية - دوّر</title>
 
+  <!-- ========================================================================= -->
+  <!-- Strict Admin Page Protection Guard (Top of Lifecycle)                     -->
+  <!-- ========================================================================= -->
+  <script>
+    (function () {
+      try {
+        const loginTarget = (typeof window !== 'undefined' && window.location && window.location.protocol === 'file:')
+          ? 'login.html?unauthorized=true'
+          : '/login.html?unauthorized=true';
+
+        function failAndRedirect(message) {
+          try {
+            sessionStorage.setItem('dawwer_pending_toast', JSON.stringify({
+              title: 'تنبيه أمني',
+              message: message,
+              type: 'warning'
+            }));
+          } catch (e) {}
+          window.location.replace(loginTarget);
+        }
+
+        const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || localStorage.getItem('dawwer_access_token');
+        if (!token || token === 'null' || token === 'undefined' || typeof token !== 'string' || token.trim() === '') {
+          failAndRedirect('يرجى تسجيل الدخول بحساب مسؤول للوصول إلى لوحة الإدارة.');
+          return;
+        }
+
+        // Validate JWT token expiry and embedded role if present
+        let tokenRole = null;
+        try {
+          const parts = token.split('.');
+          if (parts.length === 3) {
+            const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+            const payload = JSON.parse(decodeURIComponent(escape(atob(base64))));
+            if (payload.exp && (payload.exp * 1000) < Date.now()) {
+              localStorage.removeItem('accessToken');
+              localStorage.removeItem('token');
+              localStorage.removeItem('dawwer_access_token');
+              failAndRedirect('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مجدداً.');
+              return;
+            }
+            tokenRole = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role;
+          }
+        } catch (jwtErr) {}
+
+        let userRole = null;
+        try {
+          const rawUser = localStorage.getItem('dawwer_user_data') || localStorage.getItem('user') || localStorage.getItem('userData');
+          if (rawUser) {
+            const user = JSON.parse(rawUser);
+            userRole = user ? (user.role ?? user.Role) : null;
+          }
+        } catch (parseErr) {}
+
+        if (userRole === null || userRole === undefined) {
+          userRole = tokenRole;
+        }
+
+        const isAdmin = (
+          userRole === 4 ||
+          userRole === '4' ||
+          userRole === 'Admin'
+        );
+
+        if (!isAdmin) {
+          failAndRedirect('غير مصرح: هذا الحساب لا يملك صلاحيات مسؤول للوصول إلى لوحة الإدارة.');
+        }
+      } catch (err) {
+        const fallbackTarget = (typeof window !== 'undefined' && window.location && window.location.protocol === 'file:')
+          ? 'login.html?unauthorized=true'
+          : '/login.html?unauthorized=true';
+        try {
+          sessionStorage.setItem('dawwer_pending_toast', JSON.stringify({
+            title: 'تنبيه أمني',
+            message: 'حدث خطأ في التحقق من الصلاحيات. يرجى إعادة تسجيل الدخول.',
+            type: 'warning'
+          }));
+        } catch (e) {}
+        window.location.replace(fallbackTarget);
+      }
+    })();
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -21,261 +104,297 @@
             brand: {
               primary: '#1c5335',
               dark: '#143e27',
-              soft: '#edf5f0'
+              soft: '#edf5f0',
+              gold: '#d6a950'
             }
+          },
+          borderRadius: {
+            '2xl': '1rem',
+            '3xl': '1.5rem',
           }
         }
       }
     }
   </script>
+  <style>
+    /* Tabular numeric alignment */
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    .active-admin-tab {
+      background-color: #1c5335 !important;
+      color: white !important;
+    }
+  </style>
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans md:mr-16" dir="rtl">
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans md:mr-[72px]" dir="rtl">
 
-    
-    <aside id="sidebar-box" class="fixed top-0 right-0 h-screen w-16 bg-[#153f2d] text-white flex flex-col justify-between items-center py-3 z-50 shadow-xl border-l border-white/10 select-none overflow-visible">
-      <!-- TOP: Minimal Brand Icon/Logo Only -->
-      <div class="flex flex-col items-center w-full pt-1 px-1.5 shrink-0 overflow-visible">
-        <div class="relative group flex items-center justify-center">
-          <a href="index.html" class="flex items-center justify-center w-11 h-11 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-colors shadow-xs" aria-label="دوّر - الرئيسية">
-            <img src="assets/images/FrameLogo.png" alt="دوّر" class="h-6 w-auto object-contain">
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
-            دوّر - الرئيسية
+    <!-- Super Admin Slim Sidebar -->
+    <aside id="sidebar-box" class="fixed top-0 right-0 h-screen w-[72px] bg-[#153f2d] text-white flex flex-col justify-between items-center py-4 z-50 shadow-xl border-l border-white/10 select-none">
+      <!-- TOP: Dawwer Logo & Super Admin Identity -->
+      <div class="flex flex-col items-center gap-2 w-full pt-1 px-2 shrink-0">
+        <a href="admin-dashboard.html" class="group relative flex items-center justify-center w-12 h-12 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 transition-all duration-200 active:scale-95 shadow-sm" aria-label="الإدارة المركزية">
+          <img src="assets/images/FrameLogo.png" alt="دوّر" class="h-7 w-auto object-contain">
+          <span class="absolute -bottom-0.5 -left-0.5 w-3 h-3 bg-emerald-400 border-2 border-[#153f2d] rounded-full animate-pulse" title="مدير النظام"></span>
+          <div class="sidebar-tooltip">
+            <span class="font-bold text-white block">منظومة دوّر</span>
+            <span class="text-[10px] text-emerald-300 font-medium">الإدارة المركزية (Super Admin)</span>
           </div>
-        </div>
+        </a>
       </div>
 
-      <!-- CENTER: Clean Icon-Only Navigation Buttons -->
-      <nav class="flex flex-col items-center gap-2 my-auto w-full py-2 sidebar-nav overflow-visible">
-        <!-- 1. لوحة التحكم -->
-        <div class="relative group flex items-center justify-center">
-          <a href="index.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="لوحة التحكم">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
-            لوحة التحكم الرئيسية
-          </div>
-        </div>
+      <!-- CENTER: Admin Tabs as Centered Icons -->
+      <nav class="flex flex-col items-center gap-2.5 my-auto w-full py-2 sidebar-nav overflow-y-auto overflow-x-hidden">
+        <!-- 1. طلبات المتاجر -->
+        <button data-tab="stores" id="tab-btn-stores" class="nav-item group relative flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 active active-tab cursor-pointer" aria-label="طلبات المتاجر">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          <span id="stores-badge" class="absolute -top-0.5 -right-0.5 bg-[#d6a950] text-[#153f2d] text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-xs">0</span>
+          <div class="sidebar-tooltip">طلبات المتاجر واعتمادها</div>
+        </button>
 
-        <!-- 2. الكتالوج والمخططات -->
-        <div class="relative group flex items-center justify-center">
-          <a href="catalog.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الكتالوج والمخططات">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
-            إدارة الكتالوج والمخطط
-          </div>
-        </div>
+        <!-- 2. المستخدمين والحسابات -->
+        <button data-tab="users" id="tab-btn-users" class="nav-item group relative flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 cursor-pointer" aria-label="المستخدمين">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          <div class="sidebar-tooltip">المستخدمين والحسابات</div>
+        </button>
 
-        <!-- 3. مسح الرفوف بالذكاء الاصطناعي (AI) -->
-        <div class="relative group flex items-center justify-center">
-          <a href="ai-capture.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="مسح الرفوف بالذكاء">
-            <svg class="w-5 h-5 text-[#d6a950] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.01.01"/></svg>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
-            مسح الرفوف بالذكاء الاصطناعي
-          </div>
-        </div>
+        <!-- 3. شجرة التصنيفات -->
+        <button data-tab="categories" id="tab-btn-categories" class="nav-item group relative flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 cursor-pointer" aria-label="التصنيفات">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          <div class="sidebar-tooltip">شجرة التصنيفات المركزية</div>
+        </button>
 
-        <!-- 4. مراجعة المسودات المستخرجة -->
-        <div class="relative group flex items-center justify-center">
-          <a href="review-drafts.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="مراجعة المسودات">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
-            مراجعة واعتماد المسودات
-          </div>
-        </div>
+        <!-- 4. سجلات التدقيق -->
+        <button data-tab="audit" id="tab-btn-audit" class="nav-item group relative flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 cursor-pointer" aria-label="التدقيق">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <div class="sidebar-tooltip">سجلات التدقيق (Audit Logs)</div>
+        </button>
 
-        <!-- 5. المخزون وسجل التدقيق -->
-        <div class="relative group flex items-center justify-center">
-          <a href="inventory-audit.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="المخزون والتدقيق">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
-            المخزون وسجل التدقيق
-          </div>
-        </div>
-
-        <!-- 6. الطلبات والمبيعات -->
-        <div class="relative group flex items-center justify-center">
-          <a href="orders.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الطلبات والمبيعات">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
-            الطلبات والمبيعات
-          </div>
-        </div>
-
-        <!-- 7. الممرات والرفوف -->
-        <div class="relative group flex items-center justify-center">
-          <a href="shelves.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الممرات والرفوف">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
-            مواقع الممرات والرفوف
-          </div>
-        </div>
-
-        <!-- 8. فريق العمل والصلاحيات -->
-        <div class="relative group flex items-center justify-center">
-          <a href="store-staff.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="فريق العمل">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
-            فريق العمل والأدوار
-          </div>
-        </div>
-
-        <!-- 9. تسجيل واعتماد المتجر -->
-        <div class="relative group flex items-center justify-center">
-          <a href="merchant-application.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="بيانات المتجر">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z"/></svg>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
-            تسجيل واعتماد المتجر
-          </div>
-        </div>
-
-        <!-- 10. الملف الشخصي والإعدادات -->
-        <div class="relative group flex items-center justify-center">
-          <a href="profile.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الملف الشخصي">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
-            الملف الشخصي والإعدادات
-          </div>
-        </div>
+        <!-- 5. بوابة التاجر للمعاينة -->
+        <a href="index.html" class="nav-item group relative flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200" aria-label="بوابة التاجر">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          <div class="sidebar-tooltip">معاينة بوابة التاجر</div>
+        </a>
       </nav>
 
-      <!-- BOTTOM: Single Logout Button Only -->
-      <div class="flex flex-col items-center w-full pt-2 pb-1 border-t border-white/10 px-1.5 shrink-0 overflow-visible">
-        <div class="relative group flex items-center justify-center">
-          <button id="logout-btn" data-action="logout" class="flex items-center justify-center w-11 h-11 rounded-xl text-rose-300 hover:text-white hover:bg-rose-500/20 transition-colors cursor-pointer active:scale-95" aria-label="تسجيل الخروج">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-          </button>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-rose-200 border border-rose-900/60 text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
-            تسجيل الخروج
-          </div>
-        </div>
+      <!-- BOTTOM: Profile & Logout -->
+      <div class="flex flex-col items-center gap-2 pt-2 pb-1 border-t border-white/10 w-full px-2 shrink-0">
+        <a href="profile.html" class="nav-item group relative flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200" aria-label="الملف الشخصي">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          <div class="sidebar-tooltip">الملف الشخصي والإعدادات</div>
+        </a>
+
+        <button id="logout-btn" data-action="logout" type="button" class="group relative flex items-center justify-center w-11 h-11 rounded-xl text-rose-300 hover:text-white hover:bg-rose-500/20 transition-all duration-200 cursor-pointer active:scale-95" aria-label="تسجيل الخروج">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          <div class="sidebar-tooltip text-rose-200 border-rose-900/60">تسجيل الخروج</div>
+        </button>
       </div>
     </aside>
 
     <div id="sidebar-backdrop" class="backdrop-hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40"></div>
-<header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-6 py-3.5 flex items-center justify-between gap-4 shadow-2xs">
+
+    <!-- Header Section -->
+    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-4 md:px-8 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs">
       <div class="flex items-center gap-3">
-        <button id="sidebar-toggle-btn" class="sidebar-toggle-btn p-2 text-slate-600 hover:text-[#153f2d] hover:bg-slate-100 rounded-xl transition flex items-center justify-center cursor-pointer active:scale-95" title="القائمة الجانبية (Ctrl+B)">
+        <button id="sidebar-toggle-btn" class="sidebar-toggle-btn p-2 text-slate-600 hover:text-[#153f2d] hover:bg-slate-100 rounded-xl transition flex items-center justify-center cursor-pointer active:scale-95 md:hidden" title="القائمة الجانبية">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
         </button>
         <div>
-          <h1 id="page-title" class="text-lg font-black text-slate-900 leading-tight">طلبات انضمام المتاجر</h1>
-          <p id="page-subtitle" class="text-xs text-slate-500 mt-0.5">مراجعة واعتماد طلبات المتاجر المسجلة</p>
+          <div class="flex items-center gap-2">
+            <span class="inline-block w-2.5 h-6 bg-[#1c5335] rounded-full"></span>
+            <h1 id="page-title" class="text-lg md:text-xl font-black text-slate-900 leading-tight">طلبات انضمام المتاجر</h1>
+          </div>
+          <p id="page-subtitle" class="text-xs text-slate-500 mt-0.5">مراجعة واعتماد طلبات المتاجر المسجلة في منصة دوّر</p>
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
-        <a href="index.html" class="text-xs bg-white border border-slate-300 px-3.5 py-2 rounded-xl text-slate-700 font-bold hover:bg-slate-50 shadow-2xs transition">
-          معاينة بوابة التاجر
-        </a>
-        <button data-action="logout" type="button" class="text-xs bg-red-50 border border-red-200 px-3.5 py-2 rounded-xl text-red-700 font-bold hover:bg-red-100 transition cursor-pointer">
-          خروج
-        </button>
+      <!-- Header Tabs & Actions -->
+      <div class="flex items-center flex-wrap gap-2">
+        <!-- Top Tab Navigation Pills -->
+        <div class="flex items-center bg-slate-100 p-1 rounded-2xl gap-1">
+          <button data-tab="stores" class="header-tab-btn px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer active-admin-tab" id="header-tab-stores">
+            المتاجر
+          </button>
+          <button data-tab="users" class="header-tab-btn px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer text-slate-600 hover:text-slate-900" id="header-tab-users">
+            المستخدمين
+          </button>
+          <button data-tab="categories" class="header-tab-btn px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer text-slate-600 hover:text-slate-900" id="header-tab-categories">
+            التصنيفات
+          </button>
+          <button data-tab="audit" class="header-tab-btn px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer text-slate-600 hover:text-slate-900" id="header-tab-audit">
+            سجلات التدقيق
+          </button>
+        </div>
+
+        <div class="flex items-center gap-1.5 mr-auto sm:mr-0">
+          <a href="index.html" class="text-xs bg-white border border-slate-300 px-3 py-1.5 rounded-xl text-slate-700 font-bold hover:bg-slate-50 shadow-2xs transition">
+            معاينة المتجر
+          </a>
+          <button data-action="logout" type="button" class="text-xs bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-xl text-rose-700 font-bold hover:bg-rose-100 transition cursor-pointer">
+            خروج
+          </button>
+        </div>
       </div>
     </header>
 
-    <main class="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8 space-y-6">
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8 space-y-6">
 
+      <!-- ===================================================================== -->
+      <!-- TAB 1: Store Applications Review (/api/admin/stores)                  -->
+      <!-- ===================================================================== -->
       <div id="tab-stores" class="tab-content">
-        <div class="flex flex-wrap items-center gap-2 mb-4">
-          <button data-store-filter="all" class="filter-store-btn bg-[#184336] text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer">الكل</button>
-          <button data-store-filter="Submitted" class="filter-store-btn bg-white border border-slate-200 text-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-50 transition cursor-pointer">بانتظار المراجعة (Submitted)</button>
-          <button data-store-filter="UnderReview" class="filter-store-btn bg-white border border-slate-200 text-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-50 transition cursor-pointer">قيد المراجعة (Under Review)</button>
-          <button data-store-filter="Approved" class="filter-store-btn bg-white border border-slate-200 text-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-50 transition cursor-pointer">معتمد ونشط (Approved)</button>
-          <button data-store-filter="NeedsInformation" class="filter-store-btn bg-white border border-slate-200 text-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-50 transition cursor-pointer">مطلوب معلومات</button>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div class="flex flex-wrap items-center gap-2">
+            <button data-store-filter="all" class="filter-store-btn bg-[#184336] text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer">الكل</button>
+            <button data-store-filter="2" class="filter-store-btn bg-white border border-slate-200 text-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-50 transition cursor-pointer">الطلبات الواردة (Submitted)</button>
+            <button data-store-filter="3" class="filter-store-btn bg-white border border-slate-200 text-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-50 transition cursor-pointer">قيد المراجعة (Under Review)</button>
+            <button data-store-filter="5" class="filter-store-btn bg-white border border-slate-200 text-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-50 transition cursor-pointer">معتمد ونشط (Approved)</button>
+            <button data-store-filter="4" class="filter-store-btn bg-white border border-slate-200 text-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-50 transition cursor-pointer">مطلوب معلومات (Needs Info)</button>
+            <button data-store-filter="6" class="filter-store-btn bg-white border border-slate-200 text-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-50 transition cursor-pointer">مرفوض (Rejected)</button>
+          </div>
+
+          <button id="btn-refresh-stores" type="button" class="text-xs bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-xl font-bold text-slate-700 transition flex items-center gap-1.5 self-start sm:self-auto cursor-pointer" title="تحديث القائمة">
+            <svg class="w-3.5 h-3.5 text-[#184336]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <span>تحديث القائمة</span>
+          </button>
         </div>
 
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-x-auto">
-          <table class="w-full text-right border-collapse text-sm">
-            <thead>
-              <tr class="bg-[#edf5f0] text-[#1c5335] font-bold border-b border-[#1c5335]/10">
-                <th class="p-4">اسم المتجر</th>
-                <th class="p-4">رقم السجل / الضريبة</th>
-                <th class="p-4">المدينة / العنوان</th>
-                <th class="p-4">هاتف التواصل</th>
-                <th class="p-4">الحالة</th>
-                <th class="p-4">الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody id="admin-stores-body" class="divide-y divide-slate-100">
-              <tr><td colspan="6" class="p-8 text-center text-slate-400">جاري تحميل طلبات المتاجر...</td></tr>
-            </tbody>
-          </table>
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-right border-collapse text-sm">
+              <thead>
+                <tr class="bg-[#edf5f0] text-[#1c5335] font-bold border-b border-[#1c5335]/10">
+                  <th class="p-4">اسم المتجر</th>
+                  <th class="p-4">رقم السجل / الضريبة</th>
+                  <th class="p-4">المدينة / العنوان</th>
+                  <th class="p-4">هاتف التواصل</th>
+                  <th class="p-4">الحالة</th>
+                  <th class="p-4">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="admin-stores-body" class="divide-y divide-slate-100">
+                <tr><td colspan="6" class="p-8 text-center text-slate-400">جاري تحميل طلبات المتاجر من الخادم...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Stores Pagination -->
+          <div id="stores-pagination" class="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600 bg-slate-50/50">
+            <span id="stores-page-info">الصفحة 1</span>
+            <div class="flex items-center gap-2">
+              <button id="stores-prev-btn" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white font-bold hover:bg-slate-100 disabled:opacity-40 cursor-pointer">السابق</button>
+              <button id="stores-next-btn" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white font-bold hover:bg-slate-100 disabled:opacity-40 cursor-pointer">التالي</button>
+            </div>
+          </div>
         </div>
       </div>
 
+      <!-- ===================================================================== -->
+      <!-- TAB 2: User Management (/api/admin/users)                             -->
+      <!-- ===================================================================== -->
       <div id="tab-users" class="tab-content hidden">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-          <input 
-            type="text" 
-            id="user-search" 
-            placeholder="بحث بالاسم أو البريد الإلكتروني..." 
-            class="p-3 rounded-xl border border-slate-200 bg-white text-sm w-full max-w-md focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none"
-          >
-          <div class="flex gap-2">
-            <select id="user-role-filter" class="p-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold cursor-pointer">
-              <option value="">جميع الأدوار</option>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div class="relative flex-1 max-w-md">
+            <input 
+              type="text" 
+              id="user-search" 
+              placeholder="بحث بالاسم أو البريد الإلكتروني أو المعرف..." 
+              class="w-full p-2.5 pr-9 rounded-xl border border-slate-200 bg-white text-xs font-medium focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none"
+            >
+            <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </span>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <select id="user-role-filter" class="p-2 rounded-xl border border-slate-200 bg-white text-xs font-bold cursor-pointer">
+              <option value="">جميع الأدوار (Roles)</option>
               <option value="Admin">مدير (Admin)</option>
               <option value="Merchant">تاجر (Merchant)</option>
               <option value="Customer">زبون (Customer)</option>
             </select>
+
+            <select id="user-status-filter" class="p-2 rounded-xl border border-slate-200 bg-white text-xs font-bold cursor-pointer">
+              <option value="">جميع الحالات (Statuses)</option>
+              <option value="Active">نشط (Active)</option>
+              <option value="Suspended">معلق (Suspended)</option>
+            </select>
+
+            <button id="btn-refresh-users" type="button" class="text-xs bg-white border border-slate-200 hover:bg-slate-50 px-3 py-2 rounded-xl font-bold text-slate-700 transition flex items-center gap-1.5 cursor-pointer">
+              <svg class="w-3.5 h-3.5 text-[#184336]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span>تحديث</span>
+            </button>
           </div>
         </div>
 
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-x-auto">
-          <table class="w-full text-right border-collapse text-sm">
-            <thead>
-              <tr class="bg-[#edf5f0] text-[#1c5335] font-bold border-b border-[#1c5335]/10">
-                <th class="p-4">الاسم الكامل</th>
-                <th class="p-4">البريد الإلكتروني</th>
-                <th class="p-4">الدور</th>
-                <th class="p-4">حالة الحساب</th>
-                <th class="p-4">الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody id="admin-users-body" class="divide-y divide-slate-100">
-              <tr><td colspan="5" class="p-8 text-center text-slate-400">جاري تحميل المستخدمين...</td></tr>
-            </tbody>
-          </table>
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-right border-collapse text-sm">
+              <thead>
+                <tr class="bg-[#edf5f0] text-[#1c5335] font-bold border-b border-[#1c5335]/10">
+                  <th class="p-4">الاسم الكامل</th>
+                  <th class="p-4">البريد الإلكتروني</th>
+                  <th class="p-4">الدور</th>
+                  <th class="p-4">حالة الحساب</th>
+                  <th class="p-4">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="admin-users-body" class="divide-y divide-slate-100">
+                <tr><td colspan="5" class="p-8 text-center text-slate-400">جاري تحميل المستخدمين من الخادم...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Users Pagination -->
+          <div id="users-pagination" class="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600 bg-slate-50/50">
+            <span id="users-page-info">الصفحة 1</span>
+            <div class="flex items-center gap-2">
+              <button id="users-prev-btn" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white font-bold hover:bg-slate-100 disabled:opacity-40 cursor-pointer">السابق</button>
+              <button id="users-next-btn" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white font-bold hover:bg-slate-100 disabled:opacity-40 cursor-pointer">التالي</button>
+            </div>
+          </div>
         </div>
       </div>
 
+      <!-- ===================================================================== -->
+      <!-- TAB 3: Category Governance (/api/admin/categories)                    -->
+      <!-- ===================================================================== -->
       <div id="tab-categories" class="tab-content hidden">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
-            <h2 class="text-base font-bold text-[#1c5335]">شجرة التصنيفات المركزية</h2>
-            <p class="text-xs text-slate-500">إدارة الأقسام والتصنيفات العامة للمنتجات</p>
+            <h2 class="text-base font-bold text-[#1c5335]">شجرة التصنيفات المركزية (/api/admin/categories)</h2>
+            <p class="text-xs text-slate-500">حوكمة الأقسام والتصنيفات العامة للمنتجات عبر واجهة برمجة تطبيقات دوّر</p>
           </div>
-          <button id="open-category-modal-btn" type="button" class="text-xs bg-[#1c5335] text-white px-4 py-2.5 rounded-xl font-bold hover:bg-[#143e27] shadow-sm transition cursor-pointer">
-            + إضافة تصنيف رئيسي / فرعي
-          </button>
+          <div class="flex items-center gap-2">
+            <button id="btn-refresh-categories" type="button" class="text-xs bg-white border border-slate-200 hover:bg-slate-50 px-3 py-2 rounded-xl font-bold text-slate-700 transition cursor-pointer">
+              تحديث الشجرة
+            </button>
+            <button id="open-category-modal-btn" type="button" class="text-xs bg-[#1c5335] text-white px-4 py-2.5 rounded-xl font-bold hover:bg-[#143e27] shadow-sm transition cursor-pointer flex items-center gap-1.5">
+              <span>+ إضافة تصنيف رئيسي / فرعي</span>
+            </button>
+          </div>
         </div>
 
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-6">
           <div id="categories-tree-container" class="space-y-3">
+            <div class="p-8 text-center text-slate-400">جاري تحميل شجرة التصنيفات...</div>
           </div>
         </div>
       </div>
 
+      <!-- ===================================================================== -->
+      <!-- TAB 4: Audit Logs (/api/admin/audit-logs)                            -->
+      <!-- ===================================================================== -->
       <div id="tab-audit" class="tab-content hidden">
-        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm mb-4">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm mb-4">
           <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div>
               <label class="block text-[11px] font-bold text-slate-700 mb-1">نوع الإجراء (Action)</label>
-              <input type="text" id="audit-action-filter" placeholder="e.g. ApproveStore" class="w-full p-2 rounded-xl border border-slate-200 text-xs">
+              <input type="text" id="audit-action-filter" placeholder="مثال: ApproveStore, SuspendUser" class="w-full p-2 rounded-xl border border-slate-200 text-xs">
             </div>
             <div>
               <label class="block text-[11px] font-bold text-slate-700 mb-1">نوع الكيان (Entity)</label>
-              <input type="text" id="audit-entity-filter" placeholder="e.g. StoreApplication" class="w-full p-2 rounded-xl border border-slate-200 text-xs">
+              <input type="text" id="audit-entity-filter" placeholder="مثال: StoreApplication, UserAccount" class="w-full p-2 rounded-xl border border-slate-200 text-xs">
             </div>
             <div>
               <label class="block text-[11px] font-bold text-slate-700 mb-1">من تاريخ</label>
@@ -289,29 +408,46 @@
           </div>
         </div>
 
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-x-auto">
-          <table class="w-full text-right border-collapse text-xs">
-            <thead>
-              <tr class="bg-[#edf5f0] text-[#1c5335] font-bold border-b border-[#1c5335]/10">
-                <th class="p-3.5">الوقت والتاريخ</th>
-                <th class="p-3.5">المستخدم المنفذ</th>
-                <th class="p-3.5">نوع الإجراء</th>
-                <th class="p-3.5">الكيان المتأثر</th>
-                <th class="p-3.5">التفاصيل / الفروقات</th>
-              </tr>
-            </thead>
-            <tbody id="admin-audit-body" class="divide-y divide-slate-100 font-mono">
-              <tr><td colspan="5" class="p-8 text-center text-slate-400 font-sans">جاري تحميل سجلات التدقيق...</td></tr>
-            </tbody>
-          </table>
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-right border-collapse text-xs">
+              <thead>
+                <tr class="bg-[#edf5f0] text-[#1c5335] font-bold border-b border-[#1c5335]/10">
+                  <th class="p-3.5">الوقت والتاريخ</th>
+                  <th class="p-3.5">المستخدم المنفذ</th>
+                  <th class="p-3.5">نوع الإجراء</th>
+                  <th class="p-3.5">الكيان المتأثر</th>
+                  <th class="p-3.5">التفاصيل / الفروقات</th>
+                </tr>
+              </thead>
+              <tbody id="admin-audit-body" class="divide-y divide-slate-100 font-mono">
+                <tr><td colspan="5" class="p-8 text-center text-slate-400 font-sans">جاري تحميل سجلات التدقيق...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Audit Pagination -->
+          <div id="audit-pagination" class="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600 bg-slate-50/50">
+            <span id="audit-page-info">الصفحة 1</span>
+            <div class="flex items-center gap-2">
+              <button id="audit-prev-btn" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white font-bold hover:bg-slate-100 disabled:opacity-40 cursor-pointer">السابق</button>
+              <button id="audit-next-btn" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white font-bold hover:bg-slate-100 disabled:opacity-40 cursor-pointer">التالي</button>
+            </div>
+          </div>
         </div>
       </div>
     </main>
 
+  <!-- ========================================================================= -->
+  <!-- MODAL: Store Details & Review Actions                                    -->
+  <!-- ========================================================================= -->
   <div id="store-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
-        <h3 class="text-lg font-bold text-[#1c5335]" id="modal-store-name">تفاصيل طلب انضمام المتجر</h3>
+        <div>
+          <h3 class="text-lg font-bold text-[#1c5335]" id="modal-store-name">تفاصيل طلب انضمام المتجر</h3>
+          <span id="modal-store-status-badge" class="text-xs font-bold text-slate-500">الحالة: -</span>
+        </div>
         <button type="button" data-close-modal="store-modal" class="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">✕</button>
       </div>
 
@@ -323,6 +459,9 @@
     </div>
   </div>
 
+  <!-- ========================================================================= -->
+  <!-- MODAL: Action Prompt (Reason / Notes for Reject, Suspend, Request Info)    -->
+  <!-- ========================================================================= -->
   <div id="prompt-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
       <h3 id="prompt-title" class="text-base font-bold text-[#1c5335] mb-2"></h3>
@@ -340,6 +479,9 @@
     </div>
   </div>
 
+  <!-- ========================================================================= -->
+  <!-- MODAL: Category Create / Update                                          -->
+  <!-- ========================================================================= -->
   <div id="category-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
       <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
@@ -351,7 +493,7 @@
         <input type="hidden" id="category-id">
 
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">اسم التصنيف *</label>
+          <label class="block text-xs font-bold text-slate-700 mb-1">اسم التصنيف (Name) *</label>
           <input type="text" id="cat-name" required placeholder="مثال: مشروبات وعصائر" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
         </div>
 
@@ -361,15 +503,31 @@
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">التصنيف الأب (اختياري)</label>
-          <select id="cat-parent" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none">
-            <option value="">تصنيف رئيسي (Root Category)</option>
-          </select>
+          <label class="block text-xs font-bold text-slate-700 mb-1">الوصف (Description)</label>
+          <textarea id="cat-desc" rows="2" placeholder="وصف التصنيف وأصنافه..." class="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none"></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">التصنيف الأب (Parent)</label>
+            <select id="cat-parent" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none">
+              <option value="">تصنيف رئيسي (Root)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">ترتيب العرض (Order)</label>
+            <input type="number" id="cat-order" value="1" min="1" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
+          </div>
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">ترتيب العرض</label>
-          <input type="number" id="cat-order" value="1" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none">
+          <label class="block text-xs font-bold text-slate-700 mb-1">رابط الأيقونة (Icon URL)</label>
+          <input type="text" id="cat-icon" placeholder="https://... أو اسم الأيقونة" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] focus:outline-none font-mono">
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <input type="checkbox" id="cat-active" checked class="rounded text-[#1c5335] focus:ring-[#1c5335]">
+          <label for="cat-active" class="text-xs font-bold text-slate-700 cursor-pointer">التصنيف نشط ومتاح (isActive)</label>
         </div>
 
         <div class="flex gap-2 pt-3 border-t border-slate-100">
@@ -384,10 +542,16 @@
     </div>
   </div>
 
+  <!-- ========================================================================= -->
+  <!-- MODAL: Audit Log Diff Viewer                                             -->
+  <!-- ========================================================================= -->
   <div id="audit-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
-        <h3 class="text-base font-bold text-[#1c5335]">تفاصيل العملية وتغييرات البيانات (Diff)</h3>
+        <div>
+          <h3 class="text-base font-bold text-[#1c5335]" id="audit-modal-title">تفاصيل العملية وتغييرات البيانات (Diff)</h3>
+          <span id="audit-modal-subtitle" class="text-xs text-slate-500 font-sans block">سجل تدقيق أمني</span>
+        </div>
         <button type="button" data-close-modal="audit-modal" class="text-slate-400 hover:text-slate-600 font-bold cursor-pointer">✕</button>
       </div>
 
@@ -404,6 +568,7 @@
     </div>
   </div>
 
+  <!-- Core Scripts -->
   <script src="js/config.js" defer></script>
   <script src="js/api.js" defer></script>
   <script src="js/auth.js" defer></script>
