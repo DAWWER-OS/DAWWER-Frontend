@@ -1012,9 +1012,31 @@ const ApiClient = {
                            localStorage.getItem('dawwer_access_token');
     const cleanAccessToken = rawAccessToken ? String(rawAccessToken).trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '') : null;
 
+    // Endpoint classification
+    const cleanLower = lower.startsWith('/api/') ? lower.slice(4) : lower;
+
+    // Public authentication / health endpoints exempt from mandatory auth token
+    const isPublicAuthEndpoint = cleanLower.startsWith('/auth/login') ||
+                                 cleanLower.startsWith('/auth/register') ||
+                                 cleanLower.startsWith('/auth/forgot-password') ||
+                                 cleanLower.startsWith('/auth/reset-password') ||
+                                 cleanLower.startsWith('/auth/verify-code') ||
+                                 cleanLower.startsWith('/auth/refresh-token') ||
+                                 cleanLower.includes('/health');
+
+    const isAdminEndpoint = options.isAdmin === true ||
+                            options.service === 'admin' ||
+                            cleanLower.startsWith('/admin');
+
+    const isMerchantEndpoint = options.isMerchant === true ||
+                               options.service === 'merchant' ||
+                               cleanLower.startsWith('/merchant');
+
     let token = null;
 
-    if (isFastApiTarget) {
+    if (isPublicAuthEndpoint) {
+      token = null;
+    } else if (isFastApiTarget) {
       token = (cleanStoreToken && cleanStoreToken.toLowerCase() !== 'null' && cleanStoreToken.toLowerCase() !== 'undefined')
         ? cleanStoreToken
         : ((cleanAccessToken && cleanAccessToken.toLowerCase() !== 'null' && cleanAccessToken.toLowerCase() !== 'undefined') ? cleanAccessToken : null);
@@ -1036,15 +1058,6 @@ const ApiClient = {
         token = explicitVal;
       }
     }
-
-    // Public authentication / health endpoints exempt from mandatory auth token
-    const isPublicAuthEndpoint = lower.startsWith('/auth/login') ||
-                                 lower.startsWith('/auth/register') ||
-                                 lower.startsWith('/auth/forgot-password') ||
-                                 lower.startsWith('/auth/reset-password') ||
-                                 lower.startsWith('/auth/verify-code') ||
-                                 lower.startsWith('/auth/refresh-token') ||
-                                 lower.includes('/health');
 
     // Pre-flight check: If token is missing, stop the request immediately and notify the user to log in
     if (!isPublicAuthEndpoint) {
