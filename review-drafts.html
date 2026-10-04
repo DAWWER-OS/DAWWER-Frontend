@@ -6,34 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>مراجعة ومطابقة واعتماد المسودات المستخرجة بالذكاء الاصطناعي - دوّر</title>
 
+  <link rel="icon" type="image/png" href="assets/images/favicon-dawwer.png">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-  <script src="assets/css/tailwind.min.js"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ["'IBM Plex Sans Arabic'", 'sans-serif'],
-          },
-          colors: {
-            brand: {
-              primary: '#1c5335',
-              dark: '#143e27',
-              soft: '#edf5f0',
-              gold: '#d6a950',
-            }
-          },
-          borderRadius: {
-            '2xl': '1rem',
-            '3xl': '1.5rem',
-          }
-        }
-      }
-    }
-  </script>
+  <link rel="stylesheet" href="css/output.css">
 
   <style>
     ::-webkit-scrollbar {
@@ -76,6 +55,15 @@
     .bounding-box.duplicate-box {
       border-color: #f59e0b;
       background-color: rgba(245, 158, 11, 0.22);
+    }
+
+    .bounding-box.approved-box {
+      border-color: #059669;
+      background-color: rgba(5, 150, 105, 0.25);
+    }
+
+    .bounding-box.approved-box .bounding-tag {
+      background: #059669;
     }
 
     .bounding-tag {
@@ -130,7 +118,7 @@
   </style>
 </head>
 
-<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col font-sans md:mr-16" dir="rtl">
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col font-sans mr-0 md:mr-16" dir="rtl">
 
   
     <aside id="sidebar-box" class="fixed top-0 right-0 h-screen w-16 bg-[#153f2d] text-white flex flex-col justify-between items-center py-3 z-50 shadow-xl border-l border-white/10 select-none overflow-visible">
@@ -278,11 +266,11 @@
   </div>
 
   <header
-    class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-6 py-3.5 flex items-center justify-between gap-4 shrink-0 shadow-2xs">
+    class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-4 sm:px-6 py-3.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-2xs">
 
     <div class="flex items-center gap-3">
       <button id="sidebar-toggle-btn"
-        class="sidebar-toggle-btn p-2 text-slate-600 hover:text-[#153f2d] hover:bg-slate-100 rounded-xl transition flex items-center justify-center cursor-pointer active:scale-95"
+        class="sidebar-toggle-btn p-2 text-slate-600 hover:text-[#153f2d] hover:bg-slate-100 rounded-xl transition flex items-center justify-center cursor-pointer active:scale-95 md:hidden"
         title="القائمة الجانبية (Ctrl+B)">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -309,7 +297,7 @@
       </div>
     </div>
 
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3 self-end sm:self-auto">
       <div class="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-200">
         <span class="text-xs font-bold text-slate-500 pr-2 hidden sm:inline">العملية الحالية:</span>
         <select id="job-selector"
@@ -431,8 +419,9 @@
           <div id="zoom-viewport"
             class="zoom-viewport flex-1 flex items-center justify-center bg-slate-950 overflow-hidden relative">
             <div id="zoom-content" class="zoom-content relative inline-block transition-transform">
-              <img id="shelf-source-img" src="" alt="صورة الرف الأصلية"
-                class="max-h-[75vh] w-auto object-contain pointer-events-none select-none rounded-lg shadow-2xl border border-slate-800">
+              <img id="shelf-source-img" src="assets/placeholder-product.png" alt="صورة الرف الأصلية"
+                class="max-h-[75vh] w-auto object-contain pointer-events-none select-none rounded-lg shadow-2xl border border-slate-800"
+                onerror="this.onerror=null; this.src='assets/placeholder-product.png';">
               <div id="image-boxes-layer" class="absolute inset-0 pointer-events-auto"></div>
             </div>
 
@@ -543,7 +532,7 @@
             <span>استبعاد المحدد</span>
           </button>
 
-          <button type="button" id="btn-publish-catalog"
+          <button type="button" id="btn-approve-all-drafts" data-alias="btn-publish-catalog"
             class="inline-flex items-center justify-center gap-2 bg-[#153f2d] hover:bg-[#0f2d20] disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black px-6 py-2.5 rounded-xl shadow-md text-xs sm:text-sm transition active:scale-95">
             <svg class="w-4 h-4 text-[#d6a950]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -675,13 +664,10 @@
     </div>
   </div>
 
-    <script src="js/config.js" defer></script>
-  <script src="js/api.js" defer></script>
-  <script src="js/auth.js" defer></script>
-  <script src="js/layout.js" defer></script>
-  <script src="js/notifications.js" defer></script>
-  <script src="js/main.js" defer></script>
-  <script src="js/review-drafts.js" defer></script>
+  <script src="js/config.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/review-drafts.js"></script>
 </body>
 
 </html>

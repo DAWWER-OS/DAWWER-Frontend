@@ -75,8 +75,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadLiveCategories() {
   try {
-    if (typeof ApiClient === 'undefined' || !ApiClient.categories) return;
-    const categories = (res && res.data && Array.isArray(res.data)) ? res.data : (Array.isArray(res) ? res : []);
+    if (typeof ApiClient === 'undefined') return;
+    let categories = [];
+    if (ApiClient.categories && ApiClient.categories.list) {
+      try {
+        const res = await ApiClient.categories.list();
+        categories = (res && res.data && Array.isArray(res.data)) ? res.data : (Array.isArray(res) ? res : []);
+      } catch (e) {}
+    }
     if (categories.length === 0) return;
 
     const filterSelect = document.getElementById('category-filter');
@@ -416,15 +422,27 @@ function handleAssignProductToAisle(event) {
     localStorage.setItem("myProducts", JSON.stringify(products));
     localStorage.setItem("dawwer_merchant_catalog_products", JSON.stringify(products));
 
-    // Sync live product shelf position to products service if active
+    // Sync live product shelf position to products & spatial placement service if active
     const storeId = (typeof ApiClient !== 'undefined') ? ApiClient.getActiveStoreId() : null;
-    if (storeId && prodId && typeof ApiClient !== 'undefined' && ApiClient.products) {
-      ApiClient.products.update(storeId, prodId, {
-        shelf: targetShelf,
-        aisle: list[aisleIndex].name
-      }, { suppressToastOnError: true }).catch(err => {
-        console.warn('Live API product shelf update failed:', err);
-      });
+    if (storeId && typeof ApiClient !== 'undefined') {
+      if (prodId && ApiClient.products) {
+        ApiClient.products.update(storeId, prodId, {
+          shelf: targetShelf,
+          aisle: list[aisleIndex].name
+        }, { suppressToastOnError: true }).catch(err => {
+          console.warn('Live API product shelf update failed:', err);
+        });
+      }
+      if (ApiClient.floorplan && ApiClient.floorplan.savePlacements) {
+        ApiClient.floorplan.savePlacements(storeId, [{
+          product_id: prodId,
+          product_name: productName,
+          shelf_code: targetShelf,
+          aisle_name: list[aisleIndex].name
+        }]).catch(err => {
+          console.warn('Live API spatial placement sync failed:', err);
+        });
+      }
     }
 
     closeModal("add-product-modal");

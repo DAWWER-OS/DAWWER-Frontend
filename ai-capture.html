@@ -5,35 +5,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>التقاط الرفوف واستخراج المنتجات بالذكاء الاصطناعي - دوّر</title>
+  <link rel="icon" type="image/png" href="assets/images/favicon-dawwer.png">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-  <script src="assets/css/tailwind.min.js"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ["'IBM Plex Sans Arabic'", 'sans-serif'],
-          },
-          colors: {
-            brand: {
-              primary: '#1c5335',
-              dark: '#143e27',
-              soft: '#edf5f0',
-              gold: '#d6a950',
-            }
-          },
-          borderRadius: {
-            '2xl': '1rem',
-            '3xl': '1.5rem',
-          }
-        }
-      }
-    }
-  </script>
+  <link rel="stylesheet" href="css/output.css">
 
   <style>
     ::-webkit-scrollbar {
@@ -107,10 +84,19 @@
     .bounding-box.active .bounding-tag {
       background: #d6a950;
     }
+
+    #camera-modal.hidden,
+    #review-modal.hidden,
+    #toast.hidden,
+    #sidebar-backdrop.hidden,
+    .hidden {
+      display: none !important;
+      pointer-events: none !important;
+    }
   </style>
 </head>
 
-<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans md:mr-16" dir="rtl">
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans" dir="rtl">
 
   
     <aside id="sidebar-box" class="fixed top-0 right-0 h-screen w-16 bg-[#153f2d] text-white flex flex-col justify-between items-center py-3 z-50 shadow-xl border-l border-white/10 select-none overflow-visible">
@@ -118,7 +104,7 @@
       <div class="flex flex-col items-center w-full pt-1 px-1.5 shrink-0 overflow-visible">
         <div class="relative group flex items-center justify-center">
           <a href="index.html" class="flex items-center justify-center w-11 h-11 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-colors shadow-xs" aria-label="دوّر - الرئيسية">
-            <img src="assets/images/FrameLogo.png" alt="دوّر" class="h-6 w-auto object-contain">
+            <img src="assets/images/FrameLogo.png" alt="دوّر" class="h-6 w-auto max-w-[28px] max-h-[28px] object-contain">
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
             دوّر - الرئيسية
@@ -242,7 +228,7 @@
       </div>
     </aside>
 
-    <div id="sidebar-backdrop" class="backdrop-hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40"></div>
+    <div id="sidebar-backdrop" class="hidden backdrop-hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 pointer-events-none"></div>
 <header
     class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-6 py-3.5 flex items-center justify-between gap-4 shadow-2xs">
 
@@ -476,47 +462,47 @@
                 <span class="text-[11px] text-slate-400 font-medium">يدعم JPG, PNG, WEBP حتى 10MB لكل صورة</span>
               </div>
 
-              <div id="dropzone" class="relative border-2 border-dashed border-slate-300 hover:border-[#153f2d] bg-slate-50/70 hover:bg-[#edf5f0]/40 rounded-3xl p-8 text-center transition cursor-pointer group">
-                <input type="file" id="file-input" accept="image/png, image/jpeg, image/webp" multiple class="hidden">
-                <input type="file" id="mobile-camera-input" accept="image/*" capture="environment" class="hidden">
+              <input type="file" id="file-input" class="hidden" accept="image/jpeg,image/png,image/webp" multiple>
+              <input type="file" id="mobile-camera-input" class="hidden" accept="image/*" capture="environment">
 
-                <div class="flex flex-col items-center justify-center gap-3">
+              <label for="file-input" id="dropzone" class="cursor-pointer block relative w-full z-10 select-none border-2 border-dashed border-slate-300 hover:border-[#153f2d] bg-slate-50/70 hover:bg-[#edf5f0]/40 rounded-3xl p-8 text-center transition group shadow-2xs">
+                <div class="flex flex-col items-center justify-center gap-3 pointer-events-none">
                   <div
-                    class="w-16 h-16 rounded-3xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-[#153f2d] group-hover:scale-110 transition">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="w-16 h-16 rounded-3xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-[#153f2d] group-hover:scale-110 transition pointer-events-none">
+                    <svg class="w-8 h-8 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
                         d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <div>
-                    <div class="text-sm font-bold text-slate-800 group-hover:text-[#153f2d] transition">اسحب وأفلت صور
+                  <div class="pointer-events-none">
+                    <div class="text-sm font-bold text-slate-800 group-hover:text-[#153f2d] transition pointer-events-none">اسحب وأفلت صور
                       الرف هنا، أو انقر للاختيار من جهازك</div>
-                    <div class="text-xs text-slate-500 mt-1">يمكنك رفع عدة صور لنفس الرف من زوايا مختلفة لتحقيق أعلى دقة
+                    <div class="text-xs text-slate-500 mt-1 pointer-events-none">يمكنك رفع عدة صور لنفس الرف من زوايا مختلفة لتحقيق أعلى دقة
                       استخراج</div>
                   </div>
-                  <div class="flex flex-wrap items-center justify-center gap-2.5 mt-2">
+                  <div class="flex flex-wrap items-center justify-center gap-2.5 mt-2 pointer-events-auto relative z-20">
                     <button type="button" id="btn-camera-capture"
-                      class="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-[#153f2d] hover:bg-[#0f2d20] text-white shadow-sm transition active:scale-95 cursor-pointer z-10"
+                      class="pointer-events-auto relative z-20 inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-[#153f2d] hover:bg-[#0f2d20] text-white shadow-sm transition active:scale-95 cursor-pointer"
                       title="التقاط فوري بالكاميرا">
-                      <svg class="w-4 h-4 text-[#d6a950]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg class="w-4 h-4 text-[#d6a950] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
-                      <span>التقاط فوري بالكاميرا</span>
+                      <span class="pointer-events-none">التقاط فوري بالكاميرا</span>
                     </button>
                     <span
-                      class="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-2 rounded-full bg-white border border-slate-200 text-slate-600 shadow-2xs">
-                      <svg class="w-3.5 h-3.5 text-[#d6a950]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      class="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-2 rounded-full bg-white border border-slate-200 text-slate-600 shadow-2xs pointer-events-none">
+                      <svg class="w-3.5 h-3.5 text-[#d6a950] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                       </svg>
-                      <span>كشف الباركود والأسعار OCR</span>
+                      <span class="pointer-events-none">كشف الباركود والأسعار OCR</span>
                     </span>
                   </div>
                 </div>
-              </div>
+              </label>
 
               <div id="thumbnails-container" class="mt-4 hidden space-y-3">
                 <div class="flex items-center justify-between">
@@ -666,8 +652,7 @@
 
   
 
-  <div id="camera-modal"
-    class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
+  <div id="camera-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 hidden">
     <div
       class="bg-slate-900 text-white rounded-3xl border border-slate-700/80 max-w-2xl w-full overflow-hidden shadow-2xl flex flex-col">
       
@@ -772,8 +757,7 @@
     </div>
   </div>
 
-  <div id="review-modal"
-    class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+  <div id="review-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 hidden">
     <div
       class="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in duration-200">
 
@@ -887,13 +871,10 @@
     </div>
   </div>
 
-    <script src="js/config.js" defer></script>
-  <script src="js/api.js" defer></script>
-  <script src="js/auth.js" defer></script>
-  <script src="js/layout.js" defer></script>
-  <script src="js/notifications.js" defer></script>
-  <script src="js/main.js" defer></script>
-  <script src="js/ai-capture.js" defer></script>
+  <script src="js/config.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/ai-capture.js"></script>
 </body>
 
 </html>

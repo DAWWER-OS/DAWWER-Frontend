@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>لوحة الإدارة المركزية - دوّر</title>
+  <link rel="icon" type="image/png" href="assets/images/favicon-dawwer.png">
 
   <!-- ========================================================================= -->
   <!-- Strict Admin Page Protection Guard (Top of Lifecycle)                     -->
@@ -92,30 +93,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-  <script src="assets/css/tailwind.min.js"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ["'IBM Plex Sans Arabic'", 'sans-serif'],
-          },
-          colors: {
-            brand: {
-              primary: '#1c5335',
-              dark: '#143e27',
-              soft: '#edf5f0',
-              gold: '#d6a950'
-            }
-          },
-          borderRadius: {
-            '2xl': '1rem',
-            '3xl': '1.5rem',
-          }
-        }
-      }
-    }
-  </script>
+  <link rel="stylesheet" href="css/output.css">
   <style>
     /* Tabular numeric alignment */
     .tabular-nums {
@@ -127,7 +105,7 @@
     }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans md:mr-[72px]" dir="rtl">
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans mr-0 md:mr-[72px]" dir="rtl">
 
     <!-- Super Admin Slim Sidebar -->
     <aside id="sidebar-box" class="fixed top-0 right-0 h-screen w-[72px] bg-[#153f2d] text-white flex flex-col justify-between items-center py-4 z-50 shadow-xl border-l border-white/10 select-none">
