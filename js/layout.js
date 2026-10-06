@@ -711,7 +711,11 @@ const DawwerLayout = {
       });
     }
 
-    if (typeof Auth !== 'undefined' && Auth.isAuthenticated && Auth.isAuthenticated()) {
+    const isSuperAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
+      ? Auth.isAdmin()
+      : (typeof Auth !== 'undefined' && Auth.getUser && Auth.getUser() && (Auth.getUser().role === 'Admin' || Auth.getUser().role === 4 || /admin|superadmin/i.test(String(Auth.getUser().role))));
+
+    if (!isSuperAdmin && typeof Auth !== 'undefined' && Auth.isAuthenticated && Auth.isAuthenticated()) {
       this.fetchStoreProfile();
     }
   },
@@ -782,6 +786,11 @@ const DawwerLayout = {
   },
 
   async fetchStoreProfile(storeId = null) {
+    const isSuperAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
+      ? Auth.isAdmin()
+      : (typeof Auth !== 'undefined' && Auth.getUser && Auth.getUser() && (Auth.getUser().role === 'Admin' || Auth.getUser().role === 4 || /admin|superadmin/i.test(String(Auth.getUser().role))));
+    if (isSuperAdmin) return null;
+
     try {
       const targetId = storeId || (typeof ApiClient !== 'undefined' && ApiClient.getActiveStoreId ? ApiClient.getActiveStoreId() : null);
       if (!targetId) return null;
@@ -812,6 +821,14 @@ const DawwerLayout = {
   },
 
   async openStoreSwitcher() {
+    const isSuperAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
+      ? Auth.isAdmin()
+      : (typeof Auth !== 'undefined' && Auth.getUser && Auth.getUser() && (Auth.getUser().role === 'Admin' || Auth.getUser().role === 4 || /admin|superadmin/i.test(String(Auth.getUser().role))));
+    if (isSuperAdmin) {
+      console.info('[DawwerLayout] openStoreSwitcher suppressed for SuperAdmin');
+      return;
+    }
+
     let modal = document.getElementById('dawwer-store-selector-modal');
     if (modal) {
       modal.classList.remove('hidden');

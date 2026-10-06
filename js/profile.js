@@ -35,9 +35,22 @@ async function loadUserProfile() {
       if (phoneInput) phoneInput.value = userData.phoneNumber || userData.phone || '';
 
       const storeIdInput = document.getElementById('profile-store-id-input');
-      const activeStoreId = (typeof ApiClient !== 'undefined' && ApiClient.getActiveStoreId) ? ApiClient.getActiveStoreId() : null;
+      const isSuperAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
+        ? Auth.isAdmin()
+        : (function() {
+            const r = localStorage.getItem('userRole') || localStorage.getItem('role') || userData.role;
+            return r === 4 || r === '4' || /admin|superadmin/i.test(String(r));
+          })();
+
       if (storeIdInput) {
-        storeIdInput.value = activeStoreId || userData.storeId || '';
+        if (isSuperAdmin) {
+          storeIdInput.value = 'غير مطلوب (إدارة المنصة المركزية - Super Admin)';
+          storeIdInput.readOnly = true;
+          storeIdInput.classList.add('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+        } else {
+          const activeStoreId = (typeof ApiClient !== 'undefined' && ApiClient.getActiveStoreId) ? ApiClient.getActiveStoreId() : null;
+          storeIdInput.value = activeStoreId || userData.storeId || '';
+        }
       }
     }
   } catch (err) {

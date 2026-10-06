@@ -436,6 +436,17 @@ const ApiClient = {
       }
     } catch (e) {}
 
+    const isUserAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
+      ? Auth.isAdmin()
+      : (function() {
+          const r = localStorage.getItem('userRole') || localStorage.getItem('role');
+          return r === 4 || r === '4' || /admin|superadmin/i.test(String(r));
+        })();
+
+    if (isUserAdmin) {
+      return null;
+    }
+
     const configuredDefault = (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_STORE_ID) ? CONFIG.DEFAULT_STORE_ID : null;
     if (configuredDefault && !this.isInvalidStoreId(configuredDefault)) {
       return configuredDefault;
@@ -596,6 +607,18 @@ const ApiClient = {
    *      instead of dispatching a GET request with an invalid/null ID.
    */
   async verifyStoreContext(storeId = null, options = {}) {
+    // Platform Admins supervise the whole platform and do not belong to a single merchant store
+    const isUserAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
+      ? Auth.isAdmin()
+      : (function() {
+          const r = localStorage.getItem('userRole') || localStorage.getItem('role');
+          return r === 4 || r === '4' || /admin|superadmin/i.test(String(r));
+        })();
+
+    if (isUserAdmin) {
+      return { success: true, message: "SuperAdmin context bypassed", data: null };
+    }
+
     let id = storeId;
     if (id === undefined || id === null) {
       id = this.getActiveStoreId();
@@ -637,6 +660,18 @@ const ApiClient = {
    * Purges invalid/null store keys from storage, prompts user, and immediately directs to store selection.
    */
   handleStoreVerification404(invalidStoreId = null) {
+    // Platform Admins supervise the whole platform and should NEVER be prompted to select a store
+    const isUserAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
+      ? Auth.isAdmin()
+      : (function() {
+          const r = localStorage.getItem('userRole') || localStorage.getItem('role');
+          return r === 4 || r === '4' || /admin|superadmin/i.test(String(r));
+        })();
+
+    if (isUserAdmin) {
+      return;
+    }
+
     // 2. Persistent Store Context: Do NOT prompt or redirect if valid active_store_id and storeToken exist
     const hasValidStoreId = !!(localStorage.getItem('active_store_id') || localStorage.getItem('activeStoreId'));
     const hasValidStoreToken = !!(localStorage.getItem('storeToken') || localStorage.getItem('store_token'));
@@ -677,7 +712,7 @@ const ApiClient = {
 
       // Prompt or redirect user to select a store via the store selection view
       const currentPath = (window.location.pathname || '').split('/').pop() || 'index.html';
-      const exemptPages = ['login.html', 'register.html', 'verify-account.html', 'forgot-password.html', 'reset-password.html', 'admin-login.html', 'merchant-application.html', 'select-store.html'];
+      const exemptPages = ['login.html', 'register.html', 'verify-account.html', 'forgot-password.html', 'reset-password.html', 'admin-login.html', 'merchant-application.html', 'select-store.html', 'admin-dashboard.html', 'profile.html'];
 
       if (!exemptPages.includes(currentPath)) {
         if (typeof window.DawwerLayout !== 'undefined' && typeof window.DawwerLayout.openStoreSwitcher === 'function') {
