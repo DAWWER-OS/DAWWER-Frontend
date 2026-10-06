@@ -1,3 +1,4 @@
+// Direct role-based redirection if already authenticated
 if (typeof Auth !== 'undefined' && Auth.isAuthenticated && Auth.isAuthenticated()) {
   const urlParams = new URLSearchParams(window.location.search);
   const redirect = urlParams.get('redirect');
@@ -5,18 +6,24 @@ if (typeof Auth !== 'undefined' && Auth.isAuthenticated && Auth.isAuthenticated(
   if (redirect && !redirect.includes('login.html')) {
     window.location.href = redirect;
   } else if (user && (user.role === 'Admin' || user.role === 4 || user.role === '4')) {
-    const adminUrl = (window.location.protocol === 'file:') ? 'admin-dashboard.html' : '/admin-dashboard.html';
-    window.location.href = adminUrl;
+    window.location.href = 'admin-dashboard.html';
+  } else if (!localStorage.getItem('activeStoreId') && !localStorage.getItem('storeToken')) {
+    window.location.href = 'select-store.html';
   } else if (user && (user.role === 'Merchant' || user.role === 2 || user.role === '2')) {
-    const merchantUrl = (window.location.protocol === 'file:') ? 'index.html' : '/index.html';
-    window.location.href = merchantUrl;
+    window.location.href = 'dashboard.html';
   } else {
-    const defaultUrl = (window.location.protocol === 'file:') ? 'index.html' : '/index.html';
-    window.location.href = defaultUrl;
+    window.location.href = 'index.html';
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function initLoginForm() {
   const urlParams = new URLSearchParams(window.location.search);
 
   // 1. Account verified query handler
@@ -53,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
       errorBox.innerHTML = `
         <div class="flex items-center gap-2">
           <svg class="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-          <span>${warningMsg}</span>
+          <span>${escapeHtml(warningMsg)}</span>
         </div>
       `;
       errorBox.className = 'mb-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-bold block';
@@ -73,10 +80,18 @@ document.addEventListener('DOMContentLoaded', () => {
   if (loginForm) {
     loginForm.addEventListener('submit', handleLogin);
   }
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initLoginForm);
+} else {
+  initLoginForm();
+}
 
 async function handleLogin(event) {
-  event.preventDefault();
+  if (event && typeof event.preventDefault === 'function') {
+    event.preventDefault();
+  }
 
   const emailInput = document.getElementById('email-input');
   const passwordInput = document.getElementById('password-input');
@@ -88,247 +103,204 @@ async function handleLogin(event) {
   const email = emailInput.value.trim();
   const password = passwordInput.value;
 
-  if (errorBox) errorBox.classList.add('hidden');
+  if (errorBox) {
+    errorBox.classList.add('hidden');
+    errorBox.innerHTML = '';
+  }
   if (btn) {
     btn.innerText = 'جاري التحقق...';
     btn.disabled = true;
   }
 
   try {
-    const response = await ApiClient.post('/Auth/login', { email, password });
+    // 1. Submit form to POST /api/Auth/login
+    let authPayload;
+    const client = (typeof window !== 'undefined' && window.ApiClient) || (typeof ApiClient !== 'undefined' ? ApiClient : null);
+
+    if (client && typeof client.core === 'function') {
+      authPayload = await client.core('/Auth/login', {
+        method: 'POST',
+        body: { email, password }
+      });
+    } else if (client && typeof client.post === 'function') {
+      const response = await client.post('/Auth/login', { email, password }, {}, { throwOnError: true });
+      authPayload = response.data || response;
+    } else {
+      // Failsafe direct native fetch fallback
+      const baseUrl = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL)
+        ? CONFIG.API_BASE_URL
+        : 'https://dawwer.runasp.net/api';
+      const apiUrl = `${baseUrl.replace(/\/+$/, '')}/Auth/login`;
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8'
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      const resJson = await response.json().catch(() => null);
+      if (!response.ok || (resJson && resJson.success === false)) {
+        const errorMsg = (resJson && Array.isArray(resJson.errors) && resJson.errors.length)
+          ? resJson.errors.join(' | ')
+          : (resJson?.message || 'بيانات الدخول غير صحيحة.');
+        const err = new Error(errorMsg);
+        err.data = resJson?.data || resJson;
+        err.response = { data: resJson };
+        throw err;
+      }
+
+      authPayload = resJson?.data || resJson;
+    }
 
     const isUnverified = 
-      response.data?.isVerified === false ||
-      response.data?.requiresVerification === true ||
-      response.data?.status === 'PendingVerification' ||
-      response.data?.status === 1 ||
-      (response.message && (
-        response.message.toLowerCase().includes('email verification required') ||
-        response.message.toLowerCase().includes('verification required') ||
-        response.message.toLowerCase().includes('verif') ||
-        response.message.includes('تفعيل') ||
-        response.message.includes('تأكيد')
-      ));
+      authPayload?.isVerified === false ||
+      authPayload?.requiresVerification === true ||
+      authPayload?.status === 'PendingVerification' ||
+      authPayload?.status === 1;
 
     if (isUnverified) {
-      const previewCode = response.data?.verificationCodePreview || response.data?.previewCode || '';
+      sessionStorage.setItem('email', email);
+      sessionStorage.setItem('dawwer_registered_email', email);
       if (errorBox) {
-        errorBox.innerHTML = 'البريد الإلكتروني بحاجة إلى تأكيد، جاري تحويلك لصفحة التحقق...';
+        errorBox.textContent = 'البريد الإلكتروني بحاجة إلى تأكيد، جاري تحويلك لصفحة التحقق...';
         errorBox.className = 'mb-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-bold block';
+        errorBox.classList.remove('hidden');
       }
       if (typeof showToast === 'function') {
         showToast({ title: 'التحقق مطلوب', message: 'يرجى تأكيد بريدك الإلكتروني للمتابعة', type: 'warning' });
       }
 
-      const redirectUrl = previewCode 
-        ? `verify-account.html?email=${encodeURIComponent(email)}&previewCode=${encodeURIComponent(previewCode)}`
-        : `verify-account.html?email=${encodeURIComponent(email)}`;
-
       setTimeout(() => {
-        window.location.href = redirectUrl;
+        window.location.href = `verify-account.html?email=${encodeURIComponent(email)}`;
       }, 1000);
       return;
     }
 
-    const activeToken = response.data?.accessToken || response.data?.token;
-    if (response.success && response.data && activeToken) {
-      const authPayload = response.data;
-      if (!authPayload.accessToken && activeToken) authPayload.accessToken = activeToken;
-      localStorage.setItem("token", activeToken);
-      localStorage.setItem("accessToken", activeToken);
-      localStorage.setItem("userId", authPayload.userId || authPayload.id || "");
-      localStorage.setItem("dawwer_access_token", activeToken);
-      if (authPayload.refreshToken) {
-        localStorage.setItem("refreshToken", authPayload.refreshToken);
-        localStorage.setItem("dawwer_refresh_token", authPayload.refreshToken);
-      }
-      if (authPayload.storeToken) {
-        localStorage.setItem("storeToken", authPayload.storeToken);
-        localStorage.setItem("store_token", authPayload.storeToken);
-        localStorage.setItem("dawwer_store_token", authPayload.storeToken);
-      }
-      const rawStoreId = authPayload.storeId || authPayload.store_id;
-      const storeId = (rawStoreId && String(rawStoreId).trim().toLowerCase() !== 'null' && String(rawStoreId).trim().toLowerCase() !== 'undefined')
-        ? String(rawStoreId).trim()
-        : null;
-      if (storeId) {
-        localStorage.setItem("activeStoreId", storeId);
-        localStorage.setItem("store_id", storeId);
-        localStorage.setItem("storeId", storeId);
-        localStorage.setItem("active_store_id", storeId);
-        localStorage.setItem("dawwer_active_store_id", storeId);
-      } else {
-        localStorage.removeItem("activeStoreId");
-        localStorage.removeItem("store_id");
-        localStorage.removeItem("storeId");
-        localStorage.removeItem("active_store_id");
-        localStorage.removeItem("dawwer_active_store_id");
-      }
-      if (authPayload.storeName) {
-        localStorage.setItem("storeName", authPayload.storeName);
-        localStorage.setItem("store_name", authPayload.storeName);
-        localStorage.setItem("dawwer_store_name", authPayload.storeName);
-      }
-      Auth.saveSession(authPayload);
+    const activeToken = authPayload?.accessToken || authPayload?.token;
 
-      // Inspect authenticated user's role (from response body user.role or decoded token claims)
-      let role = authPayload.role ?? authPayload.user?.role;
+    if (authPayload && activeToken) {
+      // 2. Save accessToken, refreshToken, and userData in localStorage
+      localStorage.setItem('accessToken', activeToken);
+      localStorage.setItem('token', activeToken);
+      localStorage.setItem('dawwer_access_token', activeToken);
+      if (typeof CONFIG !== 'undefined' && CONFIG.TOKEN_KEY) {
+        localStorage.setItem(CONFIG.TOKEN_KEY, activeToken);
+      }
+
+      if (authPayload.refreshToken) {
+        localStorage.setItem('refreshToken', authPayload.refreshToken);
+        localStorage.setItem('refresh_token', authPayload.refreshToken);
+        localStorage.setItem('dawwer_refresh_token', authPayload.refreshToken);
+        if (typeof CONFIG !== 'undefined' && CONFIG.REFRESH_TOKEN_KEY) {
+          localStorage.setItem(CONFIG.REFRESH_TOKEN_KEY, authPayload.refreshToken);
+        }
+      }
+
+      // Safety rule: Do NOT call select-store automatically on login unless storeId is a verified valid GUID
+      const rawStoreId = authPayload.storeId || authPayload.store_id;
+      const isValidGuid = rawStoreId && typeof rawStoreId === 'string' &&
+        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(rawStoreId.trim()) &&
+        rawStoreId.trim() !== '00000000-0000-0000-0000-000000000000';
+      const storeId = isValidGuid ? rawStoreId.trim() : null;
+
+      if (storeId) {
+        localStorage.setItem('activeStoreId', storeId);
+        localStorage.setItem('store_id', storeId);
+        localStorage.setItem('storeId', storeId);
+      } else {
+        localStorage.removeItem('activeStoreId');
+        localStorage.removeItem('store_id');
+        localStorage.removeItem('storeId');
+        localStorage.removeItem('storeToken');
+      }
+
+      if (authPayload.storeToken) {
+        localStorage.setItem('storeToken', authPayload.storeToken);
+        localStorage.setItem('store_token', authPayload.storeToken);
+        localStorage.setItem('dawwer_store_token', authPayload.storeToken);
+      }
+
+      if (authPayload.storeName) {
+        localStorage.setItem('storeName', authPayload.storeName);
+        localStorage.setItem('store_name', authPayload.storeName);
+        localStorage.setItem('dawwer_store_name', authPayload.storeName);
+      }
+
+      let role = authPayload.role ?? authPayload.user?.role ?? authPayload.roles?.[0];
       if (role === undefined || role === null || role === '') {
         try {
           const parts = activeToken.split('.');
           if (parts.length === 3) {
             const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
             const tokenClaims = JSON.parse(decodeURIComponent(escape(atob(base64))));
-            role = tokenClaims['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || tokenClaims.role;
+            role = tokenClaims['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ||
+                   tokenClaims['http://schemas.microsoft.com/ws/2008/06/identity/claims/roles'] ||
+                   tokenClaims.role ||
+                   tokenClaims.roles;
           }
-        } catch (jwtErr) {}
+        } catch (jwtErr) {
+          console.warn('[Login] Error decoding JWT claims:', jwtErr);
+        }
       }
 
-      const isAdmin = (
-        role === 4 ||
-        role === '4' ||
-        role === 'Admin' ||
-        (typeof CONFIG !== 'undefined' && CONFIG.ROLES && (role === CONFIG.ROLES.ADMIN || role === String(CONFIG.ROLES.ADMIN)))
-      );
+      const userId = authPayload.userId || authPayload.user?.userId || authPayload.user?.id || authPayload.id || '';
+      const fullName = authPayload.fullName || authPayload.user?.fullName || authPayload.user?.name || authPayload.name || 'مستخدم دوّر';
+      const userObj = {
+        userId,
+        fullName,
+        email: authPayload.email || authPayload.user?.email || email,
+        phoneNumber: authPayload.phoneNumber || authPayload.user?.phoneNumber || '',
+        role: role ?? 2,
+        storeId,
+        storeName: authPayload.storeName || authPayload.user?.storeName || null
+      };
 
-      const isMerchant = (
-        role === 2 ||
-        role === '2' ||
-        role === 'Merchant' ||
-        (typeof CONFIG !== 'undefined' && CONFIG.ROLES && (role === CONFIG.ROLES.MERCHANT || role === String(CONFIG.ROLES.MERCHANT)))
-      );
-
-      const urlParams = new URLSearchParams(window.location.search);
-      const redirect = urlParams.get('redirect');
-
-      // Requirement 1: Smart Role-Based Routing
-      if (isAdmin) {
-        // If role === 4 (or role name === "Admin"): Redirect immediately to "/admin-dashboard.html"
-        const adminDashboardUrl = (window.location.protocol === 'file:') ? 'admin-dashboard.html' : '/admin-dashboard.html';
-        if (typeof showToast === 'function') {
-          showToast({ title: 'تسجيل دخول مسؤول', message: 'مرحباً بك! جاري نقلك إلى لوحة الإدارة المركزية...', type: 'success' });
-        }
-        window.location.href = adminDashboardUrl;
-        return;
+      if (userId) {
+        localStorage.setItem('userId', userId);
+      }
+      localStorage.setItem('role', String(role ?? ''));
+      localStorage.setItem('userRole', String(role ?? ''));
+      localStorage.setItem('userData', JSON.stringify(userObj));
+      localStorage.setItem('user', JSON.stringify(userObj));
+      localStorage.setItem('dawwer_user', JSON.stringify(userObj));
+      localStorage.setItem('dawwer_user_data', JSON.stringify(userObj));
+      if (typeof CONFIG !== 'undefined' && CONFIG.USER_KEY) {
+        localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(userObj));
       }
 
-      if (isMerchant) {
-        if (typeof showToast === 'function') {
-          showToast({ title: 'تسجيل دخول تاجر', message: 'جاري تهيئة مساحة عمل المتجر...', type: 'info' });
-        }
-
-        let storeSelected = false;
+      if (typeof Auth !== 'undefined' && typeof Auth.saveSession === 'function') {
         try {
-          // 1. Auto Store Selection on Login:
-          // Immediately after successful login for role === 2 (Merchant):
-          // Fetch the merchant's store list (GET /api/merchant/stores)
-          let stores = [];
-          if (typeof ApiClient !== 'undefined') {
-            const storesRes = await ApiClient.get('/merchant/stores').catch(() => null);
-            if (storesRes && storesRes.success && Array.isArray(storesRes.data)) {
-              stores = storesRes.data;
-            } else if (Array.isArray(storesRes)) {
-              stores = storesRes;
-            }
-          }
-
-          if (Array.isArray(stores) && stores.length > 0) {
-            // Find an approved store (verificationStatus === 5) or first available store
-            const selectedStore = stores.find(s => s.verificationStatus === 5 || s.verificationStatus === 'Approved' || s.isActive) || stores[0];
-            const storeIdToSelect = selectedStore?.id || selectedStore?.storeId;
-
-            if (storeIdToSelect) {
-              // Automatically dispatch POST /api/Auth/select-store with the store's ID
-              let selectRes = null;
-              if (typeof Auth !== 'undefined' && typeof Auth.selectStore === 'function') {
-                selectRes = await Auth.selectStore(storeIdToSelect).catch(() => null);
-              } else if (typeof ApiClient !== 'undefined' && ApiClient.auth && typeof ApiClient.auth.selectStore === 'function') {
-                selectRes = await ApiClient.auth.selectStore(storeIdToSelect).catch(() => null);
-              } else if (typeof ApiClient !== 'undefined') {
-                selectRes = await ApiClient.post('/Auth/select-store', { storeId: storeIdToSelect }).catch(() => null);
-              }
-
-              // Store the returned storeToken, active_store_id, and store profile data in localStorage
-              const selData = selectRes?.data || selectRes || {};
-              const resolvedStoreId = selData.storeId || storeIdToSelect;
-              const resolvedStoreToken = selData.storeToken || selectedStore.storeToken || null;
-              const resolvedStoreName = selData.storeName || selectedStore.name || 'المتجر الحالي';
-
-              localStorage.setItem('active_store_id', resolvedStoreId);
-              localStorage.setItem('activeStoreId', resolvedStoreId);
-              localStorage.setItem('store_id', resolvedStoreId);
-              localStorage.setItem('storeId', resolvedStoreId);
-              localStorage.setItem('dawwer_active_store_id', resolvedStoreId);
-
-              if (resolvedStoreToken) {
-                localStorage.setItem('storeToken', resolvedStoreToken);
-                localStorage.setItem('store_token', resolvedStoreToken);
-                localStorage.setItem('dawwer_store_token', resolvedStoreToken);
-              }
-
-              if (resolvedStoreName) {
-                localStorage.setItem('storeName', resolvedStoreName);
-                localStorage.setItem('store_name', resolvedStoreName);
-                localStorage.setItem('dawwer_store_name', resolvedStoreName);
-              }
-
-              const activeStoreProfile = {
-                storeId: resolvedStoreId,
-                storeName: resolvedStoreName,
-                roleName: selData.roleName || selectedStore.roleName || 'Merchant',
-                permissions: selData.permissions || selectedStore.permissions || []
-              };
-              localStorage.setItem('dawwer_active_store', JSON.stringify(activeStoreProfile));
-              if (typeof CONFIG !== 'undefined' && CONFIG.ACTIVE_STORE_KEY) {
-                localStorage.setItem(CONFIG.ACTIVE_STORE_KEY, JSON.stringify(activeStoreProfile));
-              }
-
-              storeSelected = true;
-            }
-          }
-        } catch (storeErr) {
-          console.warn('[Login] Auto store selection error:', storeErr);
-        }
-
-        if (storeSelected) {
-          if (typeof showToast === 'function') {
-            showToast({ title: 'مرحباً بك', message: 'تم تفعيل المتجر، جاري نقلك إلى لوحة التحكم...', type: 'success' });
-          }
-          // Redirect the merchant directly to the Merchant Dashboard (index.html) bypassing the select-store page entirely.
-          const dashboardUrl = (redirect && !redirect.includes('select-store.html') && !redirect.includes('login.html'))
-            ? redirect
-            : ((window.location.protocol === 'file:') ? 'index.html' : '/index.html');
-          window.location.href = dashboardUrl;
-          return;
-        } else {
-          // If no store exists yet, redirect to the store registration page (merchant-application.html)
-          if (typeof showToast === 'function') {
-            showToast({ title: 'تسجيل المتجر مطلوب', message: 'لم يتم العثور على متجر مسجل. جاري نقلك لتقديم طلب انضمام متجر...', type: 'info' });
-          }
-          const regUrl = (window.location.protocol === 'file:') ? 'merchant-application.html' : '/merchant-application.html';
-          window.location.href = regUrl;
-          return;
-        }
+          Auth.saveSession({ ...authPayload, role, user: userObj });
+        } catch (sessionErr) {}
       }
 
-      // For other roles (Customer): Redirect to the main customer view/marketplace
-      const marketplaceUrl = (redirect && !redirect.includes('login.html'))
-        ? redirect
-        : ((window.location.protocol === 'file:') ? 'index.html' : '/index.html');
       if (typeof showToast === 'function') {
-        showToast({ title: 'تسجيل دخول ناجح', message: 'مرحباً بك مجدداً في منصة دوّر', type: 'success' });
+        showToast({ title: 'تسجيل دخول ناجح', message: 'مرحباً بك في دوّر', type: 'success' });
       }
-      window.location.href = marketplaceUrl;
+
+      // Redirect to select-store.html (or redirect URL if explicitly provided)
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirect = urlParams.get('redirect') || urlParams.get('returnUrl');
+      const targetUrl = (redirect && !redirect.includes('login.html') && !redirect.includes('register.html') && !redirect.includes('index.html'))
+        ? redirect
+        : 'select-store.html';
+
+      setTimeout(() => {
+        window.location.replace(targetUrl);
+      }, 350);
       return;
     } else {
-      throw new Error(response.message || 'بيانات الدخول غير صحيحة.');
+      throw new Error('بيانات الدخول غير صحيحة.');
     }
   } catch (err) {
-    const resData = err.data || (err.response ? err.response.data : null) || err.response;
-    const msg = (err.message || '').toLowerCase();
+    // Catch errors cleanly without referencing undefined helper functions
+    const resData = err?.data || (err?.response ? err.response.data : null) || err?.response;
+    const msg = (err?.message || '').toLowerCase();
 
     const isUnverifiedError = 
-      (err.message && err.message.toLowerCase().includes('email verification required')) ||
+      (err?.message && err.message.toLowerCase().includes('email verification required')) ||
       msg.includes('email verification required') ||
       msg.includes('verification required') ||
       msg.includes('unconfirmed') ||
@@ -351,6 +323,7 @@ async function handleLogin(event) {
       if (errorBox) {
         errorBox.innerHTML = 'البريد الإلكتروني بحاجة إلى تأكيد، جاري تحويلك لصفحة التحقق...';
         errorBox.className = 'mb-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-bold block';
+        errorBox.classList.remove('hidden');
       }
       if (typeof showToast === 'function') {
         showToast({ title: 'التحقق مطلوب', message: 'يرجى تأكيد بريدك الإلكتروني', type: 'warning' });
@@ -366,10 +339,11 @@ async function handleLogin(event) {
       return;
     }
 
-    const errorMsg = err.message || 'حدث خطأ أثناء تسجيل الدخول.';
+    const errorMsg = (err && err.message) || (typeof err === 'string' ? err : 'حدث خطأ أثناء تسجيل الدخول.');
     if (errorBox) {
-      errorBox.innerHTML = errorMsg;
+      errorBox.textContent = errorMsg;
       errorBox.className = 'mb-4 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-bold block';
+      errorBox.classList.remove('hidden');
     }
     if (typeof showToast === 'function') {
       showToast({ title: 'تعذر الدخول', message: errorMsg, type: 'error' });
@@ -379,4 +353,8 @@ async function handleLogin(event) {
       btn.disabled = false;
     }
   }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { handleLogin, escapeHtml };
 }

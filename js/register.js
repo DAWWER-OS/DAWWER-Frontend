@@ -48,37 +48,30 @@ async function handleRegister(event) {
       email,
       phoneNumber,
       password,
-      role: CONFIG.ROLES.MERCHANT
+      role: 2
     };
 
-    const response = await ApiClient.post('/Auth/register', payload, {}, { throwOnError: false });
-
-    // Unpack ApiResponse envelope
-    if (!response || response.success === false) {
-      const errList = Array.isArray(response?.errors) && response.errors.length > 0
-        ? response.errors
-        : (response?.data?.errors || (response?.message ? [response.message] : ['حدث خطأ أثناء إنشاء الحساب.']));
-      const errorMsg = Array.isArray(errList) ? errList.join(' | ') : String(errList);
-      throw new Error(errorMsg);
+    let data;
+    if (window.ApiClient && ApiClient.core) {
+      data = await ApiClient.core('/Auth/register', {
+        method: 'POST',
+        body: payload
+      });
+    } else {
+      const response = await ApiClient.post('/Auth/register', payload, {}, { throwOnError: true });
+      data = response?.data || response;
     }
 
-    const data = response.data || {};
-    const preview = data.verificationCodePreview || data.previewCode || data.code || response.verificationCodePreview || '';
-
+    sessionStorage.setItem('email', email);
     sessionStorage.setItem('dawwer_registered_email', email);
-    if (data.userId) {
+
+    if (data && data.userId) {
       localStorage.setItem('userId', data.userId);
     }
-    const regToken = data.accessToken || data.token;
-    if (regToken) {
-      localStorage.setItem('token', regToken);
-      localStorage.setItem('accessToken', regToken);
-      localStorage.setItem('dawwer_access_token', regToken);
-    }
 
-    const successMsg = response.message || 'تم إنشاء الحساب بنجاح! جاري تحويلك لصفحة تفعيل الحساب...';
+    const successMsg = 'تم إنشاء الحساب بنجاح! جاري تحويلك لصفحة تفعيل الحساب...';
     if (msgBox) {
-      msgBox.innerHTML = successMsg;
+      msgBox.textContent = successMsg;
       msgBox.className = 'mb-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-bold block';
     }
     if (typeof showToast === 'function') {
@@ -86,16 +79,12 @@ async function handleRegister(event) {
     }
 
     setTimeout(() => {
-      if (preview) {
-        window.location.href = `verify-account.html?email=${encodeURIComponent(email)}&previewCode=${encodeURIComponent(preview)}`;
-      } else {
-        window.location.href = `verify-account.html?email=${encodeURIComponent(email)}`;
-      }
-    }, 1200);
+      window.location.href = `verify-account.html?email=${encodeURIComponent(email)}`;
+    }, 1000);
   } catch (err) {
-    const errorMsg = err.message || 'حدث خطأ أثناء إنشاء الحساب.';
+    const errorMsg = (err && (err.message || (Array.isArray(err.errors) ? err.errors.join(' | ') : null))) || 'حدث خطأ أثناء إنشاء الحساب.';
     if (msgBox) {
-      msgBox.innerHTML = errorMsg;
+      msgBox.textContent = errorMsg;
       msgBox.className = 'mb-4 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-bold block';
     }
     if (typeof showToast === 'function') {

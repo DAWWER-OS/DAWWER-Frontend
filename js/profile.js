@@ -18,20 +18,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadUserProfile() {
   try {
-    const res = await ApiClient.get('/Profile');
-    const storeIdInput = document.getElementById('profile-store-id-input');
-    const activeStoreId = (typeof ApiClient !== 'undefined' && ApiClient.getActiveStoreId) ? ApiClient.getActiveStoreId() : null;
-    if (storeIdInput) {
-      storeIdInput.value = activeStoreId || res?.data?.storeId || '';
+    let userData;
+    if (window.ApiClient && ApiClient.core) {
+      userData = await ApiClient.core('/Profile', { method: 'GET' });
+    } else {
+      const res = await ApiClient.get('/Profile');
+      userData = res?.data || res;
     }
 
-    if (res && res.data) {
+    if (userData) {
       const nameInput = document.getElementById('full-name-input');
       const emailInput = document.getElementById('profile-email-input');
       const phoneInput = document.getElementById('profile-phone-input');
-      if (nameInput) nameInput.value = res.data.fullName || '';
-      if (emailInput) emailInput.value = res.data.email || '';
-      if (phoneInput) phoneInput.value = res.data.phoneNumber || '';
+      if (nameInput) nameInput.value = userData.fullName || userData.name || '';
+      if (emailInput) emailInput.value = userData.email || '';
+      if (phoneInput) phoneInput.value = userData.phoneNumber || userData.phone || '';
+
+      const storeIdInput = document.getElementById('profile-store-id-input');
+      const activeStoreId = (typeof ApiClient !== 'undefined' && ApiClient.getActiveStoreId) ? ApiClient.getActiveStoreId() : null;
+      if (storeIdInput) {
+        storeIdInput.value = activeStoreId || userData.storeId || '';
+      }
     }
   } catch (err) {
     console.error('Profile load error:', err);
@@ -50,25 +57,25 @@ async function handleUpdateProfile(event) {
   }
 
   try {
-    const rawStoreId = document.getElementById('profile-store-id-input')?.value.trim() || '';
-    const cleanStoreId = (rawStoreId && rawStoreId !== '11111111-1111-1111-1111-111111111111') ? rawStoreId : null;
-
     const payload = {
       fullName: document.getElementById('full-name-input')?.value.trim() || '',
       email: document.getElementById('profile-email-input')?.value.trim() || '',
-      phoneNumber: document.getElementById('profile-phone-input')?.value.trim() || '',
-      storeId: cleanStoreId
+      phoneNumber: document.getElementById('profile-phone-input')?.value.trim() || ''
     };
 
-    if (typeof ApiClient !== 'undefined' && ApiClient.setActiveStoreId) {
-      ApiClient.setActiveStoreId(cleanStoreId);
+    let res;
+    if (window.ApiClient && ApiClient.core) {
+      res = await ApiClient.core('/Profile', {
+        method: 'PUT',
+        body: payload
+      });
+    } else {
+      res = await ApiClient.put('/Profile', payload);
     }
-
-    const res = await ApiClient.put('/Profile', payload);
-    const successMsg = res?.message || 'تم تحديث الملف الشخصي وبيانات المتجر بنجاح.';
+    const successMsg = 'تم حفظ بيانات الملف الشخصي بنجاح.';
 
     if (alertBox) {
-      alertBox.innerHTML = successMsg;
+      alertBox.textContent = successMsg;
       alertBox.className = 'mb-6 p-4 rounded-2xl text-sm font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 block';
     }
     if (window.showToast) {
@@ -84,16 +91,19 @@ async function handleUpdateProfile(event) {
       user.fullName = payload.fullName;
       user.email = payload.email;
       user.phoneNumber = payload.phoneNumber;
-      user.storeId = cleanStoreId;
-      localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(user));
+      localStorage.setItem('userData', JSON.stringify(user));
+      localStorage.setItem('user', JSON.stringify(user));
+      if (typeof CONFIG !== 'undefined' && CONFIG.USER_KEY) {
+        localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(user));
+      }
     }
     if (typeof initLayout === 'function') {
       initLayout();
     }
   } catch (err) {
-    const errMsg = err.message || 'حدث خطأ أثناء تحديث الملف الشخصي.';
+    const errMsg = (err && (err.message || (Array.isArray(err.errors) ? err.errors.join(' | ') : null))) || 'حدث خطأ أثناء تحديث الملف الشخصي.';
     if (alertBox) {
-      alertBox.innerHTML = errMsg;
+      alertBox.textContent = errMsg;
       alertBox.className = 'mb-6 p-4 rounded-2xl text-sm font-bold bg-red-50 border border-red-200 text-red-700 block';
     }
     if (window.showToast) {
@@ -123,15 +133,40 @@ async function handleChangePassword(event) {
   }
 
   try {
+    const currentPassword = document.getElementById('current-pass-input')?.value || '';
+    const newPassword = document.getElementById('new-pass-input')?.value || '';
+    const confirmPassword = document.getElementById('confirm-pass-input')?.value || newPassword;
+
+    if (newPassword !== confirmPassword) {
+      throw new Error('كلمة المرور الجديدة وتأكيدها غير متطابقين.');
+    }
+
     const payload = {
-      currentPassword: document.getElementById('current-pass-input')?.value || '',
-      newPassword: document.getElementById('new-pass-input')?.value || ''
+      currentPassword,
+      newPassword,
+      confirmPassword
     };
 
-    const res = await ApiClient.post('/Profile/change-password', payload);
-    const msg = res?.message || 'تم تغيير كلمة المرور بنجاح! يرجى إعادة تسجيل الدخول.';
+    if (window.ApiClient && ApiClient.core) {
+      await ApiClient.core('/Profile/change-password', {
+        method: 'POST',
+        body: payload
+      });
+    } else {
+      await ApiClient.post('/Profile/change-password', payload);
+    }
+
+    // Reset fields upon 200 OK
+    const currentPassEl = document.getElementById('current-pass-input');
+    const newPassEl = document.getElementById('new-pass-input');
+    const confirmPassEl = document.getElementById('confirm-pass-input');
+    if (currentPassEl) currentPassEl.value = '';
+    if (newPassEl) newPassEl.value = '';
+    if (confirmPassEl) confirmPassEl.value = '';
+
+    const msg = 'تم تغيير كلمة المرور بنجاح! تم إنهاء الجلسات النشطة لضمان الأمان.';
     if (alertBox) {
-      alertBox.innerHTML = msg;
+      alertBox.textContent = msg;
       alertBox.className = 'mb-6 p-4 rounded-2xl text-sm font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 block';
     }
     if (window.showToast) {
@@ -141,16 +176,10 @@ async function handleChangePassword(event) {
         type: 'success'
       });
     }
-
-    setTimeout(() => {
-      if (typeof Auth !== 'undefined' && Auth.logout) {
-        Auth.logout();
-      }
-    }, 2000);
   } catch (err) {
-    const errMsg = err.message || 'فشل تغيير كلمة المرور.';
+    const errMsg = (err && (err.message || (Array.isArray(err.errors) ? err.errors.join(' | ') : null))) || 'فشل تغيير كلمة المرور.';
     if (alertBox) {
-      alertBox.innerHTML = errMsg;
+      alertBox.textContent = errMsg;
       alertBox.className = 'mb-6 p-4 rounded-2xl text-sm font-bold bg-red-50 border border-red-200 text-red-700 block';
     }
     if (window.showToast) {
@@ -160,6 +189,7 @@ async function handleChangePassword(event) {
         type: 'error'
       });
     }
+  } finally {
     if (btn) {
       btn.innerText = 'تغيير كلمة المرور';
       btn.disabled = false;

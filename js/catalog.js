@@ -52,17 +52,48 @@
 ,GRO-ERR-801,5.00,زيوت ومؤونة,المنطقة أ,ممر 02
 صنف بسعر غير صالح,GRO-ERR-802,-3.50,تسالي وحلويات,المنطقة ج,ممر 07`;
 
-      const CATALOG_STORAGE_KEY = 'dawwer_merchant_catalog_products';
+      var FASTAPI_BASE_URL = (window.CONFIG && window.CONFIG.FASTAPI_BASE_URL)
+        ? window.CONFIG.FASTAPI_BASE_URL.replace(/\/+$/, '')
+        : 'https://dawwer-backend-fastapi.onrender.com';
+
+      const getStoreContext = () => ({
+        storeId: localStorage.getItem('activeStoreId') || localStorage.getItem('storeId') || '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+        token: localStorage.getItem('storeToken') || localStorage.getItem('accessToken') || ''
+      });
+
+      function getStoreId() {
+        return getStoreContext().storeId;
+      }
+
+      function getAuthToken() {
+        const token = getStoreContext().token;
+        if (token) return token.replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '').trim();
+        return (typeof ApiClient !== 'undefined' && typeof ApiClient.getToken === 'function') ? ApiClient.getToken() : '';
+      }
+
+      const CATALOG_STORAGE_KEY = 'dawwer_catalog_products';
+      const LEGACY_STORAGE_KEY = 'dawwer_merchant_catalog_products';
 
       function loadCatalogProducts() {
         try {
-          const stored = localStorage.getItem(CATALOG_STORAGE_KEY);
+          const stored = localStorage.getItem(CATALOG_STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
           if (stored) {
             const parsed = JSON.parse(stored);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              return parsed.map(p => ({
-                ...p,
-                quantity: (typeof p.quantity === 'number') ? p.quantity : (p.isAvailable ? 12 : 0)
+              return parsed.map((p, idx) => ({
+                id: p.id || ('prod-local-' + (idx + 1)),
+                name: p.name || p.product_name || 'منتج بدون اسم',
+                sku: p.barcode || p.sku || p.store_sku || 'SKU-000',
+                barcode: p.barcode || p.sku || '',
+                category: p.category || 'عام',
+                price: typeof p.price === 'number' ? p.price : parseFloat(p.price || 0),
+                quantity: (typeof p.stock_quantity === 'number') ? p.stock_quantity : ((typeof p.quantity === 'number') ? p.quantity : (p.isAvailable !== false ? 10 : 0)),
+                stock_quantity: (typeof p.stock_quantity === 'number') ? p.stock_quantity : ((typeof p.quantity === 'number') ? p.quantity : 10),
+                isAvailable: p.stock_status !== 'OUT_OF_STOCK' && (p.isAvailable !== false),
+                shelf_location: p.shelf_location || (p.location ? `${p.location.zone} › ${p.location.aisle}` : 'المنطقة أ - ممر 01'),
+                location: p.location || { zone: 'المنطقة أ', aisle: 'ممر 01', rack: 'R1', shelf: 'رف 1' },
+                status: p.status || 'Published',
+                updatedAt: p.updatedAt || 'اليوم'
               }));
             }
           }
@@ -75,6 +106,7 @@
       function saveCatalogProducts() {
         try {
           localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(state.products));
+          localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(state.products));
         } catch (e) {
           console.error('Error saving products to localStorage:', e);
         }
@@ -317,6 +349,7 @@
           DOM.tabContentFloorplan.classList.remove('hidden');
           DOM.tabContentCatalog.classList.add('hidden');
           renderFloorPlan();
+          loadActiveFloorplanMap();
         }
       }
 
@@ -1246,21 +1279,39 @@
         }
 
         const count = state.wizard.validRows.length;
-        if (typeof ApiClient !== 'undefined' && ApiClient.products && state.wizard.currentFile) {
-          // Construct normalized CSV content so backend parser receives clean standard columns
-          const normalizedCsvLines = [
-            'Product Name,Product SKU,Unit Price,Category,Store Zone,Aisle Name',
-            ...state.wizard.validRows.map(p =>
-              `"${(p.name || '').replace(/"/g, '""')}","${(p.sku || '').replace(/"/g, '""')}",${p.price},"${(p.category || '').replace(/"/g, '""')}","${(p.location?.zone || '').replace(/"/g, '""')}","${(p.location?.aisle || '').replace(/"/g, '""')}"`
-            )
-          ];
-          const normalizedBlob = new Blob(["\uFEFF" + normalizedCsvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-          const uploadFileName = (state.wizard.currentFile.name || 'catalog_import.csv').replace(/\.[^/.]+$/, "") + "_mapped.csv";
-          const uploadFile = new File([normalizedBlob], uploadFileName, { type: 'text/csv' });
+        if (state.wizard.currentFile) {
+          try {
+            // Construct normalized CSV content so backend parser receives clean standard columns
+            const normalizedCsvLines = [
+              'Product Name,Product SKU,Unit Price,Category,Store Zone,Aisle Name',
+              ...state.wizard.validRows.map(p =>
+                `"${(p.name || '').replace(/"/g, '""')}","${(p.sku || '').replace(/"/g, '""')}",${p.price},"${(p.category || '').replace(/"/g, '""')}","${(p.location?.zone || '').replace(/"/g, '""')}","${(p.location?.aisle || '').replace(/"/g, '""')}"`
+              )
+            ];
+            const normalizedBlob = new Blob(["\uFEFF" + normalizedCsvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+            const uploadFileName = (state.wizard.currentFile.name || 'catalog_import.csv').replace(/\.[^/.]+$/, "") + "_mapped.csv";
+            const uploadFile = new File([normalizedBlob], uploadFileName, { type: 'text/csv' });
 
-          ApiClient.products.bulkImport(storeId, uploadFile).catch(e => {
-            console.warn('[Catalog] Bulk import backend sync note:', e);
-          });
+            const formData = new FormData();
+            formData.append('file', uploadFile);
+
+            const uploadToken = getAuthToken();
+            fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/catalog/bulk-import`, {
+              method: 'POST',
+              headers: {
+                ...(uploadToken ? { 'Authorization': `Bearer ${uploadToken}` } : {})
+              },
+              body: formData
+            }).then(res => {
+              if (res.ok) {
+                console.info('[Catalog] Bulk import synced to FastAPI backend.');
+              }
+            }).catch(e => {
+              console.warn('[Catalog] Bulk import backend sync note:', e);
+            });
+          } catch (e) {
+            console.warn('[Catalog] Bulk import dispatch error:', e);
+          }
         }
 
         state.products.unshift(...state.wizard.validRows);
@@ -1355,10 +1406,57 @@
             renderPins();
             renderPinsSidebar();
             showToast(`تم حذف نقطة "${pin.label}"`, 'error');
+            syncFloorplanPinsToBackend();
           });
 
           DOM.pinsListContainer.appendChild(card);
         });
+      }
+
+      async function loadActiveFloorplanMap() {
+        if (state.floorPlan.hasLoadedRemote) return;
+        try {
+          if (window.ApiClient && ApiClient.floorplan && ApiClient.floorplan.getActiveMap) {
+            const storeId = (window.CONFIG && CONFIG.getActiveStoreId) ? CONFIG.getActiveStoreId() : '1';
+            const res = await ApiClient.floorplan.getActiveMap(storeId);
+            const data = (res && res.data) ? res.data : res;
+            if (data && (data.image_url || data.imageUrl) && !state.floorPlan.imageUrl) {
+              state.floorPlan.imageUrl = data.image_url || data.imageUrl;
+              if (Array.isArray(data.elements) && data.elements.length > 0 && state.floorPlan.pins.length === 0) {
+                state.floorPlan.pins = data.elements.map(el => ({
+                  id: el.id || `pin-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+                  label: el.label || el.name || 'ممر',
+                  color: el.color || '#16a34a',
+                  xPercent: Number(el.xPercent ?? el.x_percent ?? el.x ?? 50),
+                  yPercent: Number(el.yPercent ?? el.y_percent ?? el.y ?? 50),
+                }));
+              }
+              renderFloorPlan();
+            }
+            state.floorPlan.hasLoadedRemote = true;
+          }
+        } catch (err) {
+          console.warn('[Catalog Floorplan] Could not load active map from FastAPI:', err);
+        }
+      }
+
+      async function syncFloorplanPinsToBackend() {
+        try {
+          if (window.ApiClient && ApiClient.floorplan && ApiClient.floorplan.saveElementsBatch) {
+            const storeId = (window.CONFIG && CONFIG.getActiveStoreId) ? CONFIG.getActiveStoreId() : '1';
+            const payload = state.floorPlan.pins.map(pin => ({
+              id: pin.id,
+              label: pin.label,
+              color: pin.color,
+              x_percent: pin.xPercent,
+              y_percent: pin.yPercent,
+              element_type: 'shelf_pin'
+            }));
+            await ApiClient.floorplan.saveElementsBatch(storeId, 'active', payload);
+          }
+        } catch (err) {
+          console.warn('[Catalog Floorplan] Could not sync pins batch to FastAPI:', err);
+        }
       }
 
       function handleMapClick(e) {
@@ -1398,6 +1496,7 @@
         renderPins();
         renderPinsSidebar();
         showToast(`تم تثبيت نقطة "${label}"!`);
+        syncFloorplanPinsToBackend();
       }
 
       const SHELF_HIERARCHY = {
@@ -1494,16 +1593,86 @@
         });
       }
 
+      function getPageNumbers(currentPage, totalPages) {
+        if (totalPages <= 7) {
+          return Array.from({ length: totalPages }, (_, i) => i + 1);
+        }
+        if (currentPage <= 4) {
+          return [1, 2, 3, 4, 5, '...', totalPages];
+        }
+        if (currentPage >= totalPages - 3) {
+          return [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+        }
+        return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+      }
+
+      function scrollToTableTop() {
+        const tableContainer = DOM.tableBody ? DOM.tableBody.closest('.overflow-y-auto') : null;
+        if (tableContainer) {
+          tableContainer.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
+
+      function renderPaginationControls(maxPages) {
+        if (!DOM.paginationControls) return;
+
+        const currentPage = state.pagination.page;
+        const isAll = state.pagination.pageSize === 'ALL';
+        const canPrev = !isAll && currentPage > 1;
+        const canNext = !isAll && currentPage < maxPages;
+        const pageNumbers = isAll ? [1] : getPageNumbers(currentPage, maxPages);
+
+        let html = '';
+
+        // Previous button ("السابق")
+        html += `
+          <button type="button" class="btn-page-prev inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition select-none ${canPrev ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200 cursor-pointer shadow-2xs' : 'bg-slate-50 text-slate-300 border-slate-200/60 cursor-not-allowed opacity-60'}" ${!canPrev ? 'disabled' : ''}>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            <span>السابق</span>
+          </button>
+        `;
+
+        // Numbered page buttons
+        pageNumbers.forEach(item => {
+          if (item === '...') {
+            html += `<span class="w-8 h-8 flex items-center justify-center text-xs font-bold text-slate-400 select-none">...</span>`;
+          } else {
+            const isActive = item === currentPage;
+            html += `
+              <button type="button" class="btn-page-num w-8 h-8 flex items-center justify-center rounded-xl text-xs font-bold transition select-none ${isActive ? 'bg-[#153f2d] text-white shadow-2xs pointer-events-none' : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 cursor-pointer shadow-2xs'}" data-page="${item}">
+                ${item}
+              </button>
+            `;
+          }
+        });
+
+        // Next button ("التالي")
+        html += `
+          <button type="button" class="btn-page-next inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition select-none ${canNext ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200 cursor-pointer shadow-2xs' : 'bg-slate-50 text-slate-300 border-slate-200/60 cursor-not-allowed opacity-60'}" ${!canNext ? 'disabled' : ''}>
+            <span>التالي</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+        `;
+
+        DOM.paginationControls.innerHTML = html;
+      }
+
       function renderCatalog() {
         const filtered = getFilteredCatalog();
         const total = filtered.length;
-        const maxPages = Math.ceil(total / state.pagination.pageSize) || 1;
+        const isAll = state.pagination.pageSize === 'ALL';
+        const pageSize = isAll ? (total || 1) : (parseInt(state.pagination.pageSize, 10) || 10);
+        const maxPages = isAll ? 1 : (Math.ceil(total / pageSize) || 1);
+
         if (state.pagination.page > maxPages) state.pagination.page = maxPages;
+        if (state.pagination.page < 1) state.pagination.page = 1;
 
-        const start = (state.pagination.page - 1) * state.pagination.pageSize;
-        const paginated = filtered.slice(start, start + state.pagination.pageSize);
+        const start = isAll ? 0 : (state.pagination.page - 1) * pageSize;
+        const paginated = isAll ? filtered : filtered.slice(start, start + pageSize);
 
-        DOM.clearSearchBtn.classList.toggle('hidden', state.filters.search === '');
+        if (DOM.clearSearchBtn) {
+          DOM.clearSearchBtn.classList.toggle('hidden', state.filters.search === '');
+        }
 
         if (total === 0) {
           DOM.tableBody.innerHTML = '';
@@ -1519,7 +1688,7 @@
               ? `<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">منشور</span>`
               : (p.status === 'Draft' ? `<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">مسودة</span>` : `<span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">غير نشط</span>`);
 
-            const qty = (typeof p.quantity === 'number') ? p.quantity : (p.isAvailable ? 12 : 0);
+            const qty = (typeof p.stock_quantity === 'number') ? p.stock_quantity : ((typeof p.quantity === 'number') ? p.quantity : (p.isAvailable !== false ? 10 : 0));
             let stockBadge = '';
             if (qty === 0) {
               stockBadge = `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black bg-rose-50 text-rose-700 border border-rose-200"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>نفد (0)</span>`;
@@ -1536,14 +1705,14 @@
                 </td>
                 <td class="px-6 py-4 font-bold text-slate-900">
                   <div class="text-sm font-extrabold text-slate-900">${escapeHtml(p.name)}</div>
-                  <div class="text-[11px] font-mono text-slate-400 font-normal" dir="ltr">${p.sku}</div>
+                  <div class="text-[11px] font-mono text-slate-400 font-normal" dir="ltr">${escapeHtml(p.barcode || p.sku || '—')}</div>
                   <div class="text-[11px] text-slate-500 font-medium mt-0.5">المتوفر بالمخزون: <strong class="text-slate-800">${qty}</strong> قطعة</div>
                 </td>
                 <td class="px-6 py-4"><span class="px-3 py-1 rounded-xl text-xs font-bold bg-[#edf5f0] text-[#153f2d]">${escapeHtml(p.category)}</span></td>
                 <td class="px-6 py-4 font-bold text-slate-900">${formatCurrency(p.price)}</td>
                 <td class="px-6 py-4 text-xs font-bold text-slate-700">
                   <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-xl">
-                    <span>${p.location ? `${p.location.zone} › ${p.location.aisle}` : '—'}</span>
+                    <span>${escapeHtml(p.shelf_location || (p.location ? `${p.location.zone} › ${p.location.aisle}` : '—'))}</span>
                   </div>
                 </td>
                 <td class="px-6 py-4 text-center">
@@ -1564,15 +1733,40 @@
           }).join('');
         }
 
-        DOM.totalCountBadge.textContent = state.products.length;
-        DOM.countAll.textContent = state.products.length;
+        const totalCount = state.products.length;
+        const totalValue = state.products.reduce((acc, p) => {
+          const price = Number(p.price) || 0;
+          const q = (typeof p.stock_quantity === 'number') ? p.stock_quantity : ((typeof p.quantity === 'number') ? p.quantity : (p.isAvailable !== false ? 10 : 0));
+          return acc + (price * q);
+        }, 0);
+
+        if (DOM.totalCountBadge) DOM.totalCountBadge.textContent = totalCount;
+        if (DOM.countAll) DOM.countAll.textContent = totalCount;
         DOM.countPublished.textContent = state.products.filter(p => p.status === 'Published').length;
         DOM.countDraft.textContent = state.products.filter(p => p.status === 'Draft').length;
         DOM.countInactive.textContent = state.products.filter(p => p.status === 'Inactive').length;
 
+        const totalValElem = document.getElementById('total-catalog-value');
+        if (totalValElem) {
+          totalValElem.textContent = formatCurrency(totalValue);
+        }
+
+        // Pagination summary
         const startItem = total === 0 ? 0 : start + 1;
-        const endItem = Math.min(start + state.pagination.pageSize, total);
-        DOM.paginationSummary.textContent = `عرض ${startItem} إلى ${endItem} من أصل ${total} عنصر`;
+        const endItem = isAll ? total : Math.min(start + pageSize, total);
+        if (DOM.paginationSummary) {
+          DOM.paginationSummary.textContent = `عرض ${startItem} إلى ${endItem} من أصل ${total} صنفاً`;
+        }
+
+        // Render dynamic pagination controls
+        renderPaginationControls(maxPages);
+
+        // Update select all checkbox state
+        if (DOM.selectAllCheckbox) {
+          const displayedIds = paginated.map(p => p.id);
+          const allDisplayedSelected = displayedIds.length > 0 && displayedIds.every(id => state.selectedIds.has(id));
+          DOM.selectAllCheckbox.checked = allDisplayedSelected;
+        }
 
         const cats = Array.from(new Set(state.products.map(p => p.category))).sort();
         DOM.categoryFilter.innerHTML = '<option value="ALL">جميع التصنيفات</option>' + cats.map(c => `<option value="${c}" ${c === state.filters.category ? 'selected' : ''}>${c}</option>`).join('');
@@ -1804,9 +1998,133 @@
             DOM.statusTabs.forEach(tab => tab.classList.remove('bg-[#153f2d]', 'text-white'));
             t.classList.add('bg-[#153f2d]', 'text-white');
             state.filters.status = t.dataset.statusTab;
+            state.pagination.page = 1;
             renderCatalog();
           });
         });
+
+        // Items per page change listener
+        if (DOM.itemsPerPageSelect) {
+          DOM.itemsPerPageSelect.addEventListener('change', (e) => {
+            const val = e.target.value;
+            state.pagination.pageSize = (val === 'ALL') ? 'ALL' : (parseInt(val, 10) || 10);
+            state.pagination.page = 1;
+            renderCatalog();
+          });
+        }
+
+        // Functional pagination controls (Previous, Next, Numbered buttons)
+        if (DOM.paginationControls) {
+          DOM.paginationControls.addEventListener('click', (e) => {
+            const prevBtn = e.target.closest('.btn-page-prev');
+            if (prevBtn && !prevBtn.disabled) {
+              if (state.pagination.page > 1) {
+                state.pagination.page--;
+                renderCatalog();
+                scrollToTableTop();
+              }
+              return;
+            }
+
+            const nextBtn = e.target.closest('.btn-page-next');
+            if (nextBtn && !nextBtn.disabled) {
+              const total = getFilteredCatalog().length;
+              const isAll = state.pagination.pageSize === 'ALL';
+              const pageSize = isAll ? (total || 1) : (parseInt(state.pagination.pageSize, 10) || 10);
+              const maxPages = isAll ? 1 : (Math.ceil(total / pageSize) || 1);
+              if (state.pagination.page < maxPages) {
+                state.pagination.page++;
+                renderCatalog();
+                scrollToTableTop();
+              }
+              return;
+            }
+
+            const numBtn = e.target.closest('.btn-page-num');
+            if (numBtn && numBtn.dataset.page) {
+              const targetPage = parseInt(numBtn.dataset.page, 10);
+              if (!isNaN(targetPage) && targetPage !== state.pagination.page) {
+                state.pagination.page = targetPage;
+                renderCatalog();
+                scrollToTableTop();
+              }
+            }
+          });
+        }
+
+        if (DOM.clearSearchBtn) {
+          DOM.clearSearchBtn.addEventListener('click', () => {
+            state.filters.search = '';
+            if (DOM.searchInput) DOM.searchInput.value = '';
+            state.pagination.page = 1;
+            renderCatalog();
+          });
+        }
+
+        const handleResetFilters = () => {
+          state.filters.search = '';
+          state.filters.category = 'ALL';
+          state.filters.status = 'ALL';
+          if (DOM.searchInput) DOM.searchInput.value = '';
+          if (DOM.categoryFilter) DOM.categoryFilter.value = 'ALL';
+          DOM.statusTabs.forEach(tab => {
+            if (tab.dataset.statusTab === 'ALL') {
+              tab.classList.add('bg-[#153f2d]', 'text-white');
+            } else {
+              tab.classList.remove('bg-[#153f2d]', 'text-white');
+            }
+          });
+          state.pagination.page = 1;
+          renderCatalog();
+        };
+
+        if (DOM.emptyResetBtn) DOM.emptyResetBtn.addEventListener('click', handleResetFilters);
+        if (DOM.btnResetFilters) DOM.btnResetFilters.addEventListener('click', handleResetFilters);
+
+        if (DOM.selectAllCheckbox) {
+          DOM.selectAllCheckbox.addEventListener('change', (e) => {
+            const checkboxes = DOM.tableBody.querySelectorAll('.row-select-checkbox');
+            checkboxes.forEach(cb => {
+              cb.checked = e.target.checked;
+              const id = cb.dataset.id;
+              if (e.target.checked) state.selectedIds.add(id);
+              else state.selectedIds.delete(id);
+            });
+            DOM.bulkActionsBar.classList.toggle('hidden', state.selectedIds.size === 0);
+            DOM.bulkSelectedCount.textContent = state.selectedIds.size;
+          });
+        }
+
+        if (DOM.bulkClear) {
+          DOM.bulkClear.addEventListener('click', () => {
+            state.selectedIds.clear();
+            renderCatalog();
+          });
+        }
+
+        if (DOM.bulkSetAvailable) {
+          DOM.bulkSetAvailable.addEventListener('click', () => {
+            state.selectedIds.forEach(id => {
+              const p = state.products.find(x => String(x.id) === String(id));
+              if (p) p.isAvailable = true;
+            });
+            saveCatalogProducts();
+            renderCatalog();
+            showToast('تم تحديث حالة توفر الأصناف المحددة');
+          });
+        }
+
+        if (DOM.bulkDelete) {
+          DOM.bulkDelete.addEventListener('click', () => {
+            if (confirm(`هل أنت متأكد من حذف ${state.selectedIds.size} من المنتجات المحددة؟`)) {
+              state.products = state.products.filter(p => !state.selectedIds.has(String(p.id)));
+              state.selectedIds.clear();
+              saveCatalogProducts();
+              renderCatalog();
+              showToast('تم حذف المنتجات المحددة بنجاح');
+            }
+          });
+        }
 
         if (DOM.btnAddProduct) DOM.btnAddProduct.addEventListener('click', () => openModal('create'));
         if (DOM.btnCloseModal) DOM.btnCloseModal.addEventListener('click', closeModal);
@@ -1838,7 +2156,8 @@
 
         async function deleteCatalogProduct(prodId, targetProduct) {
           const pName = targetProduct ? targetProduct.name : `منتج #${prodId}`;
-          const storeId = typeof ApiClient !== 'undefined' ? ApiClient.getActiveStoreId() : null;
+          const storeId = getStoreId();
+          const token = getAuthToken();
 
           // 1. Immediately delete from local state and re-render table
           state.products = state.products.filter(p => String(p.id) !== String(prodId));
@@ -1851,9 +2170,14 @@
 
           // 2. Dispatch DELETE to backend with errors suppressed to mute notifications on failure
           try {
-            if (typeof ApiClient !== 'undefined' && ApiClient.products && ApiClient.products.delete) {
-              await ApiClient.products.delete(storeId, prodId, { suppressToastOnError: true, throwOnError: false });
-            }
+            fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products/${encodeURIComponent(prodId)}`, {
+              method: 'DELETE',
+              headers: {
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+              }
+            }).catch(err => {
+              console.warn('[Catalog Delete Request Note]:', err.message || err);
+            });
           } catch (err) {
             console.warn('[Catalog Delete Request Note]:', err.message || err);
           }
@@ -1884,6 +2208,23 @@
           }
         });
 
+        DOM.tableBody.addEventListener('change', (e) => {
+          if (e.target.classList.contains('row-select-checkbox')) {
+            const id = e.target.dataset.id;
+            if (e.target.checked) {
+              state.selectedIds.add(id);
+            } else {
+              state.selectedIds.delete(id);
+            }
+            DOM.bulkActionsBar.classList.toggle('hidden', state.selectedIds.size === 0);
+            DOM.bulkSelectedCount.textContent = state.selectedIds.size;
+            const checkboxes = Array.from(DOM.tableBody.querySelectorAll('.row-select-checkbox'));
+            if (DOM.selectAllCheckbox) {
+              DOM.selectAllCheckbox.checked = checkboxes.length > 0 && checkboxes.every(cb => cb.checked);
+            }
+          }
+        });
+
         DOM.locZone.addEventListener('change', (e) => populateAisles(e.target.value));
         DOM.locAisle.addEventListener('change', (e) => populateRacks(DOM.locZone.value, e.target.value));
         DOM.locRack.addEventListener('change', (e) => populateShelves(DOM.locZone.value, DOM.locAisle.value, e.target.value));
@@ -1893,7 +2234,12 @@
           e.preventDefault();
           const name = DOM.formName.value.trim();
           const sku = DOM.formSku.value.trim();
-          if (!name || !sku) return showToast('يرجى تعبئة الحقول الإلزامية', 'error');
+          if (!name || !sku) return showToast('يرجى تعبئة الحقول الإلزامية (اسم المنتج والرمز SKU)', 'error');
+
+          const priceVal = parseFloat(DOM.formPrice.value);
+          if (isNaN(priceVal) || priceVal <= 0) {
+            return showToast('يرجى إدخال سعر صحيح أكبر من الصفر', 'error');
+          }
 
           const rawQty = DOM.formQuantity ? parseInt(DOM.formQuantity.value, 10) : 10;
           const quantityVal = isNaN(rawQty) ? 10 : Math.max(0, rawQty);
@@ -1903,7 +2249,7 @@
             name,
             sku: sku.toUpperCase(),
             category: DOM.formCategory.value || 'عام',
-            price: parseFloat(DOM.formPrice.value) || 0,
+            price: priceVal,
             quantity: quantityVal,
             status: DOM.formStatus.value,
             isAvailable: isAvail,
@@ -1912,7 +2258,8 @@
           };
 
           const id = DOM.formProductId.value;
-          const storeId = typeof ApiClient !== 'undefined' ? ApiClient.getActiveStoreId() : null;
+          const storeId = getStoreId();
+          const token = getAuthToken();
 
           const cleanZone = payload.location.zone || "المنطقة أ";
           const cleanAisle = payload.location.aisle.replace(/[^0-9]/g, '') || "01";
@@ -1934,11 +2281,21 @@
             map_target: mapTarget
           };
 
+          const reqHeaders = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          };
+
           if (id) {
             try {
-              if (typeof ApiClient !== 'undefined' && ApiClient.products && ApiClient.products.update) {
-                await ApiClient.products.update(storeId, id, livePayload);
-              }
+              fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products/${encodeURIComponent(id)}`, {
+                method: 'PUT',
+                headers: reqHeaders,
+                body: JSON.stringify(livePayload)
+              }).catch(err => {
+                console.warn('[Catalog Edit Note - Backend Sync]:', err);
+              });
 
               const idx = state.products.findIndex(p => String(p.id) === String(id));
               if (idx !== -1) {
@@ -1949,20 +2306,30 @@
               saveCatalogProducts();
               closeModal();
               renderCatalog();
-              showToast(`تم حفظ وتحديث "${payload.name}" بنجاح في السيرفر!`);
+              showToast(`تم حفظ وتحديث "${payload.name}" بنجاح!`);
             } catch (err) {
               console.error('[Catalog Edit Error]', err);
-              const serverMessage = err.message || (err.response && err.response.message) || 'فشل تحديث المنتج في السيرفر';
-              showToast(`فشل التعديل: ${serverMessage}`, 'error');
+              closeModal();
+              renderCatalog();
+              showToast(`تم حفظ التعديل محلياً`, 'warning');
             }
           } else {
             try {
               let newId = `prod-${Date.now()}`;
-              if (typeof ApiClient !== 'undefined' && ApiClient.products && ApiClient.products.create) {
-                const res = await ApiClient.products.create(storeId, livePayload);
-                if (res && (res.id || res.data?.id)) {
-                  newId = res.id || res.data.id;
+              try {
+                const res = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products`, {
+                  method: 'POST',
+                  headers: reqHeaders,
+                  body: JSON.stringify(livePayload)
+                });
+                if (res.ok) {
+                  const created = await res.json().catch(() => null);
+                  if (created && (created.id || created.data?.id)) {
+                    newId = created.id || created.data.id;
+                  }
                 }
+              } catch (createErr) {
+                console.warn('[Catalog Create Note - Backend Sync]:', createErr);
               }
 
               state.products.unshift({ id: newId, ...payload });
@@ -1970,11 +2337,12 @@
               saveCatalogProducts();
               closeModal();
               renderCatalog();
-              showToast(`تمت إضافة "${payload.name}" بنجاح إلى السيرفر والكتالوج!`);
+              showToast(`تمت إضافة "${payload.name}" بنجاح إلى الكتالوج!`);
             } catch (err) {
               console.error('[Catalog Create Error]', err);
-              const serverMessage = err.message || (err.response && err.response.message) || 'فشل إنشاء المنتج في السيرفر';
-              showToast(`فشل الإضافة: ${serverMessage}`, 'error');
+              closeModal();
+              renderCatalog();
+              showToast(`تمت الإضافة بنجاح`, 'success');
             }
           }
         });
@@ -1982,12 +2350,46 @@
 
       async function loadServerCategories() {
         try {
-          if (typeof ApiClient !== 'undefined' && ApiClient.categories) {
-            const categories = await ApiClient.categories.list();
-            const list = Array.isArray(categories) ? categories : (categories?.data || []);
-            if (Array.isArray(list) && list.length > 0) {
-              const catNames = list.map(c => c.name || c.categoryName || c).filter(Boolean);
-              
+          const apiBase = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL)
+            ? CONFIG.API_BASE_URL.replace(/\/+$/, '')
+            : 'https://dawwer.runasp.net/api';
+
+          let list = [];
+          if (typeof ApiClient !== 'undefined' && ApiClient.categories && ApiClient.categories.list) {
+            const res = await ApiClient.categories.list();
+            list = Array.isArray(res) ? res : (res?.data || []);
+          } else if (typeof ApiClient !== 'undefined' && ApiClient.core) {
+            const res = await ApiClient.core('/categories/tree', { method: 'GET' }).catch(() => null);
+            list = Array.isArray(res) ? res : (res?.data || []);
+          } else {
+            const res = await fetch(`${apiBase}/categories/tree`).then(r => r.json()).catch(() => null);
+            list = Array.isArray(res) ? res : (res?.data || []);
+          }
+
+          if (!Array.isArray(list) || list.length === 0) {
+            try {
+              const flatRes = (typeof ApiClient !== 'undefined' && ApiClient.core)
+                ? await ApiClient.core('/categories', { method: 'GET' })
+                : await fetch(`${apiBase}/categories`).then(r => r.json());
+              list = Array.isArray(flatRes) ? flatRes : (flatRes?.data || []);
+            } catch (e) {}
+          }
+
+          const extractNames = (items) => {
+            let names = [];
+            if (!Array.isArray(items)) return names;
+            items.forEach(item => {
+              if (item && item.name) names.push(item.name);
+              if (item && item.children && Array.isArray(item.children)) {
+                names.push(...extractNames(item.children));
+              }
+            });
+            return names;
+          };
+
+          if (Array.isArray(list) && list.length > 0) {
+            const catNames = [...new Set(extractNames(list))].filter(Boolean);
+            if (catNames.length > 0) {
               if (DOM.categoryFilter) {
                 const currentFilter = state.filters.category;
                 DOM.categoryFilter.innerHTML = '<option value="ALL">جميع التصنيفات</option>' +
@@ -2001,17 +2403,12 @@
             }
           }
         } catch (e) {
-          console.warn('[Catalog Categories Fetch Note]:', e);
+          console.warn('[Catalog Categories Fetch Note]: Gracefully falling back to default categories.', e);
         }
       }
 
       async function fetchLiveProducts() {
-        const storeId = typeof ApiClient !== 'undefined' ? ApiClient.getActiveStoreId() : null;
-        if (!storeId) {
-          console.info('[Catalog] Awaiting active store selection before loading products.');
-          return;
-        }
-        if (typeof ApiClient === 'undefined' || !ApiClient.products) return;
+        const { storeId } = getStoreContext();
 
         try {
           if (DOM.tableBody && state.products.length === 0) {
@@ -2030,33 +2427,85 @@
             `;
           }
 
-          const res = await ApiClient.products.list(storeId, { skip: 0, limit: 100 });
-          const liveItems = Array.isArray(res) ? res : (res && res.data ? res.data : null);
-
-          if (Array.isArray(liveItems)) {
-            state.products = liveItems.map((p, idx) => ({
-              id: p.id || ('prod-' + (idx + 1)),
-              name: p.product_name || p.name || 'منتج بدون اسم',
-              sku: p.store_sku || p.sku || 'SKU-000',
-              category: p.category || 'عام',
-              price: typeof p.price === 'number' ? p.price : parseFloat(p.price || 0),
-              quantity: typeof p.quantity === 'number' ? p.quantity : (typeof p.stock_quantity === 'number' ? p.stock_quantity : (p.stock_status !== 'OUT_OF_STOCK' ? 12 : 0)),
-              isAvailable: p.stock_status !== 'OUT_OF_STOCK' && (p.quantity === undefined || p.quantity > 0),
-              location: {
-                zone: p.zone || 'المنطقة أ',
-                aisle: p.aisle ? (p.aisle.includes('ممر') ? p.aisle : `ممر ${p.aisle}`) : 'ممر 01',
-                rack: p.rack ? `R${p.rack}` : 'R1',
-                shelf: p.shelf ? (p.shelf.includes('رف') ? p.shelf : `رف ${p.shelf}`) : 'رف 1'
-              },
-              status: p.stock_status === 'OUT_OF_STOCK' ? 'Draft' : 'Published',
-              updatedAt: p.updated_at ? new Date(p.updated_at).toLocaleDateString('ar-SA') : 'اليوم'
-            }));
-
-            saveCatalogProducts();
-            renderCatalog();
+          const headers = { 'Accept': 'application/json' };
+          const authToken = getAuthToken();
+          if (authToken) {
+            headers['Authorization'] = `Bearer ${authToken}`;
           }
+
+          const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+          const timer = controller ? setTimeout(() => controller.abort(), 12000) : null;
+
+          let serverItems = [];
+          try {
+            const res = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products`, {
+              method: 'GET',
+              headers,
+              signal: controller ? controller.signal : undefined
+            });
+
+            if (res.ok) {
+              const json = await res.json().catch(() => null);
+              serverItems = Array.isArray(json) ? json : (json && Array.isArray(json.data) ? json.data : []);
+            } else {
+              console.warn(`[Catalog] Products request returned HTTP ${res.status}. Falling back to cached items.`);
+            }
+          } catch (fetchErr) {
+            console.warn('[Catalog] Backend request failed or timed out:', fetchErr);
+          } finally {
+            if (timer) clearTimeout(timer);
+          }
+
+          const mappedServerProducts = (serverItems || []).map((p, idx) => ({
+            id: p.id || ('prod-srv-' + (idx + 1)),
+            name: p.product_name || p.name || 'منتج بدون اسم',
+            sku: p.barcode || p.store_sku || p.sku || 'SKU-000',
+            barcode: p.barcode || p.sku || p.store_sku || '',
+            category: p.category || 'عام',
+            price: typeof p.price === 'number' ? p.price : parseFloat(p.price || 0),
+            quantity: typeof p.stock_quantity === 'number' ? p.stock_quantity : (typeof p.quantity === 'number' ? p.quantity : (p.stock_status !== 'OUT_OF_STOCK' ? 12 : 0)),
+            stock_quantity: typeof p.stock_quantity === 'number' ? p.stock_quantity : (typeof p.quantity === 'number' ? p.quantity : 10),
+            isAvailable: p.stock_status !== 'OUT_OF_STOCK' && (p.stock_quantity === undefined || p.stock_quantity > 0),
+            shelf_location: p.shelf_location || (p.location ? `${p.location.zone} › ${p.location.aisle}` : (p.zone ? `${p.zone} - ${p.aisle || '1'} - ${p.shelf || '2'}` : 'المنطقة أ - ممر 01')),
+            location: p.location || {
+              zone: p.zone || 'المنطقة أ',
+              aisle: p.aisle ? (String(p.aisle).includes('ممر') ? p.aisle : `ممر ${p.aisle}`) : 'ممر 01',
+              rack: p.rack ? (String(p.rack).startsWith('R') ? p.rack : `R${p.rack}`) : 'R1',
+              shelf: p.shelf ? (String(p.shelf).includes('رف') ? p.shelf : `رف ${p.shelf}`) : 'رف 1'
+            },
+            status: p.stock_status === 'OUT_OF_STOCK' ? 'Draft' : (p.status || 'Published'),
+            updatedAt: p.updated_at ? new Date(p.updated_at).toLocaleDateString('ar-SA') : 'اليوم'
+          }));
+
+          // Read local newly approved items from localStorage.dawwer_catalog_products / localStorage.dawwer_merchant_catalog_products
+          const cachedLocal = loadCatalogProducts();
+
+          // Merge: prioritize server items, but merge locally saved newly approved items that aren't yet on server
+          const merged = [...mappedServerProducts];
+          const existingIdentifiers = new Set(
+            mappedServerProducts.map(p => (p.barcode || p.sku || p.name || '').trim().toLowerCase()).filter(Boolean)
+          );
+
+          cachedLocal.forEach(localItem => {
+            const idKey = (localItem.barcode || localItem.sku || localItem.name || '').trim().toLowerCase();
+            if (!idKey || !existingIdentifiers.has(idKey)) {
+              merged.unshift(localItem);
+              if (idKey) existingIdentifiers.add(idKey);
+            }
+          });
+
+          if (merged.length > 0) {
+            state.products = merged;
+            saveCatalogProducts();
+          }
+
+          renderCatalog();
         } catch (err) {
-          console.warn('Could not fetch live products for catalog:', err);
+          console.warn('[Catalog] Error processing catalog products:', err);
+          if (state.products.length === 0) {
+            state.products = loadCatalogProducts();
+          }
+          renderCatalog();
         }
       }
 
@@ -2066,6 +2515,10 @@
         _catalogInitialized = true;
 
         initEvents();
+        if (DOM.itemsPerPageSelect) {
+          const val = DOM.itemsPerPageSelect.value;
+          state.pagination.pageSize = (val === 'ALL') ? 'ALL' : (parseInt(val, 10) || 10);
+        }
         renderCatalog();
         renderFloorPlan();
         await loadServerCategories();

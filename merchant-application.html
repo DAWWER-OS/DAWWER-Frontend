@@ -5,10 +5,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>طلب انضمام متجر جديد - دوّر</title>
+  <link rel="icon" type="image/png" href="assets/images/favicon-dawwer.png">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/output.css">
 
   <script src="assets/css/tailwind.min.js"></script>
   <script>
@@ -31,14 +34,14 @@
   </script>
 
   </head>
-<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans md:mr-16" dir="rtl">
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans mr-0 md:mr-16" dir="rtl">
 
     <aside id="sidebar-box" class="fixed top-0 right-0 h-screen w-16 bg-[#153f2d] text-white flex flex-col justify-between items-center py-3 z-50 shadow-xl border-l border-white/10 select-none overflow-visible">
       <!-- TOP: Minimal Brand Icon/Logo Only -->
       <div class="flex flex-col items-center w-full pt-1 px-1.5 shrink-0 overflow-visible">
         <div class="relative group flex items-center justify-center">
           <a href="index.html" class="flex items-center justify-center w-11 h-11 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-colors shadow-xs" aria-label="دوّر - الرئيسية">
-            <img src="assets/images/FrameLogo.png" alt="دوّر" class="h-6 w-auto object-contain">
+            <img src="assets/images/FrameLogo.png" alt="دوّر" class="h-6 w-auto object-contain max-h-6 max-w-6" style="max-height: 24px; max-width: 24px; object-fit: contain;">
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
             دوّر - الرئيسية
@@ -163,8 +166,8 @@
     </aside>
 
     <div id="sidebar-backdrop" class="backdrop-hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40"></div>
-<header
-    class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-6 py-3.5 flex items-center justify-between gap-4 shadow-2xs">
+  <header
+    class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
     <div class="flex items-center gap-3">
       <button id="sidebar-toggle-btn"
         class="sidebar-toggle-btn p-2 text-slate-600 hover:text-[#153f2d] hover:bg-slate-100 rounded-xl transition flex items-center justify-center cursor-pointer active:scale-95"
@@ -184,7 +187,7 @@
     </div>
 
     <button id="create-draft-btn"
-      class="text-xs bg-[#1c5335] text-white px-4 py-2 rounded-xl font-bold hover:bg-[#143e27] shadow-2xs transition cursor-pointer">
+      class="w-full sm:w-auto text-xs bg-[#1c5335] text-white px-4 py-2.5 rounded-xl font-bold hover:bg-[#143e27] shadow-2xs transition cursor-pointer text-center">
       + طلب جديد
     </button>
   </header>
@@ -328,17 +331,17 @@
           </div>
         </div>
 
-        <div id="form-actions-container" class="flex flex-wrap items-center gap-3 pt-4 border-t border-slate-100">
+        <div id="form-actions-container" class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 pt-4 border-t border-slate-100">
           <div id="submitted-status-notice" class="hidden w-full p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2.5">
             <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             <span>تم استلام طلبك وهو قيد المراجعة حالياً من قبل الإدارة. لا يمكن تعديل البيانات أثناء فترة التدقيق.</span>
           </div>
           <button type="submit" id="save-draft-btn"
-            class="bg-slate-100 border border-slate-300 text-slate-700 font-bold px-6 py-3 rounded-xl text-sm hover:bg-slate-200 transition">
+            class="w-full sm:w-auto bg-slate-100 border border-slate-300 text-slate-700 font-bold px-6 py-3 rounded-xl text-sm hover:bg-slate-200 transition cursor-pointer text-center">
             حفظ كمسودة
           </button>
           <button type="button" id="submit-app-btn"
-            class="bg-[#1c5335] hover:bg-[#143e27] text-white font-bold px-8 py-3 rounded-xl text-sm shadow transition">
+            class="w-full sm:w-auto bg-[#1c5335] hover:bg-[#143e27] text-white font-bold px-8 py-3 rounded-xl text-sm shadow transition cursor-pointer text-center">
             إرسال الطلب للاعتماد الرسمي ➔
           </button>
         </div>

@@ -50,3 +50,29 @@ if (document.readyState === 'loading') {
 } else {
   initPasswordToggles();
 }
+
+document.addEventListener('click', function(e) {
+  const logoutTrigger = e.target.closest('#logout-btn, #top-logout-btn, [data-action="logout"], a[href*="logout"], .logout-btn');
+  if (logoutTrigger) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // 1. Clear all session credentials immediately
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userData');
+    localStorage.removeItem('storeToken');
+    localStorage.removeItem('activeStoreId');
+    localStorage.removeItem('dawwer_access_token');
+    localStorage.removeItem('dawwer_refresh_token');
+    localStorage.removeItem('dawwer_user_data');
+    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('store_token');
+    localStorage.removeItem('dawwer_store_token');
+    sessionStorage.clear();
+
+    // 2. Direct hard redirect to login page
+    window.location.replace('login.html');
+  }
+});

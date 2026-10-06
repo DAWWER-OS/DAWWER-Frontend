@@ -1,0 +1,15 @@
+{
+  "name": "dawwer-frontend",
+  "version": "1.0.0",
+  "description": "Dawwer Retail OS Frontend",
+  "scripts": {
+    "build:css": "tailwindcss -i ./css/input.css -o ./css/output.css --minify",
+    "watch:css": "tailwindcss -i ./css/input.css -o ./css/output.css --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}
