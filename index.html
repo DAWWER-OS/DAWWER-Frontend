@@ -11,6 +11,52 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="css/output.css">
+  <script>
+    (function() {
+      try {
+        const candidateKeys = ['accessToken', 'token', 'access_token', 'dawwer_access_token'];
+        let token = null;
+        for (const k of candidateKeys) {
+          const v = localStorage.getItem(k);
+          if (v && v.trim() && v !== 'null' && v !== 'undefined') { token = v.trim(); break; }
+        }
+        if (!token) {
+          window.location.replace('login.html');
+          return;
+        }
+        let role = localStorage.getItem('userRole') || localStorage.getItem('role');
+        if (!role) {
+          const rawUser = localStorage.getItem('userData') || localStorage.getItem('dawwer_user_data') || localStorage.getItem('user');
+          if (rawUser) {
+            const u = JSON.parse(rawUser);
+            role = u.role ?? u.Role;
+          }
+        }
+        if (!role && token.includes('.')) {
+          const parts = token.split('.');
+          if (parts.length === 3) {
+            const p = JSON.parse(decodeURIComponent(escape(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))));
+            if (p.exp && (p.exp * 1000) < Date.now()) {
+              localStorage.removeItem('accessToken');
+              localStorage.removeItem('token');
+              window.location.replace('login.html?session_expired=true');
+              return;
+            }
+            role = p['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ||
+                   p['http://schemas.microsoft.com/ws/2008/06/identity/claims/roles'] ||
+                   p.role || p.roles;
+          }
+        }
+        const rStr = Array.isArray(role) ? role.join(',') : String(role || '');
+        if (rStr === '4' || /admin|superadmin/i.test(rStr)) {
+          const urlParams = new URLSearchParams(window.location.search);
+          if (!urlParams.has('stay')) {
+            window.location.replace('admin-dashboard.html');
+          }
+        }
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans" dir="rtl">
 

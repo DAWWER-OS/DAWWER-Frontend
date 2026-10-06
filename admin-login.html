@@ -93,7 +93,7 @@
         }
 
         const role = String(data.role || data.user?.role || '').toLowerCase();
-        if (role !== 'admin' && role !== '4') {
+        if (!role.includes('admin') && role !== '4') {
           throw new Error('هذا الحساب لا يمتلك صلاحيات إدارة المنصة المركزية.');
         }
 

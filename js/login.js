@@ -3,10 +3,18 @@ if (typeof Auth !== 'undefined' && Auth.isAuthenticated && Auth.isAuthenticated(
   const urlParams = new URLSearchParams(window.location.search);
   const redirect = urlParams.get('redirect');
   const user = Auth.getUser();
-  if (redirect && !redirect.includes('login.html')) {
+  const isAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
+    ? Auth.isAdmin(user)
+    : (function(r) {
+        if (!r) return false;
+        if (Array.isArray(r)) return r.some(x => /admin|superadmin/i.test(String(x)));
+        return r === 4 || r === '4' || /admin|superadmin/i.test(String(r));
+      })(user?.role);
+
+  if (isAdmin) {
+    window.location.href = (redirect && redirect.includes('admin') && !redirect.includes('login.html')) ? redirect : 'admin-dashboard.html';
+  } else if (redirect && !redirect.includes('login.html') && !redirect.includes('register.html')) {
     window.location.href = redirect;
-  } else if (user && (user.role === 'Admin' || user.role === 4 || user.role === '4')) {
-    window.location.href = 'admin-dashboard.html';
   } else if (!localStorage.getItem('activeStoreId') && !localStorage.getItem('storeToken')) {
     window.location.href = 'select-store.html';
   } else if (user && (user.role === 'Merchant' || user.role === 2 || user.role === '2')) {
@@ -294,12 +302,34 @@ async function handleLogin(event) {
         showToast({ title: 'تسجيل دخول ناجح', message: 'مرحباً بك في دوّر', type: 'success' });
       }
 
-      // Redirect to select-store.html (or redirect URL if explicitly provided)
+      // Smart role-based redirection:
+      // Super Admin and Platform Admins MUST be directed to admin-dashboard.html and NEVER to the merchant portal (select-store.html).
       const urlParams = new URLSearchParams(window.location.search);
       const redirect = urlParams.get('redirect') || urlParams.get('returnUrl');
-      const targetUrl = (redirect && !redirect.includes('login.html') && !redirect.includes('register.html') && !redirect.includes('index.html'))
-        ? redirect
-        : 'select-store.html';
+
+      const isUserAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
+        ? Auth.isAdmin(userObj)
+        : (function(r) {
+            if (!r) return false;
+            if (Array.isArray(r)) return r.some(x => /admin|superadmin/i.test(String(x)));
+            return r === 4 || r === '4' || /admin|superadmin/i.test(String(r));
+          })(role);
+
+      let targetUrl;
+      if (isUserAdmin) {
+        targetUrl = (redirect && redirect.includes('admin') && !redirect.includes('login.html'))
+          ? redirect
+          : 'admin-dashboard.html';
+      } else {
+        // Merchant / Staff: redirect to requested page, or select-store.html if no active store context
+        if (redirect && !redirect.includes('login.html') && !redirect.includes('register.html') && !redirect.includes('index.html')) {
+          targetUrl = redirect;
+        } else if (storeId) {
+          targetUrl = 'index.html';
+        } else {
+          targetUrl = 'select-store.html';
+        }
+      }
 
       setTimeout(() => {
         window.location.replace(targetUrl);

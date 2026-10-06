@@ -72,6 +72,22 @@ function hideError() {
 
 async function loadStores() {
   hideError();
+
+  // Guard: SuperAdmin / Platform Admin belongs in admin-dashboard.html and has no merchant stores
+  const isAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
+    ? Auth.isAdmin()
+    : (function() {
+        const u = (typeof Auth !== 'undefined' && typeof Auth.getUser === 'function') ? Auth.getUser() : null;
+        const r = u?.role || localStorage.getItem('userRole') || localStorage.getItem('role');
+        return r === 4 || r === '4' || /admin|superadmin/i.test(String(r));
+      })();
+
+  if (isAdmin) {
+    console.info('[SelectStore] Admin/SuperAdmin detected. Redirecting to admin-dashboard.html');
+    window.location.replace('admin-dashboard.html');
+    return;
+  }
+
   const token = getStoredAccessToken();
   if (!token) {
     console.warn('[SelectStore] No accessToken found in storage. Redirecting to login.html');

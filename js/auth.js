@@ -95,7 +95,10 @@ const Auth = {
           const parts = token.split('.');
           if (parts.length === 3) {
             const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-            const role = payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || payload.role || 2;
+            const rawRole = payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ||
+                            payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/roles"] ||
+                            payload.role || payload.roles || 2;
+            const role = Array.isArray(rawRole) ? (rawRole.find(r => /admin|superadmin/i.test(String(r))) || rawRole[0]) : rawRole;
             const email = payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"] || payload.email || "";
             const userId = payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] || payload.nameid || payload.sub || localStorage.getItem("userId") || "";
             const fullName = payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] || payload.unique_name || payload.name || "مستخدم دوّر";
@@ -321,16 +324,63 @@ const Auth = {
     }
   },
 
+  isAdmin(userParam = null) {
+    const user = userParam || this.getUser();
+    if (user && user.role !== undefined && user.role !== null) {
+      return this._isRoleAdmin(user.role);
+    }
+    const storedRole = localStorage.getItem('userRole') || localStorage.getItem('role');
+    if (storedRole && this._isRoleAdmin(storedRole)) return true;
+
+    const token = this.getToken();
+    if (token && typeof token === 'string' && token.includes('.')) {
+      try {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(decodeURIComponent(escape(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))));
+          const r = payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ||
+                    payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/roles"] ||
+                    payload.role || payload.roles;
+          if (this._isRoleAdmin(r)) return true;
+        }
+      } catch (e) {}
+    }
+    return false;
+  },
+
+  _isRoleAdmin(role) {
+    if (role === null || role === undefined) return false;
+    if (Array.isArray(role)) {
+      return role.some(r => this._isRoleAdmin(r));
+    }
+    if (typeof role === 'number') {
+      const adminCode = (typeof CONFIG !== 'undefined' && CONFIG.ROLES) ? CONFIG.ROLES.ADMIN : 4;
+      return role === adminCode || role === 4;
+    }
+    const s = String(role).trim().toLowerCase();
+    return s === '4' || s === 'admin' || s === 'superadmin' || s === 'super_admin' || s === 'administrator' || s.includes('admin');
+  },
+
   hasRole(role) {
     const user = this.getUser();
     if (!user) return false;
+    const roles = (typeof CONFIG !== 'undefined' && CONFIG.ROLES) ? CONFIG.ROLES : { ADMIN: 4, MERCHANT: 2, STAFF: 3, CUSTOMER: 1 };
+
+    // SuperAdmin and Admin match any admin check
+    if (role === roles.ADMIN || role === 4 || role === '4' || String(role).toLowerCase().includes('admin')) {
+      return this.isAdmin(user);
+    }
+
     if (typeof role === "number") {
-      const roles = (typeof CONFIG !== 'undefined' && CONFIG.ROLES) ? CONFIG.ROLES : { ADMIN: 4, MERCHANT: 2, STAFF: 3, CUSTOMER: 1 };
-      if (role === roles.ADMIN && (user.role === "Admin" || user.role === 4)) return true;
       if (role === roles.MERCHANT && (user.role === "Merchant" || user.role === 2)) return true;
       if (role === roles.STAFF && (user.role === "Staff" || user.role === 3)) return true;
       if (role === roles.CUSTOMER && (user.role === "Customer" || user.role === 1)) return true;
     }
+
+    if (Array.isArray(user.role)) {
+      return user.role.some(r => String(r).toLowerCase() === String(role).toLowerCase());
+    }
+
     return (user.role || "").toString().toLowerCase() === role.toString().toLowerCase();
   },
 

@@ -8,10 +8,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!isAuthed) return;
   }
 
+  // Super Admin / Platform Admin belongs in admin-dashboard.html
+  if (window.Auth && typeof Auth.isAdmin === 'function' && Auth.isAdmin()) {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (!urlParams.has('stay')) {
+      window.location.replace('admin-dashboard.html');
+      return;
+    }
+  }
+
   await loadDashboard();
 });
 
 async function loadDashboard() {
+  if (window.Auth && typeof Auth.isAdmin === 'function' && Auth.isAdmin()) {
+    return;
+  }
   try {
     // 2. Persistent Store Context: read active_store_id and storeToken from localStorage directly
     const existingStoreId = localStorage.getItem('active_store_id') || localStorage.getItem('activeStoreId') || localStorage.getItem('storeId');
