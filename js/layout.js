@@ -711,10 +711,6 @@ const DawwerLayout = {
       });
     }
 
-    const isSuperAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
-      ? Auth.isAdmin()
-      : (typeof Auth !== 'undefined' && Auth.getUser && Auth.getUser() && (Auth.getUser().role === 'Admin' || Auth.getUser().role === 4 || /admin|superadmin/i.test(String(Auth.getUser().role))));
-
     if (!isSuperAdmin && typeof Auth !== 'undefined' && Auth.isAuthenticated && Auth.isAuthenticated()) {
       this.fetchStoreProfile();
     }
