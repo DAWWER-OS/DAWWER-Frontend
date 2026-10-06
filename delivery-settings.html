@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إعدادات التوصيل والاستلام الذاتي - دوّر</title>
+  <link rel="icon" type="image/png" href="assets/images/favicon-dawwer.png">
+
+  <!-- Google Fonts: Cairo & Tajawal strictly for Arabic Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/output.css">
+
+  <style>
+    /* Strictly enforce Cairo & Tajawal fonts across the whole page */
+    body.delivery-settings-page, 
+    body.delivery-settings-page *, 
+    body.delivery-settings-page button, 
+    body.delivery-settings-page input, 
+    body.delivery-settings-page select, 
+    body.delivery-settings-page textarea {
+      font-family: 'Cairo', 'Tajawal', sans-serif !important;
+    }
+
+    /* Custom subtle scrollbars */
+    ::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Primary Emerald Palette */
+    .bg-dawwer-primary {
+      background-color: #1c5335;
+    }
+    .bg-dawwer-primary-hover:hover {
+      background-color: #143e27;
+    }
+    .text-dawwer-primary {
+      color: #1c5335;
+    }
+    .border-dawwer-primary {
+      border-color: #1c5335;
+    }
+
+    /* Floating Toast Animation */
+    @keyframes toast-enter {
+      from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    @keyframes toast-exit {
+      from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+      to {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+      }
+    }
+    .animate-toast-in {
+      animation: toast-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .animate-toast-out {
+      animation: toast-exit 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans delivery-settings-page mr-0 md:mr-16" dir="rtl">
+
+  <!-- Slim Desktop Navigation Rail -->
+  <aside id="sidebar-box" class="fixed top-0 right-0 h-screen w-16 bg-[#1c5335] text-white flex flex-col justify-between items-center py-3 z-50 shadow-xl border-l border-white/10 select-none overflow-visible">
+    <!-- TOP: Minimal Brand Icon/Logo -->
+    <div class="flex flex-col items-center w-full pt-1 px-1.5 shrink-0 overflow-visible">
+      <div class="relative group flex items-center justify-center">
+        <a href="dashboard.html" class="flex items-center justify-center w-11 h-11 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-colors shadow-xs" aria-label="دوّر - لوحة التحكم">
+          <img src="assets/images/FrameLogo.png" alt="دوّر" class="h-6 w-auto object-contain">
+        </a>
+        <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#143e27] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">
+          دوّر - لوحة التحكم
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER: Navigation Buttons -->
+    <nav class="flex flex-col items-center gap-2 my-auto w-full py-2 sidebar-nav overflow-visible">
+      <!-- 1. لوحة التحكم -->
+      <div class="relative group flex items-center justify-center">
+        <a href="dashboard.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="لوحة التحكم">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        </a>
+        <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#143e27] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">
+          لوحة التحكم الرئيسية
+        </div>
+      </div>
+
+      <!-- 2. الكتالوج والمخططات -->
+      <div class="relative group flex items-center justify-center">
+        <a href="catalog.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الكتالوج والمخططات">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        </a>
+        <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#143e27] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">
+          إدارة الكتالوج والمخزون
+        </div>
+      </div>
+
+      <!-- 3. مسح الرفوف بالذكاء الاصطناعي -->
+      <div class="relative group flex items-center justify-center">
+        <a href="ai-capture.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="مسح الرفوف">
+          <svg class="w-5 h-5 text-amber-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.01.01"/></svg>
+        </a>
+        <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#143e27] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">
+          مسح الرفوف بالذكاء الاصطناعي
+        </div>
+      </div>
+
+      <!-- 4. استقبال الطلبات المباشرة -->
+      <div class="relative group flex items-center justify-center">
+        <a href="orders.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="استقبال الطلبات المباشرة">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+        </a>
+        <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#143e27] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">
+          استقبال الطلبات المباشرة
+        </div>
+      </div>
+
+      <!-- 5. إعدادات التوصيل والاستلام (ACTIVE) -->
+      <div class="relative group flex items-center justify-center">
+        <a href="delivery-settings.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl bg-white/20 text-white font-bold transition-all shrink-0 ring-2 ring-emerald-300/80 shadow-md" aria-label="إعدادات التوصيل والاستلام">
+          <svg class="w-5 h-5 shrink-0 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+        </a>
+        <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#143e27] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">
+          إعدادات التوصيل والاستلام الذاتي (نشط)
+        </div>
+      </div>
+
+      <!-- 6. الممرات والرفوف -->
+      <div class="relative group flex items-center justify-center">
+        <a href="shelves.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الممرات والرفوف">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+        </a>
+        <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#143e27] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">
+          مواقع الممرات والرفوف
+        </div>
+      </div>
+
+      <!-- 7. فريق العمل والصلاحيات -->
+      <div class="relative group flex items-center justify-center">
+        <a href="store-staff.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="فريق العمل">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        </a>
+        <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#143e27] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">
+          فريق العمل والأدوار
+        </div>
+      </div>
+
+      <!-- 8. الملف الشخصي والإعدادات -->
+      <div class="relative group flex items-center justify-center">
+        <a href="profile.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الملف الشخصي">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        </a>
+        <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#143e27] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">
+          الملف الشخصي والإعدادات
+        </div>
+      </div>
+    </nav>
+
+    <!-- BOTTOM: Back to Store -->
+    <div class="w-full pb-3 px-2 flex justify-center">
+      <div class="relative group flex items-center justify-center">
+        <a href="select-store.html" class="flex items-center justify-center w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors" aria-label="تغيير الفرع">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+        </a>
+        <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#143e27] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">
+          تغيير الفرع / المتجر
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div id="sidebar-backdrop" class="backdrop-hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40"></div>
+
+  <!-- Main Viewport Container -->
+  <main class="flex-1 flex flex-col min-w-0 pb-16">
+
+    <!-- Top Sticky Header Section -->
+    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-2xs">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <!-- Right Side: Menu toggle + Back Button, Breadcrumb & Title -->
+        <div class="flex items-center gap-3">
+          <!-- Mobile menu toggle -->
+          <button id="sidebar-toggle-btn" class="sidebar-toggle-btn p-2 text-slate-600 hover:text-[#1c5335] hover:bg-slate-100 rounded-xl transition flex items-center justify-center cursor-pointer active:scale-95 md:hidden" title="القائمة الجانبية">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          </button>
+          <!-- Direct Back Button to dashboard.html -->
+          <a href="dashboard.html" id="back-to-dashboard-btn"
+            class="flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 hover:text-[#1c5335] transition shadow-2xs shrink-0 cursor-pointer"
+            title="العودة إلى لوحة التحكم">
+            <svg class="w-5 h-5 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+            </svg>
+          </a>
+
+          <div>
+            <nav class="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 mb-0.5" aria-label="مسار التصفح">
+              <a href="dashboard.html" class="hover:text-[#1c5335] transition">لوحة التحكم</a>
+              <span>/</span>
+              <span class="text-slate-500">إعدادات المتجر</span>
+              <span>/</span>
+              <span class="text-[#1c5335] font-bold">التوصيل والاستلام الذاتي</span>
+            </nav>
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg bg-[#1c5335] text-white flex items-center justify-center shrink-0 shadow-xs">
+                <svg class="w-4 h-4 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+              </div>
+              <h1 class="text-lg sm:text-xl font-black text-slate-900 tracking-tight">إعدادات التوصيل والاستلام الذاتي</h1>
+            </div>
+          </div>
+        </div>
+
+        <!-- Left Side: Actions -->
+        <div class="flex items-center gap-2.5 shrink-0 self-end sm:self-auto">
+          <!-- Reset button -->
+          <button type="button" id="btn-reset-settings"
+            class="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer flex items-center justify-center gap-1.5"
+            title="التراجع عن التغييرات غير المحفوظة">
+            <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <span>إلغاء التعديلات</span>
+          </button>
+
+          <!-- Primary Save Button -->
+          <button type="button" id="btn-save-settings"
+            class="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-[#1c5335] hover:bg-[#143e27] active:scale-[0.98] text-white text-xs font-bold transition shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
+            <!-- Spinner -->
+            <svg id="btn-save-spinner" class="w-4 h-4 animate-spin text-white hidden" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <svg id="btn-save-check-icon" class="w-4 h-4 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+            <span id="btn-save-text">حفظ التغييرات</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Unsaved Changes Banner (Dynamic) -->
+      <div id="unsaved-changes-banner" class="hidden bg-amber-50 border-t border-amber-200/90 py-1.5 px-4 sm:px-6 lg:px-8 text-center text-xs font-bold text-amber-900 flex items-center justify-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+        <span>تنبيه: لديك تعديلات غير محفوظة. اضغط على "حفظ التغييرات" لتطبيقها فوراً في تطبيق العميل.</span>
+      </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-6">
+
+      <!-- ========================================== -->
+      <!-- SECTION 1: Home Delivery & Coverage Zones   -->
+      <!-- ========================================== -->
+      <section class="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-2xs p-5 sm:p-6 transition">
+        <!-- Section Header & Master Toggle -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-slate-100">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-xl bg-emerald-50 text-[#1c5335] border border-emerald-100 flex items-center justify-center font-bold text-base shadow-xs">
+                🛵
+              </div>
+              <div>
+                <h2 class="text-base font-black text-slate-900">خدمة التوصيل المنزلي ومناطق التغطية (Home Delivery)</h2>
+                <p class="text-xs text-slate-500 font-medium">حدد نطاق التغطية الجغرافية لمتجرك، رسوم التوصيل، والحد الأدنى للطلب</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Master Toggle Home Delivery -->
+          <div class="flex items-center gap-3 bg-slate-50 p-2.5 rounded-2xl border border-slate-200/80 shrink-0">
+            <div class="text-left">
+              <span class="block text-xs font-black text-slate-900">تفعيل التوصيل المنزلي</span>
+              <div id="home-delivery-status-badge" class="mt-0.5"></div>
+            </div>
+            <label class="inline-flex items-center cursor-pointer select-none">
+              <input type="checkbox" id="toggle-home-delivery" class="sr-only peer" checked>
+              <div class="relative w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1c5335]"></div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Paused Banner if delivery is turned off -->
+        <div id="delivery-paused-banner" class="hidden mt-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-center gap-2.5">
+          <svg class="w-5 h-5 text-rose-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <div>
+            <strong>خدمة التوصيل المنزلي معطلة حالياً:</strong> لن تظهر خيارات التوصيل للمنازل للعملاء عند إتمام الطلب، وسيقتصر الطلب على الاستلام الذاتي من الفرع فقط.
+          </div>
+        </div>
+
+        <!-- Table Header Bar (Zones count & Add Zone Button) -->
+        <div class="flex items-center justify-between gap-2 mt-5 mb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-700">مناطق التغطية المحددة</span>
+            <span id="zones-count-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-[#1c5335] border border-emerald-200">0 مناطق</span>
+          </div>
+          <button type="button" id="btn-add-zone"
+            class="px-3.5 py-2 rounded-xl bg-[#1c5335] hover:bg-[#143e27] text-white text-xs font-bold transition shadow-2xs inline-flex items-center gap-1.5 cursor-pointer">
+            <svg class="w-3.5 h-3.5 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+            <span>إضافة منطقة توصيل جديدة</span>
+          </button>
+        </div>
+
+        <!-- Dynamic Zones List Container -->
+        <div id="zones-list-container">
+          <!-- Rendered via js/delivery-settings.js -->
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SECTION 2: In-Store Pickup Windows         -->
+      <!-- ========================================== -->
+      <section class="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-2xs p-5 sm:p-6 transition">
+        <!-- Section Header & Master Toggle -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-slate-100">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 flex items-center justify-center font-bold text-base shadow-xs">
+                🛍️
+              </div>
+              <div>
+                <h2 class="text-base font-black text-slate-900">خدمة الاستلام من الفرع ونوافذ المواعيد (In-Store Pickup)</h2>
+                <p class="text-xs text-slate-500 font-medium">تمكين العملاء من تجهيز الطلبات مسبقاً والحضور للاستلام السريع داخل المتجر</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Master Toggle Pickup -->
+          <div class="flex items-center gap-3 bg-slate-50 p-2.5 rounded-2xl border border-slate-200/80 shrink-0">
+            <div class="text-left">
+              <span class="block text-xs font-black text-slate-900">تفعيل الاستلام من الفرع</span>
+              <div id="pickup-status-badge" class="mt-0.5"></div>
+            </div>
+            <label class="inline-flex items-center cursor-pointer select-none">
+              <input type="checkbox" id="toggle-pickup" class="sr-only peer" checked>
+              <div class="relative w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1c5335]"></div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Paused Banner if pickup is turned off -->
+        <div id="pickup-paused-banner" class="hidden mt-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-medium flex items-center gap-2.5">
+          <svg class="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <div>
+            <strong>خدمة الاستلام من الفرع معطلة حالياً:</strong> لن يتمكن العملاء من اختيار استلام الطلبات ذاتياً من المتجر.
+          </div>
+        </div>
+
+        <!-- Pickup Settings Body -->
+        <div class="space-y-6 mt-6">
+
+          <!-- 1. مدة تجهيز الطلب المتوقعة (Lead Time) Dropdown -->
+          <div>
+            <label for="pickup-lead-time" class="block text-xs font-black text-slate-800 mb-1">
+              مدة تجهيز الطلب المتوقعة قبل وصول العميل (Order Preparation Lead Time) <span class="text-rose-500">*</span>
+            </label>
+            <p class="text-[11px] text-slate-500 mb-2.5">
+              الوقت المستغرق لتجميع وتعبئة الطلب ووضعه عند كاونتر الاستلام قبل إشعار العميل بالجاهزية.
+            </p>
+            <div class="relative max-w-md">
+              <select id="pickup-lead-time"
+                class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] transition shadow-2xs">
+                <option value="15">15 دقيقة (تجهيز فوري سريع)</option>
+                <option value="30" selected>30 دقيقة (موصى به لمعظم المتاجر)</option>
+                <option value="45">45 دقيقة (سلات المنتجات الكبيرة)</option>
+                <option value="60">60 دقيقة (ساعة كاملة)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 2. كاونتر / نقطة الاستلام داخل الفرع -->
+          <div class="space-y-1.5">
+            <label for="pickup-counter-location" class="block text-xs font-black text-slate-800">
+              كاونتر / نقطة الاستلام المخصصة داخل الفرع (Pickup Counter / Point)
+            </label>
+            <p class="text-[11px] text-slate-500">
+              يظهر هذا الإرشاد للعميل في تفاصيل طلبه وتوجيهه مباشرة إلى المكان المناسب داخل المتجر.
+            </p>
+            <div class="relative">
+              <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+              </div>
+              <input type="text" id="pickup-counter-location"
+                placeholder="مثال: كاونتر الاستلام السريع - الصندوق 1"
+                class="w-full pr-9 pl-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] transition shadow-2xs">
+            </div>
+
+            <!-- Quick Presets -->
+            <div class="flex flex-wrap items-center gap-1.5 pt-1">
+              <span class="text-[10px] text-slate-500 font-bold">مقترحات سريعة:</span>
+              <button type="button" class="counter-preset-chip px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 hover:text-[#1c5335] rounded-lg text-[10px] font-bold text-slate-600 transition cursor-pointer"
+                data-preset="كاونتر الاستلام السريع - الصندوق 1">كاونتر الاستلام السريع - الصندوق 1</button>
+              <button type="button" class="counter-preset-chip px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 hover:text-[#1c5335] rounded-lg text-[10px] font-bold text-slate-600 transition cursor-pointer"
+                data-preset="بوابة رقم 1 - بجوار خدمة العملاء">بوابة رقم 1 - خدمة العملاء</button>
+              <button type="button" class="counter-preset-chip px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 hover:text-[#1c5335] rounded-lg text-[10px] font-bold text-slate-600 transition cursor-pointer"
+                data-preset="منطقة تسليم طلبات الأونلاين - كاشير 3">تسليم أونلاين - كاشير 3</button>
+            </div>
+          </div>
+
+          <!-- 3. ساعات الاستلام اليومية (Daily Pickup Hours: From & To) -->
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-3">
+            <div>
+              <h3 class="text-xs font-black text-slate-900">ساعات الاستلام اليومية (Daily Pickup Hours)</h3>
+              <p class="text-[11px] text-slate-500">حدد الفترة الزمنية التي يُسمح للعملاء فيها بالحضور واستلام طلباتهم</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- From time -->
+              <div>
+                <label for="pickup-window-start" class="block text-xs font-bold text-slate-700 mb-1">
+                  يبدأ وقت الاستلام من (From Time)
+                </label>
+                <input type="time" id="pickup-window-start" value="09:00"
+                  class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] transition shadow-2xs">
+              </div>
+
+              <!-- To time -->
+              <div>
+                <label for="pickup-window-end" class="block text-xs font-bold text-slate-700 mb-1">
+                  ينتهي وقت الاستلام عند (To Time)
+                </label>
+                <input type="time" id="pickup-window-end" value="22:00"
+                  class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] transition shadow-2xs">
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. أيام العمل المعتمدة للاستلام (Active Operating Days Selector) -->
+          <div class="space-y-2.5">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-xs font-black text-slate-900">أيام العمل المتاحة للاستلام (Active Operating Days)</h3>
+                <p class="text-[11px] text-slate-500">انقر على اليوم لتفعيله أو تعطيله من جدول الاستلام الذاتي</p>
+              </div>
+              <button type="button" id="btn-select-all-days"
+                class="text-[11px] font-bold text-[#1c5335] hover:underline cursor-pointer">
+                تحديد كل الأيام
+              </button>
+            </div>
+
+            <!-- Interactive Operating Days Buttons Grid -->
+            <div id="operating-days-container" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+              <!-- Generated dynamically in js/delivery-settings.js -->
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODAL: Add / Edit Delivery Zone            -->
+  <!-- ========================================== -->
+  <div id="zone-modal" class="fixed inset-0 z-50 overflow-y-auto hidden" aria-labelledby="zone-modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+      <!-- Backdrop -->
+      <div id="zone-modal-backdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"></div>
+
+      <!-- Modal Panel -->
+      <div class="relative inline-block w-full max-w-lg p-6 my-8 overflow-hidden text-right align-middle transition-all transform bg-white shadow-2xl rounded-2xl sm:rounded-3xl z-10 border border-slate-200">
+        <!-- Close Button -->
+        <button type="button" id="btn-close-zone-modal"
+          class="absolute top-4 left-4 p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer" title="إغلاق">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+
+        <!-- Modal Header -->
+        <div class="flex items-center gap-2.5 pb-4 border-b border-slate-100">
+          <div class="w-8 h-8 rounded-xl bg-emerald-50 text-[#1c5335] flex items-center justify-center font-bold">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+          </div>
+          <div>
+            <h3 id="zone-modal-title" class="text-sm font-black text-slate-900">إضافة منطقة توصيل جديدة</h3>
+            <p class="text-[11px] text-slate-500">حدد تفاصيل المنطقة، رسوم التوصيل، والحد الأدنى للطلب</p>
+          </div>
+        </div>
+
+        <!-- Modal Form with Real-time Validation -->
+        <form id="zone-form" class="mt-4 space-y-4" novalidate>
+          <!-- Zone Name -->
+          <div>
+            <label for="zone-name" class="block text-xs font-bold text-slate-700 mb-1">
+              اسم المنطقة / الحي <span class="text-rose-500">*</span>
+            </label>
+            <input type="text" id="zone-name" required
+              placeholder="مثال: حي الرفيديا"
+              class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] transition">
+            <p id="zone-name-error" class="hidden text-[10px] text-rose-500 mt-1 font-bold">يرجى إدخال اسم المنطقة أو الحي بشكل صحيح</p>
+          </div>
+
+          <!-- Base Fee & Min Order: Two Columns -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <!-- Base Delivery Fee (₪) -->
+            <div>
+              <label for="zone-base-fee" class="block text-xs font-bold text-slate-700 mb-1">
+                رسوم التوصيل الأساسية (₪) <span class="text-rose-500">*</span>
+              </label>
+              <div class="relative">
+                <input type="number" id="zone-base-fee" min="0" step="0.5" required value="10.0"
+                  class="w-full pr-3 pl-8 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 tabular-nums focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] transition">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs font-bold">
+                  ₪
+                </div>
+              </div>
+              <p id="zone-base-fee-error" class="hidden text-[10px] text-rose-500 mt-1 font-bold">رسوم التوصيل يجب أن تكون 0 أو أكثر</p>
+            </div>
+
+            <!-- Minimum Order Amount (₪) -->
+            <div>
+              <label for="zone-min-order" class="block text-xs font-bold text-slate-700 mb-1">
+                الحد الأدنى للطلب (₪) <span class="text-rose-500">*</span>
+              </label>
+              <div class="relative">
+                <input type="number" id="zone-min-order" min="0" step="1" required value="30.0"
+                  class="w-full pr-3 pl-8 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 tabular-nums focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] transition">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs font-bold">
+                  ₪
+                </div>
+              </div>
+              <p id="zone-min-order-error" class="hidden text-[10px] text-rose-500 mt-1 font-bold">الحد الأدنى يجب أن يكون 0 أو أكثر</p>
+            </div>
+          </div>
+
+          <!-- Free Delivery Threshold Toggle & Input -->
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <label for="zone-has-free-delivery" class="text-xs font-bold text-slate-800 cursor-pointer select-none">
+                تفعيل التوصيل المجاني عند تجاوز قيمة سلة محددة
+              </label>
+              <input type="checkbox" id="zone-has-free-delivery" checked
+                class="w-4 h-4 rounded text-[#1c5335] focus:ring-[#1c5335] border-slate-300 cursor-pointer">
+            </div>
+
+            <div id="zone-free-threshold-group" class="pt-1">
+              <label for="zone-free-threshold" class="block text-[11px] font-bold text-slate-600 mb-1">
+                الحد الأدنى للسلة للتوصيل المجاني (₪)
+              </label>
+              <div class="relative">
+                <input type="number" id="zone-free-threshold" min="0" step="5" value="150.0"
+                  class="w-full pr-3 pl-8 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-900 tabular-nums focus:outline-none focus:border-[#1c5335]">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs font-bold">
+                  ₪
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Estimated Delivery Time (ETA) -->
+          <div>
+            <label for="zone-est-time" class="block text-xs font-bold text-slate-700 mb-1">
+              الوقت المتوقع للتوصيل (Estimated ETA) <span class="text-rose-500">*</span>
+            </label>
+            <input type="text" id="zone-est-time" value="30-45 دقيقة" required
+              placeholder="مثال: 30-45 دقيقة"
+              class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] transition">
+            <p id="zone-est-time-error" class="hidden text-[10px] text-rose-500 mt-1 font-bold">يرجى كتابة الوقت المتوقع للتوصيل</p>
+          </div>
+
+          <!-- Actions -->
+          <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+            <button type="button" id="btn-cancel-zone-modal"
+              class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition cursor-pointer">
+              إلغاء
+            </button>
+            <button type="submit" id="btn-submit-zone-form"
+              class="px-5 py-2 rounded-xl bg-[#1c5335] hover:bg-[#143e27] text-white text-xs font-bold transition shadow-2xs cursor-pointer">
+              حفظ المنطقة
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: Delete Zone Confirmation            -->
+  <!-- ========================================== -->
+  <div id="delete-zone-modal" class="fixed inset-0 z-50 overflow-y-auto hidden" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+      <div id="delete-zone-modal-backdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"></div>
+      <!-- Modal Panel -->
+      <div class="relative inline-block w-full max-w-md p-6 my-8 overflow-hidden text-right align-middle transition-all transform bg-white shadow-2xl rounded-2xl sm:rounded-3xl z-10 border border-slate-200">
+        <!-- Close Button -->
+        <button type="button" id="btn-close-delete-modal"
+          class="absolute top-4 left-4 p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer" title="إغلاق">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </div>
+          <div class="space-y-1">
+            <h3 class="text-sm font-black text-slate-900">تأكيد حذف منطقة التوصيل</h3>
+            <p id="delete-zone-modal-msg" class="text-xs text-slate-500 leading-relaxed">
+              هل أنت متأكد من حذف هذه المنطقة؟ لن يتمكن العملاء في هذا النطاق من طلب التوصيل.
+            </p>
+          </div>
+        </div>
+        <div class="mt-6 flex items-center justify-end gap-2">
+          <button type="button" id="btn-cancel-delete-zone"
+            class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition cursor-pointer">
+            تراجع
+          </button>
+          <button type="button" id="btn-confirm-delete-zone"
+            class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-xs cursor-pointer">
+            نعم، احذف المنطقة
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: Validation Error Modal (HTTP 422)    -->
+  <!-- ========================================== -->
+  <div id="validation-error-modal" class="fixed inset-0 z-50 overflow-y-auto hidden" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+      <div id="validation-error-backdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"></div>
+      <div class="relative inline-block w-full max-w-md p-6 my-8 overflow-hidden text-right align-middle transition-all transform bg-white shadow-2xl rounded-2xl sm:rounded-3xl z-10 border border-slate-200">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          </div>
+          <div class="space-y-1">
+            <h3 class="text-sm font-black text-slate-900">تنبيه التحقق من البيانات (422)</h3>
+            <p class="text-xs text-slate-500">يرجى مراجعة الحقول التالية وتصحيحها قبل المتابعة:</p>
+            <div id="validation-error-details" class="mt-2 p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 font-semibold space-y-1 max-h-48 overflow-y-auto">
+            </div>
+          </div>
+        </div>
+        <div class="mt-5 flex justify-end">
+          <button type="button" id="btn-close-validation-modal"
+            class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition shadow-xs cursor-pointer">
+            حسناً، سأقوم بالتعديل
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- Floating Emerald Success Toast             -->
+  <!-- ========================================== -->
+  <div id="emerald-toast-container" class="fixed bottom-6 left-6 z-50 pointer-events-none flex flex-col gap-2">
+  </div>
+
+  <!-- Core Scripts -->
+  <script src="js/config.js" defer></script>
+  <script src="js/api.js" defer></script>
+  <script src="js/auth.js" defer></script>
+  <script src="js/delivery-settings.js" defer></script>
+
+</body>
+
+</html>

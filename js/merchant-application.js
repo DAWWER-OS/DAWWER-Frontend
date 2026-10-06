@@ -381,22 +381,57 @@ async function loadApplications() {
   }
 
   try {
-    const res = await ApiClient.get("/merchant/stores");
-    if (res && res.success && res.data) {
-      const stores = Array.isArray(res.data) ? res.data : [res.data];
+    let storesData;
+    let res;
+    if (window.ApiClient && ApiClient.core) {
+      storesData = await ApiClient.core("/merchant/stores", { method: 'GET' });
+    } else {
+      res = await ApiClient.get("/merchant/stores");
+      storesData = res?.data || res;
+    }
+
+    if (storesData) {
+      const stores = Array.isArray(storesData) ? storesData : [storesData];
       if (stores.length > 0) {
         currentStore = stores[0];
         populateForm(currentStore);
         renderStatusCard(currentStore);
         if (currentStore.id) {
           setApplicationId(currentStore.id);
+          if (isValidGuid(currentStore.id)) {
+            localStorage.setItem('activeStoreId', currentStore.id);
+            localStorage.setItem('storeId', currentStore.id);
+            localStorage.setItem('store_id', currentStore.id);
+          }
+
+          // Safe store context switching if approved (StoreVerificationStatus.Approved = 5)
+          const isApproved = currentStore.verificationStatus === 5 ||
+                             currentStore.verificationStatus === 'Approved' ||
+                             currentStore.status === 5 ||
+                             currentStore.status === 'Approved';
+          if (isApproved && isValidGuid(currentStore.id)) {
+            try {
+              if (typeof ApiClient !== 'undefined' && ApiClient.auth && ApiClient.auth.selectStore) {
+                await ApiClient.auth.selectStore(currentStore.id);
+              }
+            } catch (selErr) {
+              console.warn('[MerchantApp] Safe store context select note:', selErr);
+            }
+          }
+
           // If currentStore.documents is not provided by list endpoint, fetch detailed entity
           if (!currentStore.documents || currentStore.documents.length === 0) {
             try {
-              const detailRes = await ApiClient.get(`/merchant/stores/${currentStore.id}`);
-              if (detailRes && detailRes.success && detailRes.data && Array.isArray(detailRes.data.documents)) {
-                currentStore.documents = detailRes.data.documents;
-                uploadedDocs = detailRes.data.documents;
+              let detailRes;
+              if (window.ApiClient && ApiClient.core) {
+                detailRes = await ApiClient.core(`/merchant/stores/${currentStore.id}`, { method: 'GET' });
+              } else {
+                const raw = await ApiClient.get(`/merchant/stores/${currentStore.id}`);
+                detailRes = raw?.data || raw;
+              }
+              if (detailRes && Array.isArray(detailRes.documents)) {
+                currentStore.documents = detailRes.documents;
+                uploadedDocs = detailRes.documents;
                 renderDocsTable();
               }
             } catch (dErr) {
@@ -526,35 +561,51 @@ async function handleSaveStore(event) {
     taxNumber: document.getElementById("store-tax")?.value.trim() || '',
     phoneNumber: document.getElementById("store-phone")?.value.trim() || '',
     email: document.getElementById("store-email")?.value.trim() || '',
+    address: document.getElementById("store-address")?.value.trim() || '',
     city: document.getElementById("store-city")?.value.trim() || '',
-    address: document.getElementById("store-address")?.value.trim() || ''
+    latitude: 24.7136,
+    longitude: 46.6753
   };
 
   const existingAppId = getApplicationId();
 
   try {
-    let res;
+    let resData;
     if (existingAppId) {
-      res = await ApiClient.put(`/merchant/stores/${existingAppId}`, payload);
+      if (window.ApiClient && ApiClient.core) {
+        resData = await ApiClient.core(`/merchant/stores/${existingAppId}`, {
+          method: 'PUT',
+          body: payload
+        });
+      } else {
+        const raw = await ApiClient.put(`/merchant/stores/${existingAppId}`, payload);
+        resData = raw?.data || raw;
+      }
     } else {
-      res = await ApiClient.post("/merchant/stores", payload);
+      if (window.ApiClient && ApiClient.core) {
+        resData = await ApiClient.core("/merchant/stores", {
+          method: 'POST',
+          body: payload
+        });
+      } else {
+        const raw = await ApiClient.post("/merchant/stores", payload);
+        resData = raw?.data || raw;
+      }
     }
 
-    if (!res || res.success === false) {
-      const errMsg = (Array.isArray(res?.errors) && res.errors.length > 0)
-        ? res.errors.join(' | ')
-        : (res?.message || res?.error || "فشل حفظ بيانات المتجر. يرجى التحقق من الحقول والمحاولة مرة أخرى.");
-      throw new Error(errMsg);
-    }
-
-    // Extract application ID from backend response (data.id)
-    const returnedId = res?.data?.id || res?.data?.applicationId || res?.id;
+    // Extract application ID from backend response
+    const returnedId = resData?.id || resData?.applicationId || resData?.storeId || existingAppId;
     if (returnedId) {
       setApplicationId(returnedId);
+      if (isValidGuid(returnedId)) {
+        localStorage.setItem('activeStoreId', returnedId);
+        localStorage.setItem('storeId', returnedId);
+        localStorage.setItem('store_id', returnedId);
+      }
     }
 
-    if (res.data && typeof res.data === 'object') {
-      currentStore = { ...currentStore, ...res.data };
+    if (resData && typeof resData === 'object') {
+      currentStore = { ...currentStore, ...resData };
       if (returnedId) currentStore.id = returnedId;
     } else if (returnedId) {
       currentStore = { ...(currentStore || {}), ...payload, id: returnedId };
@@ -673,18 +724,23 @@ async function submitApplication() {
   }
 
   try {
-    const res = await ApiClient.post(`/merchant/stores/${appId}/submit`, {});
-    if (!res || res.success === false) {
-      const errMsg = (Array.isArray(res?.errors) && res.errors.length > 0)
-        ? res.errors.join(' | ')
-        : (res?.message || res?.error || 'حدث خطأ أثناء إرسال الطلب للاعتماد.');
+    let res;
+    if (window.ApiClient && ApiClient.core) {
+      res = await ApiClient.core(`/merchant/stores/${appId}/submit`, { method: 'POST' });
+    } else {
+      res = await ApiClient.post(`/merchant/stores/${appId}/submit`, {});
+      if (!res || res.success === false) {
+        const errMsg = (Array.isArray(res?.errors) && res.errors.length > 0)
+          ? res.errors.join(' | ')
+          : (res?.message || res?.error || 'حدث خطأ أثناء إرسال الطلب للاعتماد.');
 
-      // Catch 400 Bad Request error if status is already submitted
-      if (isAlreadySubmittedError(res, errMsg)) {
-        handleAlreadySubmittedState();
-        return;
+        // Catch 400 Bad Request error if status is already submitted
+        if (isAlreadySubmittedError(res, errMsg)) {
+          handleAlreadySubmittedState();
+          return;
+        }
+        throw new Error(errMsg);
       }
-      throw new Error(errMsg);
     }
 
     // Success state
@@ -696,6 +752,11 @@ async function submitApplication() {
     }
 
     showSubmittedBanner();
+    lockFormForReview(true);
+    const submittedNotice = document.getElementById("submitted-status-notice");
+    if (submittedNotice) {
+      submittedNotice.classList.remove('hidden');
+    }
 
     if (window.showToast) {
       window.showToast({
@@ -802,16 +863,26 @@ async function uploadDocument() {
   }
 
   try {
-    const res = await ApiClient.upload(`/merchant/stores/${appId}/documents`, formData);
-    if (!res || res.success === false) {
-      const errMsg = (Array.isArray(res?.errors) && res.errors.length > 0)
-        ? res.errors.join(' | ')
-        : (res?.message || res?.error || 'فشل رفع المستند.');
-      throw new Error(errMsg);
+    let docData;
+    let successMsg = 'تم رفع المستند بنجاح!';
+    if (window.ApiClient && ApiClient.core) {
+      docData = await ApiClient.core(`/merchant/stores/${appId}/documents`, {
+        method: 'POST',
+        body: formData
+      });
+    } else {
+      const res = await ApiClient.upload(`/merchant/stores/${appId}/documents`, formData);
+      if (!res || res.success === false) {
+        const errMsg = (Array.isArray(res?.errors) && res.errors.length > 0)
+          ? res.errors.join(' | ')
+          : (res?.message || res?.error || 'فشل رفع المستند.');
+        throw new Error(errMsg);
+      }
+      docData = res.data;
+      if (res.message) successMsg = res.message;
     }
 
     // Refresh uploaded documents list state from response acknowledgement
-    const docData = res.data;
     if (Array.isArray(docData)) {
       uploadedDocs = docData;
     } else if (docData && typeof docData === 'object' && (docData.id || docData.fileName || docData.documentType)) {
@@ -845,10 +916,16 @@ async function uploadDocument() {
 
     // Attempt to sync detailed state from backend
     try {
-      const detailRes = await ApiClient.get(`/merchant/stores/${appId}`);
-      if (detailRes && detailRes.success && detailRes.data && Array.isArray(detailRes.data.documents)) {
-        uploadedDocs = detailRes.data.documents;
-        if (currentStore) currentStore.documents = detailRes.data.documents;
+      let detailRes;
+      if (window.ApiClient && ApiClient.core) {
+        detailRes = await ApiClient.core(`/merchant/stores/${appId}`, { method: 'GET' });
+      } else {
+        const raw = await ApiClient.get(`/merchant/stores/${appId}`);
+        detailRes = raw?.data || raw;
+      }
+      if (detailRes && Array.isArray(detailRes.documents)) {
+        uploadedDocs = detailRes.documents;
+        if (currentStore) currentStore.documents = detailRes.documents;
       }
     } catch (syncErr) {
       console.warn("Could not sync documents from store details:", syncErr);
@@ -858,12 +935,11 @@ async function uploadDocument() {
     renderDocsTable();
     updateSubmitButtonState();
 
-    const msg = res?.message || 'تم رفع المستند بنجاح!';
-    showAlert(msg, 'success');
+    showAlert(successMsg, 'success');
     if (window.showToast) {
       window.showToast({
         title: 'تم الرفع بنجاح',
-        message: msg,
+        message: successMsg,
         type: 'success'
       });
     }

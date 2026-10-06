@@ -41,21 +41,22 @@
  *     * POST   /api/v1/stores/{store_id}/draft-products/batch-approve
  */
 
-const AUTH_BASE = (typeof CONFIG !== 'undefined' && CONFIG.AUTH_BASE_URL)
-  ? CONFIG.AUTH_BASE_URL
+const AUTH_BASE = (typeof CONFIG !== 'undefined' && (CONFIG.API_BASE_URL || CONFIG.AUTH_BASE_URL))
+  ? (CONFIG.API_BASE_URL || CONFIG.AUTH_BASE_URL)
   : "https://dawwer.runasp.net/api";
 
-const FASTAPI_BASE = (typeof CONFIG !== 'undefined' && CONFIG.PRODUCTS_BASE_URL)
-  ? CONFIG.PRODUCTS_BASE_URL
+const FASTAPI_BASE = (typeof CONFIG !== 'undefined' && (CONFIG.FASTAPI_BASE_URL || CONFIG.PRODUCTS_BASE_URL))
+  ? (CONFIG.FASTAPI_BASE_URL || CONFIG.PRODUCTS_BASE_URL)
   : "https://dawwer-backend-fastapi.onrender.com";
 
+const API_BASE_URL = AUTH_BASE;
 const AUTH_BASE_URL = AUTH_BASE;
 const PRODUCTS_BASE_URL = FASTAPI_BASE;
 const BASE_URL = FASTAPI_BASE;
 
 const DEFAULT_TIMEOUT_MS = (typeof CONFIG !== 'undefined' && (CONFIG.REQUEST_TIMEOUT || CONFIG.TIMEOUT_MS))
   ? (CONFIG.REQUEST_TIMEOUT || CONFIG.TIMEOUT_MS)
-  : 90000; // 90000ms (90 seconds) AbortController timeout threshold for Render cold-starts (updated from 15000ms)
+  : 90000; // 90000ms (90 seconds) AbortController timeout threshold for Render cold-starts
 
 /**
  * Prevent stringified "null" or "undefined" storage:
@@ -111,6 +112,8 @@ const DEFAULT_TIMEOUT_MS = (typeof CONFIG !== 'undefined' && (CONFIG.REQUEST_TIM
 })();
 
 const ApiClient = {
+  API_BASE_URL,
+  FASTAPI_BASE_URL: (typeof window !== 'undefined' && window.CONFIG && window.CONFIG.FASTAPI_BASE_URL) || (typeof CONFIG !== 'undefined' && CONFIG.FASTAPI_BASE_URL) || 'https://dawwer-backend-fastapi.onrender.com',
   AUTH_BASE,
   FASTAPI_BASE,
   AUTH_BASE_URL,
@@ -119,6 +122,225 @@ const ApiClient = {
   DEFAULT_TIMEOUT_MS,
 
   _storeVerificationPromptActive: false,
+
+  /**
+   * Helper: Retrieve unified authorization bearer token
+   * Always prioritizes storeToken then accessToken, checking fallback keys.
+   */
+  getToken() {
+    try {
+      const storeToken = localStorage.getItem('storeToken') ||
+                         localStorage.getItem('store_token') ||
+                         localStorage.getItem('dawwer_store_token') ||
+                         (typeof CONFIG !== 'undefined' ? CONFIG.getStoreToken() : null);
+      if (storeToken && typeof storeToken === 'string') {
+        const clean = storeToken.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
+        if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined') return clean;
+      }
+      const token = localStorage.getItem('accessToken') ||
+                    localStorage.getItem('token') ||
+                    localStorage.getItem('access_token') ||
+                    localStorage.getItem('dawwer_access_token') ||
+                    (typeof CONFIG !== 'undefined' ? CONFIG.getToken() : null);
+      if (token && typeof token === 'string') {
+        const clean = token.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
+        if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined') return clean;
+      }
+    } catch (e) {}
+    return null;
+  },
+
+  /**
+   * Primary Platform Backend Dispatcher (ASP.NET Core 9 / CONFIG.API_BASE_URL).
+   * Unpacks ASP.NET standard envelope { success, data, message, errors }.
+   * If success === false, throws an error showing errors.join(', ') or message.
+   * On server sleep or network failure, provides realistic offline mock fallback without unhandled rejections.
+   */
+  async core(endpoint, options = {}) {
+    const base = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL)
+      ? CONFIG.API_BASE_URL.replace(/\/+$/, '')
+      : (this.API_BASE_URL || this.AUTH_BASE || "https://dawwer.runasp.net/api").replace(/\/+$/, '');
+
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
+    const path = cleanEndpoint.startsWith('/api/') ? cleanEndpoint.slice(4) : (cleanEndpoint === '/api' ? '' : cleanEndpoint);
+    const url = cleanEndpoint.startsWith('http://') || cleanEndpoint.startsWith('https://')
+      ? cleanEndpoint
+      : `${base}${path}`;
+
+    const headers = { ...(options.headers || {}) };
+    const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+
+    // Attach Authorization: Bearer <token>
+    const token = this.getToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    if (!isFormData) {
+      if (!Object.keys(headers).some(k => k.toLowerCase() === 'content-type')) {
+        headers['Content-Type'] = 'application/json';
+      }
+    } else {
+      Object.keys(headers).forEach(k => {
+        if (k.toLowerCase() === 'content-type') delete headers[k];
+      });
+    }
+
+    let requestBody = options.body;
+    if (!isFormData && requestBody !== undefined && requestBody !== null && typeof requestBody !== 'string') {
+      requestBody = JSON.stringify(requestBody);
+    }
+
+    const timeoutMs = (options.timeout !== undefined && options.timeout !== null)
+      ? Number(options.timeout)
+      : (typeof CONFIG !== 'undefined' && (CONFIG.REQUEST_TIMEOUT || CONFIG.TIMEOUT_MS) ? (CONFIG.REQUEST_TIMEOUT || CONFIG.TIMEOUT_MS) : 90000);
+
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    let timer = null;
+    if (controller && timeoutMs > 0) {
+      timer = setTimeout(() => controller.abort(), timeoutMs);
+    }
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        body: requestBody,
+        signal: controller ? controller.signal : undefined
+      }).finally(() => {
+        if (timer) clearTimeout(timer);
+      });
+
+      let json = null;
+      try {
+        json = await response.json();
+      } catch (e) {
+        json = null;
+      }
+
+      if (response.ok) {
+        // Universal ASP.NET Response Envelope { success, message, data, errors }
+        if (json && typeof json === 'object' && ('success' in json || 'data' in json)) {
+          if (json.success === false) {
+            const errMsg = (Array.isArray(json.errors) && json.errors.length > 0)
+              ? json.errors.join(' | ')
+              : (json.message || 'فشلت العملية في خادم المنصة.');
+            const err = new Error(errMsg);
+            err.status = response.status;
+            err.response = json;
+            err.errors = json.errors;
+            throw err;
+          }
+          return json.data !== undefined ? json.data : json;
+        }
+        return json;
+      } else {
+        const errMsg = (json && Array.isArray(json.errors) && json.errors.length > 0)
+          ? json.errors.join(' | ')
+          : (json?.message || json?.detail || `HTTP ${response.status}`);
+        const err = new Error(errMsg);
+        err.status = response.status;
+        err.response = json;
+        err.errors = json?.errors;
+        throw err;
+      }
+    } catch (networkError) {
+      console.warn(`[ApiClient.core] Primary ASP.NET backend error: ${options.method || 'GET'} ${url} -`, networkError.message || networkError);
+      if (options.fallback !== undefined) {
+        console.warn(`[ApiClient.core] Utilizing graceful offline mock fallback for ${url}`);
+        return options.fallback;
+      }
+      throw networkError;
+    }
+  },
+
+  /**
+   * AI & In-Store Spatial Backend Dispatcher (FastAPI / CONFIG.FASTAPI_BASE_URL).
+   * Handles standard JSON or direct FastAPI data returns.
+   * On Render spin-up delay or sleep, provides realistic offline mock fallback without unhandled rejections.
+   */
+  async fastapi(endpoint, options = {}) {
+    const base = (typeof CONFIG !== 'undefined' && CONFIG.FASTAPI_BASE_URL)
+      ? CONFIG.FASTAPI_BASE_URL.replace(/\/+$/, '')
+      : (this.FASTAPI_BASE_URL || this.FASTAPI_BASE || "https://dawwer-backend-fastapi.onrender.com").replace(/\/+$/, '');
+
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
+    const url = cleanEndpoint.startsWith('http://') || cleanEndpoint.startsWith('https://')
+      ? cleanEndpoint
+      : `${base}${cleanEndpoint.startsWith('/api/v1') ? '' : '/api/v1'}${cleanEndpoint}`;
+
+    const headers = { ...(options.headers || {}) };
+    const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+
+    // Attach Authorization: Bearer <token>
+    const token = this.getToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    if (!isFormData) {
+      if (!Object.keys(headers).some(k => k.toLowerCase() === 'content-type')) {
+        headers['Content-Type'] = 'application/json';
+      }
+    } else {
+      Object.keys(headers).forEach(k => {
+        if (k.toLowerCase() === 'content-type') delete headers[k];
+      });
+    }
+
+    let requestBody = options.body;
+    if (!isFormData && requestBody !== undefined && requestBody !== null && typeof requestBody !== 'string') {
+      requestBody = JSON.stringify(requestBody);
+    }
+
+    const timeoutMs = (options.timeout !== undefined && options.timeout !== null)
+      ? Number(options.timeout)
+      : (typeof CONFIG !== 'undefined' && (CONFIG.REQUEST_TIMEOUT || CONFIG.TIMEOUT_MS) ? (CONFIG.REQUEST_TIMEOUT || CONFIG.TIMEOUT_MS) : 90000);
+
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    let timer = null;
+    if (controller && timeoutMs > 0) {
+      timer = setTimeout(() => controller.abort(), timeoutMs);
+    }
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        body: requestBody,
+        signal: controller ? controller.signal : undefined
+      }).finally(() => {
+        if (timer) clearTimeout(timer);
+      });
+
+      let json = null;
+      try {
+        json = await response.json();
+      } catch (e) {
+        json = null;
+      }
+
+      if (response.ok) {
+        return json;
+      } else {
+        const errMsg = json?.detail || json?.message || `FastAPI HTTP Error ${response.status}`;
+        const err = new Error(typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg));
+        err.status = response.status;
+        err.response = json;
+        throw err;
+      }
+    } catch (networkError) {
+      console.warn(`[ApiClient.fastapi] FastAPI Render service is sleeping or unreachable: ${options.method || 'GET'} ${url} -`, networkError.message || networkError);
+      if (options.fallback !== undefined) {
+        console.warn(`[ApiClient.fastapi] Utilizing graceful offline mock fallback for ${url}`);
+        return options.fallback;
+      }
+      if (options.throwOnError) {
+        throw networkError;
+      }
+      return null;
+    }
+  },
 
   /**
    * Helper to verify if a string is a valid GUID / UUID.
@@ -289,6 +511,82 @@ const ApiClient = {
   },
 
   /**
+   * Immediately clears all stored session credentials from localStorage and sessionStorage.
+   */
+  clearSession() {
+    try {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('userData');
+      localStorage.removeItem('storeToken');
+      localStorage.removeItem('activeStoreId');
+      localStorage.removeItem('dawwer_access_token');
+      localStorage.removeItem('dawwer_refresh_token');
+      localStorage.removeItem('dawwer_user_data');
+      localStorage.removeItem('token');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('store_token');
+      localStorage.removeItem('dawwer_store_token');
+      localStorage.removeItem('store_id');
+      localStorage.removeItem('storeId');
+      localStorage.removeItem('active_store_id');
+      localStorage.removeItem('storeName');
+      localStorage.removeItem('store_name');
+      localStorage.removeItem('dawwer_store_name');
+      localStorage.removeItem('dawwer_active_store');
+      if (typeof CONFIG !== 'undefined') {
+        if (CONFIG.TOKEN_KEY) localStorage.removeItem(CONFIG.TOKEN_KEY);
+        if (CONFIG.REFRESH_TOKEN_KEY) localStorage.removeItem(CONFIG.REFRESH_TOKEN_KEY);
+        if (CONFIG.USER_KEY) localStorage.removeItem(CONFIG.USER_KEY);
+        if (CONFIG.STORE_TOKEN_KEY) localStorage.removeItem(CONFIG.STORE_TOKEN_KEY);
+        if (CONFIG.ACTIVE_STORE_KEY) localStorage.removeItem(CONFIG.ACTIVE_STORE_KEY);
+      }
+      sessionStorage.clear();
+    } catch (e) {}
+  },
+
+  /**
+   * Fail-safe, non-blocking logout with immediate storage cleanup, fire-and-forget notification, and hard redirect.
+   */
+  logout() {
+    const token = this.getToken();
+    const refreshToken = this.getRefreshToken();
+    this.clearSession();
+
+    try {
+      const apiBase = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL)
+        ? CONFIG.API_BASE_URL.replace(/\/+$/, '')
+        : 'https://dawwer.runasp.net/api';
+      fetch(`${apiBase}/Auth/logout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ refreshToken: refreshToken || '' })
+      }).catch(() => {});
+    } catch (e) {}
+
+    window.location.replace('login.html');
+  },
+
+  /**
+   * Auth API dispatch helpers
+   */
+  auth: {
+    async selectStore(storeId) {
+      if (!storeId || !ApiClient.isValidGuid(storeId)) {
+        console.warn('[ApiClient.auth.selectStore] Invalid store GUID:', storeId);
+        return { success: false, message: 'Invalid store GUID' };
+      }
+      return await ApiClient.post('/Auth/select-store', { storeId });
+    },
+    logout() {
+      ApiClient.logout();
+    }
+  },
+
+  /**
    * Verifies the store context against FastAPI Backend: GET /api/v1/stores/{store_id}
    * 
    * 1. Guard check before verifying store context:
@@ -406,16 +704,14 @@ const ApiClient = {
    */
   getAuthToken(forStore = false) {
     try {
-      if (forStore) {
-        const storeToken = localStorage.getItem('storeToken') ||
-                           localStorage.getItem('store_token') ||
-                           localStorage.getItem('dawwer_store_token') ||
-                           (typeof CONFIG !== 'undefined' ? localStorage.getItem(CONFIG.STORE_TOKEN_KEY) : null);
-        if (storeToken && typeof storeToken === 'string') {
-          const clean = storeToken.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-          if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && !this.isTokenExpired(clean)) {
-            return clean;
-          }
+      const storeToken = localStorage.getItem('storeToken') ||
+                         localStorage.getItem('store_token') ||
+                         localStorage.getItem('dawwer_store_token') ||
+                         (typeof CONFIG !== 'undefined' && CONFIG.STORE_TOKEN_KEY ? localStorage.getItem(CONFIG.STORE_TOKEN_KEY) : null);
+      if (storeToken && typeof storeToken === 'string') {
+        const clean = storeToken.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
+        if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && !this.isTokenExpired(clean)) {
+          return clean;
         }
       }
 
@@ -423,30 +719,13 @@ const ApiClient = {
                     localStorage.getItem('token') ||
                     localStorage.getItem('access_token') ||
                     localStorage.getItem('dawwer_access_token') ||
-                    (typeof CONFIG !== 'undefined' ? localStorage.getItem(CONFIG.TOKEN_KEY) : null) ||
-                    localStorage.getItem('dawwer_token') ||
-                    localStorage.getItem('storeToken') ||
-                    localStorage.getItem('store_token') ||
-                    localStorage.getItem('dawwer_store_token') ||
-                    (typeof CONFIG !== 'undefined' ? localStorage.getItem(CONFIG.STORE_TOKEN_KEY) : null);
+                    (typeof CONFIG !== 'undefined' && CONFIG.TOKEN_KEY ? localStorage.getItem(CONFIG.TOKEN_KEY) : null) ||
+                    localStorage.getItem('dawwer_token');
 
       if (token && typeof token === 'string') {
         const clean = token.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
         if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && !this.isTokenExpired(clean)) {
           return clean;
-        }
-      }
-
-      if (!forStore) {
-        const storeToken = localStorage.getItem('storeToken') ||
-                           localStorage.getItem('store_token') ||
-                           localStorage.getItem('dawwer_store_token') ||
-                           (typeof CONFIG !== 'undefined' ? localStorage.getItem(CONFIG.STORE_TOKEN_KEY) : null);
-        if (storeToken && typeof storeToken === 'string') {
-          const clean = storeToken.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-          if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && !this.isTokenExpired(clean)) {
-            return clean;
-          }
         }
       }
 
@@ -688,27 +967,50 @@ const ApiClient = {
           console.info('[ApiClient] Silent token refresh successful.');
 
           // If active store exists but storeToken was not returned in refresh, re-fetch storeToken
-          const activeStoreId = this.getActiveStoreId();
-          if (activeStoreId && this.isValidStoreId(activeStoreId) && !newStoreToken) {
+          const rawStoreVal = localStorage.getItem('activeStoreId') || localStorage.getItem('storeId') || localStorage.getItem('dawwer_active_store');
+          let activeStoreId = rawStoreVal;
+          if (rawStoreVal && typeof rawStoreVal === 'string' && rawStoreVal.trim().startsWith('{')) {
             try {
-              const selRes = await fetch(`${baseUrl.replace(/\/+$/, '')}/Auth/select-store`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json; charset=utf-8',
-                  'Authorization': `Bearer ${newAccessToken}`
-                },
-                body: JSON.stringify({ storeId: activeStoreId })
-              });
-              if (selRes.ok) {
-                const selJson = await selRes.json().catch(() => null);
-                const selData = selJson?.data || selJson;
-                if (selData?.storeToken) {
-                  this.setTokens({ storeToken: selData.storeToken });
-                }
-              }
-            } catch (selErr) {
-              console.warn('[ApiClient] Background store token renewal note:', selErr);
+              const parsed = JSON.parse(rawStoreVal);
+              activeStoreId = parsed?.storeId || parsed?.id || parsed?.store_id || null;
+            } catch (e) {
+              activeStoreId = null;
             }
+          }
+          if (typeof activeStoreId === 'string') {
+            activeStoreId = activeStoreId.trim();
+          }
+
+          const isValidGuid = typeof activeStoreId === 'string' &&
+            /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(activeStoreId) &&
+            activeStoreId !== '00000000-0000-0000-0000-000000000000';
+
+          if (isValidGuid) {
+            if (!newStoreToken) {
+              try {
+                const selRes = await fetch(`${baseUrl.replace(/\/+$/, '')}/Auth/select-store`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json; charset=utf-8',
+                    'Authorization': `Bearer ${newAccessToken}`
+                  },
+                  body: JSON.stringify({ storeId: activeStoreId })
+                });
+                if (selRes.ok) {
+                  const selJson = await selRes.json().catch(() => null);
+                  const selData = selJson?.data || selJson;
+                  if (selData?.storeToken) {
+                    this.setTokens({ storeToken: selData.storeToken });
+                  }
+                } else {
+                  console.warn(`[ApiClient] select-store returned HTTP ${selRes.status}. Skipping store token update.`);
+                }
+              } catch (selErr) {
+                console.warn('[ApiClient] Background store token renewal note:', selErr);
+              }
+            }
+          } else {
+            console.warn('[ApiClient] Skipping select-store: No valid store GUID set yet.');
           }
 
           return newAccessToken;
@@ -870,16 +1172,19 @@ const ApiClient = {
     if (options.service) {
       const s = String(options.service).toLowerCase();
       if (s === 'fastapi' || s === 'products') return 'fastapi';
-      if (s === 'auth') return 'auth';
+      if (s === 'core' || s === 'auth') return 'auth';
     }
 
     const clean = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
     const lower = clean.toLowerCase();
 
-    // 1. Target AUTH_BASE for:
+    // 1. Target Primary Platform Backend (ASP.NET Core / AUTH_BASE / API_BASE_URL) for:
     // - Authentication & Sessions: /Auth/login, /Auth/register, /Auth/verify-code, /Auth/refresh-token, /Auth/logout
     // - Store Selection: /Auth/select-store
     // - Taxonomies: /categories, /categories/tree, /categories/{id}
+    // - Orders & Lifecycle: /Orders, /Orders/{id}/status, /Orders/{id}/amendments, /Orders/{id}/cancel
+    // - Payment Receipts: /orders/{orderId}/receipts, /orders/{orderId}/receipts/file, verify
+    // - Delivery Settings: /districts, /stores/{storeId}/delivery-zones
     // - Merchant Applications & Documents: /merchant/stores, /merchant/stores/{id}/documents, /merchant/stores/{id}/submit
     // - Staff & Custom Roles: /stores/{storeId}/staff, /stores/{storeId}/roles
     // - Profile & Admin: /Profile, /admin/...
@@ -888,6 +1193,12 @@ const ApiClient = {
       lower.startsWith('/api/auth') ||
       lower.startsWith('/categories') ||
       lower.startsWith('/api/categories') ||
+      lower.startsWith('/orders') ||
+      lower.startsWith('/api/orders') ||
+      lower.startsWith('/districts') ||
+      lower.startsWith('/api/districts') ||
+      lower.includes('/delivery-zones') ||
+      lower.includes('/receipts') ||
       lower.startsWith('/merchant') ||
       lower.startsWith('/api/merchant') ||
       lower.startsWith('/profile') ||
@@ -901,22 +1212,25 @@ const ApiClient = {
       return 'auth';
     }
 
-    // 2. Target FASTAPI_BASE for:
+    // 2. Target AI & Spatial Backend (FastAPI / FASTAPI_BASE / FASTAPI_BASE_URL) for:
     // - System Health: /api/v1/health
     // - Store Context Verification: /api/v1/stores/{store_id}
     // - Product Management: /api/v1/stores/{store_id}/products...
     // - Bulk Catalog Import: /api/v1/stores/{store_id}/catalog/bulk-import
     // - AI Shelf Capture Jobs: /api/v1/stores/{store_id}/shelf-jobs...
     // - AI Draft Approvals & Review: /api/v1/stores/{store_id}/draft-products...
+    // - In-Store Floorplan & Blueprint: /api/v1/stores/{store_id}/maps..., /placements...
     if (
       lower.startsWith('/api/v1/') ||
       lower.includes('/shelf-jobs') ||
       lower.includes('/draft-products') ||
       lower.includes('/catalog/bulk-import') ||
       lower.includes('/products') ||
+      lower.includes('/maps') ||
+      lower.includes('/placements') ||
       lower === '/health' ||
       lower.startsWith('/health') ||
-      (lower.startsWith('/stores/') && !lower.includes('/staff') && !lower.includes('/roles'))
+      (lower.startsWith('/stores/') && !lower.includes('/staff') && !lower.includes('/roles') && !lower.includes('/delivery-zones'))
     ) {
       return 'fastapi';
     }
@@ -1041,13 +1355,13 @@ const ApiClient = {
         ? cleanStoreToken
         : ((cleanAccessToken && cleanAccessToken.toLowerCase() !== 'null' && cleanAccessToken.toLowerCase() !== 'undefined') ? cleanAccessToken : null);
     } else if (isAdminEndpoint) {
-      token = this.getAdminToken() || cleanAccessToken || this.getAuthToken(false);
+      token = (typeof this.getAdminToken === 'function' ? this.getAdminToken() : null) || cleanAccessToken || (typeof this.getAuthToken === 'function' ? this.getAuthToken(false) : null);
     } else if (isMerchantEndpoint) {
-      token = this.getMerchantToken() || cleanAccessToken || cleanStoreToken || this.getAuthToken(false);
+      token = (typeof this.getMerchantToken === 'function' ? this.getMerchantToken() : null) || cleanAccessToken || cleanStoreToken || (typeof this.getAuthToken === 'function' ? this.getAuthToken(false) : null);
     } else {
       token = (cleanStoreToken && cleanStoreToken.toLowerCase() !== 'null' && cleanStoreToken.toLowerCase() !== 'undefined')
         ? cleanStoreToken
-        : (cleanAccessToken || this.getAuthToken(true));
+        : (cleanAccessToken || (typeof this.getAuthToken === 'function' ? this.getAuthToken(true) : null));
     }
 
     // Check if Authorization was explicitly provided in options.headers
@@ -1061,17 +1375,17 @@ const ApiClient = {
 
     // Pre-flight check: If token is missing, stop the request immediately and notify the user to log in
     if (!isPublicAuthEndpoint) {
-      if ((!token || token === 'null' || token === 'undefined' || token.trim() === '') && this.getRefreshToken()) {
-        const refreshedToken = await this.refreshAuthToken();
+      if ((!token || token === 'null' || token === 'undefined' || token.trim() === '') && typeof this.getRefreshToken === 'function' && this.getRefreshToken()) {
+        const refreshedToken = typeof this.refreshAuthToken === 'function' ? await this.refreshAuthToken() : null;
         if (refreshedToken) {
-          token = this.getUploadAuthToken() || refreshedToken;
+          token = (typeof this.getUploadAuthToken === 'function' ? this.getUploadAuthToken() : null) || refreshedToken;
         }
       }
 
       if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
         console.warn(`[ApiClient] Token Attachment Check failed: Missing Authorization Bearer token for "${method} ${cleanEndpoint}". Stopping request immediately.`);
         const unauthMsg = "جلسة العمل منتهية أو غير مسجلة. يرجى تسجيل الدخول للمتابعة.";
-        if (!options.suppressAuthPrompt) {
+        if (!options.suppressAuthPrompt && typeof this.promptReauthentication === 'function') {
           this.promptReauthentication(unauthMsg);
         }
         const unauthResult = {
@@ -1432,8 +1746,20 @@ const ApiClient = {
         } catch (e) {}
       }
 
-      if (isFastApi) {
-        if (options.throwOnError) {
+      if (isFastApi || isFastApiTarget) {
+        if (response.status >= 500) {
+          console.warn(`[ApiClient] FastAPI returned HTTP ${response.status} (${method} ${url}). Service may be starting up on Render. Gracefully handling fallback.`);
+          if (options.fallback !== undefined) {
+            return options.fallback;
+          }
+          return {
+            success: false,
+            status: response.status,
+            message: `FastAPI service temporarily unavailable (${response.status})`,
+            data: null
+          };
+        }
+        if (options.throwOnError && response.status < 500) {
           const msg = errorBody?.detail || errorBody?.message || `FastAPI error (${response.status})`;
           const err = new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
           err.status = response.status;
@@ -1473,6 +1799,21 @@ const ApiClient = {
       const errMsg = isTimeout
         ? `انتهت مهلة الاتصال بالخادم (${Math.round(timeoutMs / 1000)} ثانية)، يرجى المحاولة مجدداً.`
         : 'تعذر الاتصال بالخادم الحي، يرجى التحقق من اتصال الإنترنت.';
+
+      if (isFastApiTarget || isFastApi) {
+        console.warn(`[ApiClient] FastAPI service unreachable (${method} ${url}):`, networkError.message || networkError);
+        if (options.fallback !== undefined) {
+          return options.fallback;
+        }
+        return {
+          success: false,
+          status: isTimeout ? 408 : 0,
+          isTimeout,
+          isNetworkError: true,
+          message: 'FastAPI service temporarily unreachable',
+          data: null
+        };
+      }
 
       console.error(`[ApiClient Network Error] ${method} ${url}:`, networkError.message);
 
@@ -1644,36 +1985,54 @@ const ApiClient = {
   // Authentication & Sessions (ASP.NET Backend: AUTH_BASE)
   // =========================================================================
   auth: {
-    login(credentials) {
-      return ApiClient.post('/Auth/login', credentials, {}, { service: 'auth', throwOnError: true });
+    login(credentials, options = {}) {
+      return ApiClient.core('/Auth/login', { method: 'POST', body: credentials, ...options });
     },
-    register(payload) {
-      return ApiClient.post('/Auth/register', payload, {}, { service: 'auth', throwOnError: true });
+    register(payload, options = {}) {
+      return ApiClient.core('/Auth/register', { method: 'POST', body: payload, ...options });
     },
-    verifyCode(payload) {
-      return ApiClient.post('/Auth/verify-code', payload, {}, { service: 'auth', throwOnError: true });
+    verifyCode(payload, options = {}) {
+      return ApiClient.core('/Auth/verify-code', { method: 'POST', body: payload, ...options });
     },
-    resendCode(payload) {
-      return ApiClient.post('/Auth/resend-code', payload, {}, { service: 'auth', throwOnError: true });
+    resendCode(payload, options = {}) {
+      return ApiClient.core('/Auth/resend-code', { method: 'POST', body: payload, ...options });
     },
-    refreshToken(payload) {
-      return ApiClient.post('/Auth/refresh-token', payload, {}, { service: 'auth' });
+    refreshToken(payload, options = {}) {
+      return ApiClient.core('/Auth/refresh-token', { method: 'POST', body: payload, ...options });
     },
-    forgotPassword(payload) {
-      return ApiClient.post('/Auth/forgot-password', payload, {}, { service: 'auth', throwOnError: true });
+    forgotPassword(payload, options = {}) {
+      return ApiClient.core('/Auth/forgot-password', { method: 'POST', body: payload, ...options });
     },
-    resetPassword(payload) {
-      return ApiClient.post('/Auth/reset-password', payload, {}, { service: 'auth', throwOnError: true });
+    resetPassword(payload, options = {}) {
+      return ApiClient.core('/Auth/reset-password', { method: 'POST', body: payload, ...options });
     },
-    me() {
-      return ApiClient.get('/Auth/me', {}, { service: 'auth' });
+    me(options = {}) {
+      return ApiClient.core('/Auth/me', { method: 'GET', ...options });
     },
     async selectStore(storeId) {
-      const res = await ApiClient.post('/Auth/select-store', { storeId }, {}, { service: 'auth', throwOnError: true });
+      let candidateStoreId = storeId;
+      if (candidateStoreId && typeof candidateStoreId === 'string' && candidateStoreId.trim().startsWith('{')) {
+        try {
+          const parsed = JSON.parse(candidateStoreId);
+          candidateStoreId = parsed?.storeId || parsed?.id || parsed?.store_id;
+        } catch (e) {}
+      }
+      if (!candidateStoreId || typeof candidateStoreId !== 'string') {
+        console.warn('[ApiClient] Skipping select-store: No valid store GUID set yet.');
+        return { success: false, message: 'Invalid storeId: missing or empty' };
+      }
+      const cleanStoreId = candidateStoreId.trim();
+      const isValidGuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(cleanStoreId);
+      if (!isValidGuid || cleanStoreId === '00000000-0000-0000-0000-000000000000' || cleanStoreId.toLowerCase() === 'null' || cleanStoreId.toLowerCase() === 'undefined') {
+        console.warn('[ApiClient] Skipping select-store: No valid store GUID set yet.', storeId);
+        return { success: false, message: 'Invalid store GUID' };
+      }
+
+      const res = await ApiClient.post('/Auth/select-store', { storeId: cleanStoreId }, {}, { service: 'auth', throwOnError: false });
       if (res && res.success && res.data) {
         const storeName = res.data.storeName;
         const storeToken = res.data.storeToken;
-        const activeStoreId = res.data.storeId;
+        const activeStoreId = res.data.storeId || cleanStoreId;
         const roleName = res.data.roleName;
 
         if (storeName) {
@@ -1691,6 +2050,9 @@ const ApiClient = {
         }
         if (activeStoreId) {
           ApiClient.setActiveStoreId(activeStoreId);
+          if (typeof CONFIG !== 'undefined' && CONFIG.ACTIVE_STORE_KEY) {
+            localStorage.setItem(CONFIG.ACTIVE_STORE_KEY, activeStoreId);
+          }
         }
 
         const activeStoreData = {
@@ -1700,9 +2062,6 @@ const ApiClient = {
           permissions: res.data.permissions || []
         };
         localStorage.setItem('dawwer_active_store', JSON.stringify(activeStoreData));
-        if (typeof CONFIG !== 'undefined' && CONFIG.ACTIVE_STORE_KEY) {
-          localStorage.setItem(CONFIG.ACTIVE_STORE_KEY, JSON.stringify(activeStoreData));
-        }
 
         document.querySelectorAll('#current-store-name, [data-store-name], #store-name-text').forEach(el => {
           el.textContent = storeName || 'المتجر الحالي';
@@ -1949,9 +2308,8 @@ const ApiClient = {
         return Promise.reject(err);
       }
 
-      // 1. Retrieve the token from localStorage:
-      const rawToken = localStorage.getItem('storeToken') || localStorage.getItem('accessToken');
-      const token = rawToken ? String(rawToken).trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '') : null;
+      // 1. Retrieve the unified token:
+      const token = ApiClient.getToken();
 
       // Verify before sending that token is non-empty. If token is missing, stop the request immediately and notify user to log in.
       if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
@@ -1990,9 +2348,8 @@ const ApiClient = {
         return Promise.resolve({ success: false, status: 404, message: "Missing store_id", data: [] });
       }
 
-      // 1. Retrieve the token from localStorage:
-      const rawToken = localStorage.getItem('storeToken') || localStorage.getItem('accessToken');
-      const token = rawToken ? String(rawToken).trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '') : null;
+      // 1. Retrieve the unified token:
+      const token = ApiClient.getToken();
 
       // Verify before sending that token is non-empty. If token is missing, stop the request immediately and notify user to log in.
       if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
@@ -2025,9 +2382,8 @@ const ApiClient = {
       }
       if (!jobId) return Promise.reject(new Error("Missing job_id"));
 
-      // 1. Retrieve the token from localStorage:
-      const rawToken = localStorage.getItem('storeToken') || localStorage.getItem('accessToken');
-      const token = rawToken ? String(rawToken).trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '') : null;
+      // 1. Retrieve the unified token:
+      const token = ApiClient.getToken();
 
       // Verify before sending that token is non-empty. If token is missing, stop the request immediately and notify user to log in.
       if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
@@ -2050,6 +2406,25 @@ const ApiClient = {
         ...options,
         headers: reqHeaders
       });
+    },
+
+    /**
+     * Delete Shelf Session: DELETE /api/v1/stores/{store_id}/shelf-jobs/{job_id}
+     * Fallback: /api/v1/shelf/sessions/{job_id}
+     */
+    async delete(storeId = null, jobId, options = {}) {
+      const id = storeId || ApiClient.getActiveStoreId();
+      if (!jobId) return Promise.reject(new Error("Missing job_id"));
+
+      const primaryEndpoint = `/api/v1/stores/${encodeURIComponent(id)}/shelf-jobs/${encodeURIComponent(jobId)}`;
+      try {
+        const res = await ApiClient.fastapi(primaryEndpoint, { method: 'DELETE', ...options });
+        if (res && res.status !== 404) return res;
+      } catch (e) {
+        console.warn('[ApiClient.shelfJobs.delete] Primary endpoint failed, attempting fallback:', e && e.message ? e.message : e);
+      }
+
+      return ApiClient.fastapi(`/api/v1/shelf/sessions/${encodeURIComponent(jobId)}`, { method: 'DELETE', ...options });
     }
   },
 
@@ -2066,7 +2441,7 @@ const ApiClient = {
       let query = `?skip=${skip}&limit=${limit}`;
       if (shelf_job_id) query += `&shelf_job_id=${encodeURIComponent(shelf_job_id)}`;
       if (status) query += `&status=${encodeURIComponent(status)}`;
-      return ApiClient.get(`/api/v1/stores/${encodeURIComponent(id)}/draft-products${query}`, {}, { service: 'fastapi', ...options });
+      return ApiClient.fastapi(`/stores/${encodeURIComponent(id)}/draft-products${query}`, { method: 'GET', ...options });
     },
 
     get(storeId = null, draftId, options = {}) {
@@ -2076,7 +2451,7 @@ const ApiClient = {
         return Promise.reject(new Error("معرّف المتجر غير صالح أو غير محدد. يرجى اختيار متجر نشط للمتابعة."));
       }
       if (!draftId) return Promise.reject(new Error("Missing draft_id"));
-      return ApiClient.get(`/api/v1/stores/${encodeURIComponent(id)}/draft-products/${encodeURIComponent(draftId)}`, {}, { service: 'fastapi', ...options });
+      return ApiClient.fastapi(`/stores/${encodeURIComponent(id)}/draft-products/${encodeURIComponent(draftId)}`, { method: 'GET', ...options });
     },
 
     update(storeId = null, draftId, draftData = {}, options = {}) {
@@ -2086,7 +2461,7 @@ const ApiClient = {
         return Promise.reject(new Error("معرّف المتجر غير صالح أو غير محدد. يرجى اختيار متجر نشط للمتابعة."));
       }
       if (!draftId) return Promise.reject(new Error("Missing draft_id"));
-      return ApiClient.put(`/api/v1/stores/${encodeURIComponent(id)}/draft-products/${encodeURIComponent(draftId)}`, draftData, {}, { service: 'fastapi', throwOnError: true, ...options });
+      return ApiClient.fastapi(`/stores/${encodeURIComponent(id)}/draft-products/${encodeURIComponent(draftId)}`, { method: 'PUT', body: draftData, throwOnError: true, ...options });
     },
 
     approve(storeId = null, draftId, options = {}) {
@@ -2096,7 +2471,7 @@ const ApiClient = {
         return Promise.reject(new Error("معرّف المتجر غير صالح أو غير محدد. يرجى اختيار متجر نشط للمتابعة."));
       }
       if (!draftId) return Promise.reject(new Error("Missing draft_id"));
-      return ApiClient.post(`/api/v1/stores/${encodeURIComponent(id)}/draft-products/${encodeURIComponent(draftId)}/approve`, {}, {}, { service: 'fastapi', throwOnError: true, ...options });
+      return ApiClient.fastapi(`/stores/${encodeURIComponent(id)}/draft-products/${encodeURIComponent(draftId)}/approve`, { method: 'POST', throwOnError: true, ...options });
     },
 
     reject(storeId = null, draftId, options = {}) {
@@ -2106,7 +2481,7 @@ const ApiClient = {
         return Promise.reject(new Error("معرّف المتجر غير صالح أو غير محدد. يرجى اختيار متجر نشط للمتابعة."));
       }
       if (!draftId) return Promise.reject(new Error("Missing draft_id"));
-      return ApiClient.post(`/api/v1/stores/${encodeURIComponent(id)}/draft-products/${encodeURIComponent(draftId)}/reject`, {}, {}, { service: 'fastapi', throwOnError: true, ...options });
+      return ApiClient.fastapi(`/stores/${encodeURIComponent(id)}/draft-products/${encodeURIComponent(draftId)}/reject`, { method: 'POST', throwOnError: true, ...options });
     },
 
     batchApprove(storeId = null, draftIds = [], options = {}) {
@@ -2115,56 +2490,280 @@ const ApiClient = {
         ApiClient.handleStoreVerification404(id);
         return Promise.reject(new Error("معرّف المتجر غير صالح أو غير محدد. يرجى اختيار متجر نشط للمتابعة."));
       }
-      return ApiClient.post(`/api/v1/stores/${encodeURIComponent(id)}/draft-products/batch-approve`, { draft_ids: draftIds }, {}, { service: 'fastapi', throwOnError: true, ...options });
+      return ApiClient.fastapi(`/stores/${encodeURIComponent(id)}/draft-products/batch-approve`, { method: 'POST', body: { draft_ids: draftIds }, throwOnError: true, ...options });
     }
   },
 
   // =========================================================================
-  // Orders Intake & Management (Sprint 3: Feature 3.1)
-  // Target: AUTH_BASE /api/v1/stores/{store_id}/orders
+  // Orders Lifecycle & State Machine (Primary Platform Backend: ASP.NET Core)
+  // Target: CONFIG.API_BASE_URL /api/Orders
   // =========================================================================
   orders: {
-    list(storeId = null, params = {}) {
+    /**
+     * Orders List: GET /api/Orders?storeId={storeId}
+     * Unpacks envelope and falls back to cache/seed data gracefully on sleep/offline.
+     */
+    async list(storeId = null, params = {}, options = {}) {
       const id = storeId || ApiClient.getActiveStoreId();
-      if (!ApiClient.isValidStoreId(id)) {
-        ApiClient.handleStoreVerification404(id);
-        return Promise.reject(new Error("معرّف المتجر غير صالح أو غير محدد. يرجى اختيار متجر نشط للمتابعة."));
+      const queryParams = { ...params };
+      if (id && ApiClient.isValidStoreId(id)) {
+        queryParams.storeId = id;
       }
-      const qs = new URLSearchParams(params).toString();
-      const endpoint = `/api/v1/stores/${encodeURIComponent(id)}/orders${qs ? '?' + qs : ''}`;
-      return ApiClient.get(endpoint, {}, { service: 'auth' });
+      const qs = new URLSearchParams(queryParams).toString();
+      const endpoint = `/Orders${qs ? '?' + qs : ''}`;
+
+      try {
+        const res = await ApiClient.core(endpoint, {
+          method: 'GET',
+          ...options
+        });
+        if (res) {
+          const list = Array.isArray(res) ? res : (Array.isArray(res.data) ? res.data : null);
+          if (list) return list;
+        }
+      } catch (err) {
+        console.warn('[ApiClient.orders.list] Primary /api/Orders fetch note:', err && err.message ? err.message : err);
+      }
+
+      if (options.fallback !== undefined) return options.fallback;
+      try {
+        const cached = localStorage.getItem('dawwer_merchant_orders_queue_sprint3');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (e) {}
+
+      return [];
     },
-    get(storeId = null, orderId) {
-      const id = storeId || ApiClient.getActiveStoreId();
-      if (!ApiClient.isValidStoreId(id)) {
-        ApiClient.handleStoreVerification404(id);
-        return Promise.reject(new Error("معرّف المتجر غير صالح أو غير محدد. يرجى اختيار متجر نشط للمتابعة."));
-      }
-      return ApiClient.get(`/api/v1/stores/${encodeURIComponent(id)}/orders/${encodeURIComponent(orderId)}`, {}, { service: 'auth' });
+
+    /**
+     * Order Details: GET /api/Orders/{id}
+     */
+    get(orderId, options = {}) {
+      if (!orderId) return Promise.reject(new Error("Missing orderId"));
+      return ApiClient.core(`/Orders/${encodeURIComponent(orderId)}`, {
+        method: 'GET',
+        ...options
+      });
     },
-    updateStatus(storeId = null, orderId, status, payload = {}) {
-      const id = storeId || ApiClient.getActiveStoreId();
-      if (!ApiClient.isValidStoreId(id)) {
-        ApiClient.handleStoreVerification404(id);
-        return Promise.reject(new Error("معرّف المتجر غير صالح أو غير محدد. يرجى اختيار متجر نشط للمتابعة."));
-      }
-      return ApiClient.put(`/api/v1/stores/${encodeURIComponent(id)}/orders/${encodeURIComponent(orderId)}/status`, { status, ...payload }, {}, { service: 'auth', throwOnError: true });
+
+    /**
+     * Update Status: PATCH /api/Orders/{id}/status with { targetStatus, reason }
+     */
+    updateStatus(orderId, targetStatus, reason = '', options = {}) {
+      if (!orderId) return Promise.reject(new Error("Missing orderId"));
+      return ApiClient.core(`/Orders/${encodeURIComponent(orderId)}/status`, {
+        method: 'PATCH',
+        body: { targetStatus, reason },
+        throwOnError: true,
+        ...options
+      });
     },
-    accept(storeId = null, orderId) {
-      const id = storeId || ApiClient.getActiveStoreId();
-      if (!ApiClient.isValidStoreId(id)) {
-        ApiClient.handleStoreVerification404(id);
-        return Promise.reject(new Error("معرّف المتجر غير صالح أو غير محدد. يرجى اختيار متجر نشط للمتابعة."));
-      }
-      return ApiClient.post(`/api/v1/stores/${encodeURIComponent(id)}/orders/${encodeURIComponent(orderId)}/accept`, {}, {}, { service: 'auth', throwOnError: true });
+
+    /**
+     * Propose Substitution: POST /api/Orders/{id}/amendments with { reason, revisedItems }
+     */
+    proposeSubstitution(orderId, reason = '', revisedItems = [], options = {}) {
+      if (!orderId) return Promise.reject(new Error("Missing orderId"));
+      return ApiClient.core(`/Orders/${encodeURIComponent(orderId)}/amendments`, {
+        method: 'POST',
+        body: { reason, revisedItems },
+        throwOnError: true,
+        ...options
+      });
     },
-    reject(storeId = null, orderId, reason = '', notes = '') {
+
+    /**
+     * Customer Respond: POST /api/Orders/{id}/amendments/{amendmentId}/respond
+     */
+    respondAmendment(orderId, amendmentId, response = true, options = {}) {
+      if (!orderId || !amendmentId) return Promise.reject(new Error("Missing orderId or amendmentId"));
+      return ApiClient.core(`/Orders/${encodeURIComponent(orderId)}/amendments/${encodeURIComponent(amendmentId)}/respond`, {
+        method: 'POST',
+        body: { approved: Boolean(response) },
+        throwOnError: true,
+        ...options
+      });
+    },
+
+    /**
+     * Cancel Order: POST /api/Orders/{id}/cancel with { reason }
+     */
+    cancel(orderId, reason = '', options = {}) {
+      if (!orderId) return Promise.reject(new Error("Missing orderId"));
+      return ApiClient.core(`/Orders/${encodeURIComponent(orderId)}/cancel`, {
+        method: 'POST',
+        body: { reason },
+        throwOnError: true,
+        ...options
+      });
+    },
+
+    // Convenience aliases for existing view callers
+    accept(orderId, options = {}) {
+      return this.updateStatus(orderId, 'Accepted', '', options);
+    },
+    reject(orderId, reason = '', notes = '', options = {}) {
+      return this.updateStatus(orderId, 'Rejected', reason || notes, options);
+    },
+    submitSubstitutions(orderId, substitutionData, options = {}) {
+      const reason = substitutionData?.reason || 'أصناف غير متوفرة في المخزون';
+      const items = substitutionData?.substitutions || substitutionData?.items || [];
+      return this.proposeSubstitution(orderId, reason, items, options);
+    }
+  },
+
+  // =========================================================================
+  // Payment Receipt Verification (Primary Platform Backend: ASP.NET Core)
+  // Target: CONFIG.API_BASE_URL /api/orders/{orderId}/receipts
+  // =========================================================================
+  receipts: {
+    /**
+     * Receipts List: GET /api/orders/{orderId}/receipts
+     */
+    list(orderId, options = {}) {
+      if (!orderId) return Promise.reject(new Error("Missing orderId"));
+      return ApiClient.core(`/orders/${encodeURIComponent(orderId)}/receipts`, {
+        method: 'GET',
+        ...options
+      });
+    },
+
+    /**
+     * Stream Receipt File: ${CONFIG.API_BASE_URL}/orders/{orderId}/receipts/file
+     */
+    getFileUrl(orderId, receiptId = null) {
+      const base = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL)
+        ? CONFIG.API_BASE_URL.replace(/\/+$/, '')
+        : (ApiClient.API_BASE_URL || "https://dawwer.runasp.net/api").replace(/\/+$/, '');
+      const receiptSegment = receiptId ? `/${encodeURIComponent(receiptId)}` : '';
+      return `${base}/orders/${encodeURIComponent(orderId)}/receipts${receiptSegment}/file`;
+    },
+
+    /**
+     * Verification Decision: POST /api/orders/{orderId}/receipts/{receiptId}/verify
+     * Body: { decision, verifiedAmount, reviewerNotes, rejectionReason }
+     */
+    verify(orderId, receiptId, { decision, verifiedAmount, reviewerNotes = '', rejectionReason = null }, options = {}) {
+      if (!orderId) return Promise.reject(new Error("Missing orderId"));
+      const rId = receiptId || 'latest';
+      const payload = {
+        decision: typeof decision === 'number' ? decision : (decision === 'Approved' || decision === 'verified' || decision === true ? 2 : 3),
+        verifiedAmount: Number(verifiedAmount) || 0,
+        reviewerNotes: String(reviewerNotes || '').trim(),
+        rejectionReason: rejectionReason ? String(rejectionReason) : null
+      };
+      return ApiClient.core(`/orders/${encodeURIComponent(orderId)}/receipts/${encodeURIComponent(rId)}/verify`, {
+        method: 'POST',
+        body: payload,
+        throwOnError: true,
+        ...options
+      });
+    }
+  },
+
+  // =========================================================================
+  // Municipal Delivery Zones & Fees (Primary Platform Backend: ASP.NET Core)
+  // Target: CONFIG.API_BASE_URL /api/districts, /api/stores/{storeId}/delivery-zones
+  // =========================================================================
+  delivery: {
+    /**
+     * Municipal Districts Catalog: GET /api/districts?city={city}
+     */
+    getDistricts(city = '', options = {}) {
+      const qs = city ? `?city=${encodeURIComponent(city)}` : '';
+      return ApiClient.core(`/districts${qs}`, {
+        method: 'GET',
+        ...options
+      });
+    },
+
+    /**
+     * Store Delivery Zones: GET /api/stores/{storeId}/delivery-zones
+     */
+    getZones(storeId = null, options = {}) {
       const id = storeId || ApiClient.getActiveStoreId();
-      if (!ApiClient.isValidStoreId(id)) {
-        ApiClient.handleStoreVerification404(id);
-        return Promise.reject(new Error("معرّف المتجر غير صالح أو غير محدد. يرجى اختيار متجر نشط للمتابعة."));
-      }
-      return ApiClient.post(`/api/v1/stores/${encodeURIComponent(id)}/orders/${encodeURIComponent(orderId)}/reject`, { reason, notes }, {}, { service: 'auth', throwOnError: true });
+      return ApiClient.core(`/stores/${encodeURIComponent(id)}/delivery-zones`, {
+        method: 'GET',
+        ...options
+      });
+    },
+
+    /**
+     * Configure Store Delivery Zone: POST /api/stores/{storeId}/delivery-zones
+     */
+    saveZone(storeId = null, zoneData = {}, options = {}) {
+      const id = storeId || ApiClient.getActiveStoreId();
+      return ApiClient.core(`/stores/${encodeURIComponent(id)}/delivery-zones`, {
+        method: 'POST',
+        body: zoneData,
+        throwOnError: true,
+        ...options
+      });
+    },
+
+    /**
+     * Check Delivery Zone Eligibility & Fee: GET /api/stores/{storeId}/delivery-zones/check?districtId={districtId}
+     */
+    check(storeId = null, districtId, options = {}) {
+      const id = storeId || ApiClient.getActiveStoreId();
+      return ApiClient.core(`/stores/${encodeURIComponent(id)}/delivery-zones/check?districtId=${encodeURIComponent(districtId)}`, {
+        method: 'GET',
+        ...options
+      });
+    }
+  },
+
+  // =========================================================================
+  // In-Store Floorplan & Blueprint (FastAPI AI & Spatial Backend)
+  // Target: CONFIG.FASTAPI_BASE_URL /api/v1/stores/{store_id}/maps/active
+  // =========================================================================
+  floorplan: {
+    /**
+     * Active Store Map: GET /api/v1/stores/{store_id}/maps/active
+     */
+    getActiveMap(storeId = null, options = {}) {
+      const id = storeId || ApiClient.getActiveStoreId();
+      return ApiClient.fastapi(`/stores/${encodeURIComponent(id)}/maps/active`, {
+        method: 'GET',
+        ...options
+      });
+    },
+
+    /**
+     * Save Pins/Elements Batch: POST /api/v1/stores/{store_id}/maps/{map_id}/elements/batch
+     */
+    saveElementsBatch(storeId = null, mapId, elements = [], options = {}) {
+      const id = storeId || ApiClient.getActiveStoreId();
+      return ApiClient.fastapi(`/stores/${encodeURIComponent(id)}/maps/${encodeURIComponent(mapId)}/elements/batch`, {
+        method: 'POST',
+        body: { elements },
+        throwOnError: true,
+        ...options
+      });
+    },
+
+    /**
+     * Shelf Placements: POST /api/v1/stores/{store_id}/placements
+     */
+    savePlacements(storeId = null, placements = [], options = {}) {
+      const id = storeId || ApiClient.getActiveStoreId();
+      return ApiClient.fastapi(`/stores/${encodeURIComponent(id)}/placements`, {
+        method: 'POST',
+        body: { placements },
+        throwOnError: true,
+        ...options
+      });
+    }
+  },
+
+  maps: {
+    getActive(storeId = null, options = {}) {
+      return ApiClient.floorplan.getActiveMap(storeId, options);
+    },
+    saveElementsBatch(storeId = null, mapId, elements = [], options = {}) {
+      return ApiClient.floorplan.saveElementsBatch(storeId, mapId, elements, options);
     }
   },
 
@@ -2434,6 +3033,96 @@ const ApiClient = {
     },
     get(id) {
       return ApiClient.get(`/admin/audit-logs/${id}`, {}, { service: 'auth' });
+    }
+  },
+
+
+  // =========================================================================
+  // Merchant Fulfillment & Delivery Settings (Feature 3.2)
+  // =========================================================================
+  fulfillment: {
+    /**
+     * Get store fulfillment settings (Delivery zones, fee rules, in-store pickup)
+     * Primary: GET /api/v1/stores/{storeId}/fulfillment-settings (FastAPI)
+     * Secondary: GET /merchant/stores/{storeId}/fulfillment-settings (ASP.NET)
+     */
+    async getSettings(storeId = null, options = {}) {
+      const sid = storeId || (typeof ApiClient.getActiveStoreId === 'function' ? ApiClient.getActiveStoreId() : null);
+      const rawStoreToken = localStorage.getItem('storeToken') || localStorage.getItem('accessToken');
+      const authHeader = rawStoreToken ? { 'Authorization': `Bearer ${rawStoreToken.trim().replace(/^Bearer\s+/i, '')}` } : {};
+
+      if (sid && (typeof ApiClient.isValidStoreId !== 'function' || ApiClient.isValidStoreId(sid))) {
+        // 1. Primary: FastAPI
+        try {
+          const res = await ApiClient.get(
+            `/api/v1/stores/${encodeURIComponent(sid)}/fulfillment-settings`,
+            authHeader,
+            { service: 'fastapi', ...options }
+          );
+          if (res && res.success !== false && (res.data || res.deliveryZones || res.pickupSettings)) {
+            return res.data || res;
+          }
+        } catch (err1) {
+          console.warn('[ApiClient.fulfillment.getSettings] FastAPI note:', err1 && err1.message ? err1.message : err1);
+        }
+
+        // 2. Secondary: ASP.NET
+        try {
+          const res2 = await ApiClient.get(
+            `/merchant/stores/${encodeURIComponent(sid)}/fulfillment-settings`,
+            authHeader,
+            { service: 'auth', ...options }
+          );
+          if (res2 && res2.success !== false && (res2.data || res2.deliveryZones || res2.pickupSettings)) {
+            return res2.data || res2;
+          }
+        } catch (err2) {
+          console.warn('[ApiClient.fulfillment.getSettings] ASP.NET note:', err2 && err2.message ? err2.message : err2);
+        }
+      }
+
+      return null;
+    },
+
+    /**
+     * Update store fulfillment settings
+     * Primary: PUT /api/v1/stores/{storeId}/fulfillment-settings (FastAPI)
+     * Secondary: PUT /merchant/stores/{storeId}/fulfillment-settings (ASP.NET)
+     */
+    async updateSettings(storeId = null, settingsPayload = {}, options = {}) {
+      const sid = storeId || (typeof ApiClient.getActiveStoreId === 'function' ? ApiClient.getActiveStoreId() : null);
+      const rawStoreToken = localStorage.getItem('storeToken') || localStorage.getItem('accessToken');
+      const authHeader = rawStoreToken ? { 'Authorization': `Bearer ${rawStoreToken.trim().replace(/^Bearer\s+/i, '')}` } : {};
+
+      if (!sid || (typeof ApiClient.isValidStoreId === 'function' && !ApiClient.isValidStoreId(sid))) {
+        throw new Error('معرف المتجر غير متوفر أو غير صالح.');
+      }
+
+      // 1. Primary: FastAPI
+      try {
+        const res = await ApiClient.put(
+          `/api/v1/stores/${encodeURIComponent(sid)}/fulfillment-settings`,
+          settingsPayload,
+          authHeader,
+          { service: 'fastapi', ...options }
+        );
+        if (res && res.success !== false) return res;
+      } catch (err1) {
+        console.warn('[ApiClient.fulfillment.updateSettings] FastAPI note:', err1 && err1.message ? err1.message : err1);
+      }
+
+      // 2. Secondary: ASP.NET
+      try {
+        return await ApiClient.put(
+          `/merchant/stores/${encodeURIComponent(sid)}/fulfillment-settings`,
+          settingsPayload,
+          authHeader,
+          { service: 'auth', ...options }
+        );
+      } catch (err2) {
+        console.warn('[ApiClient.fulfillment.updateSettings] ASP.NET note:', err2 && err2.message ? err2.message : err2);
+        throw err2;
+      }
     }
   }
 };

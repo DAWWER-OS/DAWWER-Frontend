@@ -62,6 +62,8 @@ const DawwerLayout = {
         border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
         user-select: none !important;
         overflow: visible !important;
+        transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.28s ease !important;
+        will-change: transform !important;
       }
 
       .sidebar-nav {
@@ -96,7 +98,7 @@ const DawwerLayout = {
         }
       }
 
-      /* Mobile Behavior (< 768px): Still compact 64px without width change */
+      /* Mobile Behavior (< 768px): Off-canvas drawer sliding from right */
       @media (max-width: 767.98px) {
         #sidebar-box.drawer-closed, #sidebar-drawer.drawer-closed {
           transform: translateX(100%) !important;
@@ -112,6 +114,83 @@ const DawwerLayout = {
 
         body:not(.auth-page) {
           margin-right: 0 !important;
+        }
+
+        /* Lock body scroll when mobile drawer is open */
+        body.sidebar-open {
+          overflow: hidden !important;
+        }
+      }
+
+      /* ============================================================
+         MOBILE RESPONSIVENESS ENHANCEMENTS
+         ============================================================ */
+
+      /* Responsive table containers: horizontal scroll with touch support */
+      .table-scroll-container {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin-left: -1rem;
+        margin-right: -1rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+      @media (min-width: 640px) {
+        .table-scroll-container {
+          margin-left: 0;
+          margin-right: 0;
+          padding-left: 0;
+          padding-right: 0;
+        }
+      }
+      .table-scroll-container table {
+        min-width: 640px;
+      }
+      .table-scroll-container th {
+        white-space: nowrap !important;
+      }
+
+      /* iOS / Safari: prevent auto-zoom on inputs (min 16px) */
+      @media (max-width: 767.98px) {
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"],
+        input[type="number"],
+        input[type="password"],
+        input[type="search"],
+        select,
+        textarea {
+          font-size: 16px !important;
+        }
+      }
+
+      /* Hide tooltips on touch/mobile (no hover) */
+      @media (max-width: 767.98px) {
+        .sidebar-tooltip {
+          display: none !important;
+        }
+      }
+
+      /* Modal mobile: full-width bottom-sheet friendly */
+      @media (max-width: 639.98px) {
+        .modal-panel-responsive {
+          width: 100% !important;
+          max-width: 100% !important;
+          margin: auto !important;
+          border-radius: 1.25rem !important;
+          padding: 1rem !important;
+          max-height: 92vh !important;
+          overflow-y: auto !important;
+          -webkit-overflow-scrolling: touch !important;
+        }
+        .modal-actions-sticky {
+          position: sticky !important;
+          bottom: 0 !important;
+          background: white !important;
+          padding: 0.75rem 0 0.25rem !important;
+          z-index: 10 !important;
+          border-top: 1px solid #e2e8f0 !important;
         }
       }
 
@@ -408,7 +487,15 @@ const DawwerLayout = {
   },
 
   getBackdrop() {
-    return document.getElementById('sidebar-backdrop');
+    let backdrop = document.getElementById('sidebar-backdrop');
+    if (!backdrop && typeof document !== 'undefined' && document.body) {
+      backdrop = document.createElement('div');
+      backdrop.id = 'sidebar-backdrop';
+      backdrop.className = 'backdrop-hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 transition-opacity duration-300';
+      backdrop.onclick = () => this.closeSidebar();
+      document.body.appendChild(backdrop);
+    }
+    return backdrop;
   },
 
   isOpen() {
@@ -442,9 +529,12 @@ const DawwerLayout = {
     sidebar.classList.remove('drawer-closed');
     sidebar.classList.add('drawer-open');
 
-    if (backdrop && window.innerWidth < 768) {
-      backdrop.classList.remove('backdrop-hidden');
-      backdrop.classList.add('backdrop-visible');
+    if (window.innerWidth < 768) {
+      if (backdrop) {
+        backdrop.classList.remove('backdrop-hidden');
+        backdrop.classList.add('backdrop-visible');
+      }
+      document.body.classList.add('sidebar-open');
     }
   },
 
@@ -460,6 +550,8 @@ const DawwerLayout = {
       backdrop.classList.remove('backdrop-visible');
       backdrop.classList.add('backdrop-hidden');
     }
+
+    document.body.classList.remove('sidebar-open');
   },
 
   toggleSidebar() {
@@ -495,13 +587,29 @@ const DawwerLayout = {
       });
     });
 
-    document.addEventListener('click', (e) => {
-      const logoutTrigger = e.target.closest('#logout-btn, [data-action="logout"], .logout-btn');
+    document.addEventListener('click', function(e) {
+      const logoutTrigger = e.target.closest('#logout-btn, #top-logout-btn, [data-action="logout"], a[href*="logout"], .logout-btn');
       if (logoutTrigger) {
         e.preventDefault();
-        if (typeof Auth !== 'undefined' && Auth.logout) {
-          Auth.logout();
-        }
+        e.stopPropagation();
+
+        // 1. Clear all session credentials immediately
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('userData');
+        localStorage.removeItem('storeToken');
+        localStorage.removeItem('activeStoreId');
+        localStorage.removeItem('dawwer_access_token');
+        localStorage.removeItem('dawwer_refresh_token');
+        localStorage.removeItem('dawwer_user_data');
+        localStorage.removeItem('token');
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('store_token');
+        localStorage.removeItem('dawwer_store_token');
+        sessionStorage.clear();
+
+        // 2. Direct hard redirect to login page
+        window.location.replace('login.html');
       }
     });
   },

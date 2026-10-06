@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تدقيق الإيصالات والمدفوعات - دوّر</title>
+  <link rel="icon" type="image/png" href="assets/images/favicon-dawwer.png">
+  <meta name="description" content="مراجعة واعتماد إيصالات الدفع بالتحويل البنكي والمحافظ الإلكترونية وتسجيل المبالغ النقدية.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/output.css">
+  <style>
+    *,body,button,input,select,textarea{font-family:'Cairo','Tajawal',sans-serif!important}
+    ::-webkit-scrollbar{height:6px;width:6px}
+    ::-webkit-scrollbar-track{background:#F4F3E8}
+    ::-webkit-scrollbar-thumb{background:#C4CDBF;border-radius:9999px}
+    ::-webkit-scrollbar-thumb:hover{background:#8F9E8B}
+    .tabular-nums{font-variant-numeric:tabular-nums}
+    .sidebar-tooltip{pointer-events:none}
+
+    /* KPI Cards */
+    .kpi-card{background:white;border-radius:1.25rem;padding:1.1rem 1.2rem;border:1.5px solid transparent;box-shadow:0 1px 4px rgba(18,55,42,0.06);transition:all 0.22s ease;position:relative;overflow:hidden}
+    .kpi-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(18,55,42,0.10)}
+    .kpi-card.amber{border-color:rgba(252,211,77,0.33)}
+    .kpi-card.emerald{border-color:rgba(52,211,153,0.33)}
+    .kpi-card.rose{border-color:rgba(251,113,133,0.33)}
+    .kpi-card.green{border-color:rgba(67,104,80,0.31)}
+
+    /* Status Tabs */
+    .pay-tab-btn{transition:all 0.18s ease;border:1.5px solid transparent;white-space:nowrap}
+    .pay-tab-btn:not(.active){color:#64748b;background:#f8fafc;border-color:#e2e8f0}
+    .pay-tab-btn:not(.active):hover{background:#f1f5f9;border-color:#cbd5e1;color:#334155}
+    .pay-tab-btn.active{background:#12372A!important;color:#fff!important;border-color:#12372A!important;box-shadow:0 2px 10px rgba(18,55,42,0.22)}
+
+    /* Payment Cards */
+    .payment-card{background:white;border-radius:1.125rem;border:1.5px solid #E8EDE9;box-shadow:0 1px 3px rgba(18,55,42,0.05);transition:all 0.22s ease}
+    .payment-card:hover{border-color:#436850;box-shadow:0 6px 24px rgba(18,55,42,0.10);transform:translateY(-1px)}
+    .payment-card.status-pending{border-right:3.5px solid #F59E0B}
+    .payment-card.status-verified{border-right:3.5px solid #10B981}
+    .payment-card.status-rejected{border-right:3.5px solid #F43F5E}
+    .payment-card.status-cash{border-right:3.5px solid #12372A}
+
+    /* Receipt thumbnail */
+    .receipt-thumb{transition:transform 0.2s ease,box-shadow 0.2s ease;cursor:zoom-in}
+    .receipt-thumb:hover{transform:scale(1.06);box-shadow:0 0 0 3px #D4A373,0 10px 28px rgba(0,0,0,0.20)}
+
+    /* Modal animations */
+    #receipt-lightbox,#rejection-dialog,#cash-log-modal{animation:fadeInBg 0.22s ease both}
+    @keyframes fadeInBg{from{opacity:0}to{opacity:1}}
+    #receipt-lightbox-inner{animation:slideUp 0.26s cubic-bezier(0.34,1.56,0.64,1) both}
+    #rejection-dialog-inner,#cash-log-modal-inner{animation:slideUp 0.24s cubic-bezier(0.34,1.56,0.64,1) both}
+    @keyframes slideUp{from{transform:translateY(32px) scale(0.96);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+
+    /* Lightbox image */
+    #receipt-img-container{overflow:hidden;cursor:grab;position:relative;background:#050e09;border-radius:1rem;min-height:320px;display:flex;align-items:center;justify-content:center;flex:1}
+    #receipt-img-container:active{cursor:grabbing}
+    #receipt-img-canvas{max-width:100%;max-height:400px;object-fit:contain;transform-origin:center center;transition:transform 0.15s ease;user-select:none;pointer-events:none}
+
+    /* Zoom controls */
+    .zoom-btn{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);border-radius:10px;color:#fff;cursor:pointer;transition:background 0.14s;flex-shrink:0}
+    .zoom-btn:hover{background:rgba(255,255,255,0.20)}
+    .zoom-btn:active{transform:scale(0.93)}
+
+    /* Rejection reason options */
+    .reason-option{display:flex;align-items:flex-start;gap:0.75rem;padding:0.75rem 1rem;border-radius:0.875rem;border:1.5px solid #e2e8f0;cursor:pointer;transition:all 0.14s ease}
+    .reason-option:hover{background:#f8fafc;border-color:#cbd5e1}
+    .reason-option:has(input:checked){border-color:#fca5a5;background:#fff5f5}
+
+    /* Toast */
+    .app-toast{animation:toastIn 0.3s ease both}
+    @keyframes toastIn{from{transform:translateY(-18px);opacity:0}to{transform:translateY(0);opacity:1}}
+    .app-toast.hiding{animation:toastOut 0.28s ease both}
+    @keyframes toastOut{from{transform:translateY(0);opacity:1}to{transform:translateY(-18px);opacity:0}}
+
+    /* Skeleton */
+    .skeleton{background:linear-gradient(90deg,#f0f4f0 25%,#e2ebe2 50%,#f0f4f0 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:0.75rem}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+    /* Sim receipt */
+    .sim-receipt-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);border-radius:1.25rem;padding:1.5rem;width:280px;max-width:100%;position:relative;overflow:hidden}
+    .sim-receipt-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#10B981,#059669)}
+  </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col mr-0 md:mr-16 bg-gradient-to-br from-[#F7F9F4] via-[#EEF4EC] to-[#F7F9F4]" dir="rtl">
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar-box" class="fixed top-0 right-0 h-screen w-16 bg-[#12372A] text-white flex flex-col justify-between items-center py-3 z-50 shadow-xl border-l border-white/10 select-none overflow-visible">
+    <div class="flex flex-col items-center w-full pt-1 px-1.5 shrink-0 overflow-visible">
+      <div class="relative group flex items-center justify-center">
+        <a href="index.html" class="flex items-center justify-center w-11 h-11 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-colors" aria-label="دوّر">
+          <img src="assets/images/FrameLogo.png" alt="دوّر" class="h-6 w-auto object-contain" onerror="this.style.display='none'">
+        </a>
+        <div class="sidebar-tooltip absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#0A2018] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">دوّر - الرئيسية</div>
+      </div>
+    </div>
+    <nav class="flex flex-col items-center gap-2 my-auto w-full py-2 overflow-visible">
+      <div class="relative group flex items-center justify-center">
+        <a href="index.html" class="flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="لوحة التحكم">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        </a>
+        <div class="sidebar-tooltip absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#0A2018] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">لوحة التحكم</div>
+      </div>
+      <div class="relative group flex items-center justify-center">
+        <a href="catalog.html" class="flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الكتالوج">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        </a>
+        <div class="sidebar-tooltip absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#0A2018] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">إدارة الكتالوج والمخزون</div>
+      </div>
+      <div class="relative group flex items-center justify-center">
+        <a href="ai-capture.html" class="flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="مسح الرفوف">
+          <svg class="w-5 h-5 text-[#D4A373]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        </a>
+        <div class="sidebar-tooltip absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#0A2018] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">مسح الرفوف بالذكاء الاصطناعي</div>
+      </div>
+      <div class="relative group flex items-center justify-center">
+        <a href="review-drafts.html" class="flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="مراجعة المسودات">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+        </a>
+        <div class="sidebar-tooltip absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#0A2018] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">مراجعة واعتماد المسودات</div>
+      </div>
+      <div class="relative group flex items-center justify-center">
+        <a href="orders.html" class="flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="استقبال الطلبات">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+        </a>
+        <div class="sidebar-tooltip absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#0A2018] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">استقبال الطلبات المباشرة</div>
+      </div>
+      <!-- ACTIVE: Payment Review -->
+      <div class="relative group flex items-center justify-center">
+        <a href="payment-review.html" aria-current="page" class="relative flex items-center justify-center w-11 h-11 rounded-xl bg-white/20 text-white ring-2 ring-[#D4A373]/80 shadow-lg shrink-0" aria-label="تدقيق الإيصالات">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span id="sidebar-pending-dot" class="hidden absolute top-1 left-1 w-2.5 h-2.5 rounded-full bg-[#D4A373]">
+            <span class="absolute inset-0 rounded-full bg-[#D4A373] animate-ping opacity-75"></span>
+          </span>
+        </a>
+        <div class="sidebar-tooltip absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#0A2018] text-[#D4A373] text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-[#D4A373]/30">تدقيق الإيصالات والمدفوعات</div>
+      </div>
+      <div class="relative group flex items-center justify-center">
+        <a href="delivery-settings.html" class="flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="إعدادات التوصيل">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+        </a>
+        <div class="sidebar-tooltip absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#0A2018] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">إعدادات التوصيل والاستلام</div>
+      </div>
+      <div class="relative group flex items-center justify-center">
+        <a href="shelves.html" class="flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الرفوف">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+        </a>
+        <div class="sidebar-tooltip absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#0A2018] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">مواقع الممرات والرفوف</div>
+      </div>
+      <div class="relative group flex items-center justify-center">
+        <a href="store-staff.html" class="flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="فريق العمل">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        </a>
+        <div class="sidebar-tooltip absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#0A2018] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">فريق العمل والأدوار</div>
+      </div>
+      <div class="relative group flex items-center justify-center">
+        <a href="profile.html" class="flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الملف الشخصي">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        </a>
+        <div class="sidebar-tooltip absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#0A2018] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">الملف الشخصي والإعدادات</div>
+      </div>
+    </nav>
+    <div class="flex flex-col items-center w-full pt-2 pb-1 border-t border-white/10 px-1.5 shrink-0 overflow-visible">
+      <div class="relative group flex items-center justify-center">
+        <button id="logout-btn" class="flex items-center justify-center w-11 h-11 rounded-xl text-rose-300 hover:text-white hover:bg-rose-500/20 transition-colors cursor-pointer active:scale-95" aria-label="تسجيل الخروج">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        </button>
+        <div class="sidebar-tooltip absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-[#0A2018] text-rose-200 border border-rose-900/60 text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap">تسجيل الخروج</div>
+      </div>
+    </div>
+  </aside>
+  <div id="sidebar-backdrop" class="backdrop-hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40"></div>
+
+  <!-- HEADER -->
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#436850]/12 px-4 md:px-8 py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-sm">
+    <div class="flex items-center gap-3 min-w-0">
+      <button id="sidebar-toggle-btn" class="sidebar-toggle-btn p-2 text-slate-500 hover:text-[#12372A] hover:bg-[#EAF1ED] rounded-xl transition cursor-pointer active:scale-95 md:hidden">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="min-w-0">
+        <nav class="flex items-center gap-1.5 text-xs font-semibold text-slate-400 mb-0.5" aria-label="breadcrumb">
+          <a href="index.html" class="hover:text-[#436850] transition">الرئيسية</a>
+          <span class="text-slate-300">/</span>
+          <span class="text-[#436850]">إدارة المدفوعات</span>
+          <span class="text-slate-300">/</span>
+          <span class="text-[#12372A] font-bold">تدقيق الإيصالات</span>
+        </nav>
+        <div class="flex flex-wrap items-center gap-2.5">
+          <h1 class="text-lg md:text-xl font-black text-[#12372A] leading-tight">تدقيق الإيصالات والمدفوعات</h1>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#EAF1ED] text-[#12372A] border border-[#436850]/20">
+            <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
+            مراجعة فورية
+          </span>
+        </div>
+        <p class="text-xs text-slate-400 hidden sm:block mt-0.5">مراجعة إيصالات التحويل البنكي والمحافظ الإلكترونية، اعتمادها أو رفضها، وتسجيل المبالغ النقدية</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+      <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold">
+        <svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span id="header-pending-count">0</span>&nbsp;بانتظار التدقيق
+      </div>
+      <button id="btn-refresh-payments" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 transition shadow-xs cursor-pointer active:scale-95">
+        <svg id="refresh-icon" class="w-4 h-4 text-[#436850] transition-transform duration-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        <span>تحديث</span>
+      </button>
+      <a href="orders.html" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-[#EAF1ED] hover:bg-[#12372A] text-[#12372A] hover:text-white transition border border-[#436850]/20 shadow-xs cursor-pointer active:scale-95">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+        <span class="hidden sm:inline">مركز الطلبات</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-5">
+
+    <!-- KPI Row -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div class="kpi-card amber flex items-center justify-between gap-3">
+        <div><span class="text-[11px] font-bold text-slate-500 block mb-0.5">بانتظار التدقيق</span><span id="kpi-pending" class="text-2xl font-black text-[#12372A] tabular-nums">0</span></div>
+        <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+      </div>
+      <div class="kpi-card emerald flex items-center justify-between gap-3">
+        <div><span class="text-[11px] font-bold text-slate-500 block mb-0.5">تم التحقق والاعتماد</span><span id="kpi-verified" class="text-2xl font-black text-[#12372A] tabular-nums">0</span></div>
+        <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+      </div>
+      <div class="kpi-card rose flex items-center justify-between gap-3">
+        <div><span class="text-[11px] font-bold text-slate-500 block mb-0.5">إيصال مرفوض</span><span id="kpi-rejected" class="text-2xl font-black text-[#12372A] tabular-nums">0</span></div>
+        <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></div>
+      </div>
+      <div class="kpi-card green flex items-center justify-between gap-3">
+        <div><span class="text-[11px] font-bold text-slate-500 block mb-0.5">دفع نقدي</span><span id="kpi-cash" class="text-2xl font-black text-[#12372A] tabular-nums">0</span></div>
+        <div class="w-10 h-10 rounded-xl bg-[#EAF1ED] text-[#12372A] flex items-center justify-center shrink-0"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg></div>
+      </div>
+    </div>
+
+    <!-- Filter Toolbar -->
+    <div class="bg-white rounded-2xl shadow-sm border border-[#436850]/12 p-4 space-y-3.5">
+      <div class="flex flex-col md:flex-row gap-2.5 items-stretch md:items-center">
+        <div class="relative flex-1">
+          <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </div>
+          <input type="search" id="pay-search" autocomplete="off"
+            class="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#436850]/25 focus:border-[#436850] transition"
+            placeholder="بحث برقم الطلب، اسم العميل، أو رقم هاتفه...">
+        </div>
+        <div class="flex items-center gap-2 shrink-0 flex-wrap">
+          <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+            <label for="pay-filter-method" class="text-xs font-bold text-slate-500 whitespace-nowrap">طريقة الدفع:</label>
+            <select id="pay-filter-method" class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer">
+              <option value="all">الكل</option>
+              <option value="bank">تحويل بنكي</option>
+              <option value="wallet">محفظة إلكترونية</option>
+              <option value="cash">دفع نقدي</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+            <label for="pay-filter-sort" class="text-xs font-bold text-slate-500 whitespace-nowrap">الترتيب:</label>
+            <select id="pay-filter-sort" class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer">
+              <option value="newest">الأحدث أولاً</option>
+              <option value="oldest">الأقدم (أولوية)</option>
+              <option value="highest">الأعلى مبلغاً</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-3 border-t border-slate-100">
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0" id="pay-status-tabs" role="tablist">
+          <button type="button" role="tab" data-pay-status="all"            class="pay-tab-btn active px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0"><span>الكل</span><span id="tab-count-all"      class="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-black">0</span></button>
+          <button type="button" role="tab" data-pay-status="pending_review" class="pay-tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0"><span>بانتظار تدقيق الإيصال</span><span id="tab-count-pending"  class="bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-black">0</span></button>
+          <button type="button" role="tab" data-pay-status="verified"       class="pay-tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0"><span>تم التحقق والاعتماد</span><span id="tab-count-verified" class="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-black">0</span></button>
+          <button type="button" role="tab" data-pay-status="rejected"       class="pay-tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0"><span>إيصال مرفوض</span><span id="tab-count-rejected" class="bg-rose-100 text-rose-800 px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-black">0</span></button>
+          <button type="button" role="tab" data-pay-status="cash"           class="pay-tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0"><span>دفع نقدي</span><span id="tab-count-cash"     class="bg-[#EAF1ED] text-[#12372A] px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-black">0</span></button>
+        </div>
+        <div class="text-xs font-bold text-slate-400 shrink-0 self-end sm:self-center" id="pay-results-info">جاري التحميل...</div>
+      </div>
+    </div>
+
+    <!-- Skeleton -->
+    <div id="pay-skeleton" class="space-y-3">
+      <div class="skeleton h-28 w-full"></div>
+      <div class="skeleton h-28 w-full"></div>
+      <div class="skeleton h-28 w-full"></div>
+    </div>
+
+    <!-- Feed -->
+    <div id="pay-feed-container" class="space-y-3 hidden"></div>
+
+    <!-- Empty State -->
+    <div id="pay-empty-state" class="hidden bg-white rounded-3xl p-10 md:p-14 text-center border border-dashed border-[#436850]/25 shadow-sm max-w-2xl mx-auto my-8">
+      <div class="w-24 h-24 mx-auto mb-5 rounded-3xl bg-[#EAF1ED] flex items-center justify-center">
+        <svg class="w-12 h-12 text-[#436850]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      </div>
+      <h3 class="text-lg font-black text-[#12372A]" id="pay-empty-title">لا توجد إيصالات في هذا التصنيف</h3>
+      <p class="text-sm text-slate-500 mt-2 max-w-md mx-auto">يتم رفع الإيصالات من قِبل العملاء عند تأكيد طلباتهم بالتحويل البنكي أو المحافظ الإلكترونية.</p>
+      <button id="btn-pay-reset-filters" class="mt-6 px-5 py-2 bg-[#EAF1ED] hover:bg-[#12372A] text-[#12372A] hover:text-white text-xs font-bold rounded-xl transition cursor-pointer">إعادة ضبط الفلاتر</button>
+    </div>
+
+  </main>
+
+  <!-- MODAL A: Receipt Inspection Lightbox -->
+  <div id="receipt-lightbox" class="hidden fixed inset-0 z-[60] overflow-y-auto" role="dialog" aria-modal="true" aria-label="معاينة الإيصال">
+    <div class="fixed inset-0 bg-black/88 backdrop-blur-sm" id="lightbox-backdrop"></div>
+    <div class="flex min-h-full items-center justify-center p-3 sm:p-5">
+      <div id="receipt-lightbox-inner" class="relative w-full max-w-5xl rounded-3xl bg-[#0b1810] border border-white/8 shadow-2xl overflow-hidden flex flex-col lg:flex-row" style="max-height:92vh">
+        <div class="flex-1 flex flex-col bg-black/50 p-4 gap-3 min-w-0" style="min-height:420px">
+          <div class="flex items-center justify-between gap-2 flex-wrap shrink-0">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">معاينة الإيصال</span>
+              <span id="lb-order-id-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/10 text-white border border-white/10">#ORD-0000</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <button class="zoom-btn" id="btn-zoom-out"    title="تصغير"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4"/></svg></button>
+              <button class="zoom-btn" id="btn-zoom-reset"  title="إعادة ضبط"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg></button>
+              <button class="zoom-btn" id="btn-zoom-in"     title="تكبير"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg></button>
+              <div class="w-px h-5 bg-white/15 mx-0.5"></div>
+              <button class="zoom-btn" id="btn-rotate-left"  title="تدوير يساراً"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg></button>
+              <button class="zoom-btn" id="btn-rotate-right" title="تدوير يميناً"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10H11a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6"/></svg></button>
+              <div class="w-px h-5 bg-white/15 mx-0.5"></div>
+              <span id="lb-zoom-level" class="text-[10px] text-white/35 font-mono w-10 text-center shrink-0">100%</span>
+              <div class="w-px h-5 bg-white/15 mx-0.5"></div>
+              <button id="btn-close-lightbox" class="zoom-btn" title="إغلاق (Esc)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+          </div>
+          <div id="receipt-img-container">
+            <div id="receipt-sim-receipt" class="flex flex-col items-center justify-center w-full h-full py-10 px-4">
+              <div class="sim-receipt-card text-white/80 text-xs" dir="rtl">
+                <div class="flex items-center justify-between mb-4">
+                  <div><div class="text-white font-black text-sm">إشعار تحويل إلكتروني</div><div class="text-white/35 text-[10px] mt-0.5">Electronic Transfer Notice</div></div>
+                  <div class="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center"><svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg></div>
+                </div>
+                <div class="divide-y divide-white/8">
+                  <div class="flex justify-between items-center py-2"><span class="text-white/40">المبلغ المحوّل:</span><strong class="text-emerald-300 tabular-nums text-sm" id="lb-sim-amount">---</strong></div>
+                  <div class="flex justify-between items-center py-2"><span class="text-white/40">البنك / المحفظة:</span><span class="text-white/80 font-bold" id="lb-sim-bank">---</span></div>
+                  <div class="flex justify-between items-center py-2"><span class="text-white/40">رقم المرجع:</span><span class="text-emerald-300 font-mono text-[10px] font-bold" id="lb-sim-ref">---</span></div>
+                  <div class="flex justify-between items-center py-2"><span class="text-white/40">التاريخ والوقت:</span><span class="text-white/55 font-mono text-[10px]" id="lb-sim-date">---</span></div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-white/8 text-center text-[9px] text-white/15 uppercase tracking-widest">Demo Receipt Preview</div>
+              </div>
+              <p class="mt-4 text-[10px] text-white/15 text-center max-w-xs">في بيئة الإنتاج تُعرض الصورة الفعلية للإيصال المرفوع من العميل</p>
+            </div>
+            <img id="receipt-img-canvas" src="" alt="إيصال الدفع" draggable="false" class="hidden">
+          </div>
+          <div class="text-[10px] text-white/18 text-center shrink-0">استخدم أدوات التكبير والتدوير للفحص الدقيق لتفاصيل الإيصال</div>
+        </div>
+        <!-- Side Panel -->
+        <div id="lb-side-panel" class="w-full lg:w-80 shrink-0 bg-[#0f2019] border-t lg:border-t-0 lg:border-r border-white/8 flex flex-col" style="max-height:92vh;overflow-y:auto">
+          <div class="p-5 border-b border-white/8">
+            <div class="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mb-1.5">بيانات التحقق والمطابقة</div>
+            <div class="font-black text-white text-base leading-tight" id="lb-customer-name">—</div>
+            <div class="text-xs text-white/45 mt-0.5 font-mono" id="lb-customer-phone" dir="ltr">—</div>
+          </div>
+          <div class="p-5 flex-1">
+            <div class="divide-y divide-white/6 text-xs">
+              <div class="flex items-center justify-between py-2.5"><span class="text-white/45">رقم الطلب:</span><span class="font-bold text-white tabular-nums" id="lb-order-num">—</span></div>
+              <div class="flex items-center justify-between py-2.5"><span class="text-white/45">البنك / المحفظة:</span><span class="font-bold text-white" id="lb-bank-name">—</span></div>
+              <div class="flex items-center justify-between py-2.5"><span class="text-white/45">رقم مرجع الحوالة:</span><span class="font-mono text-emerald-300 text-[11px] font-bold" id="lb-ref-num">—</span></div>
+              <div class="py-2.5"><span class="text-white/45 text-xs">المبلغ المتوقع مطابقته:</span><div class="text-2xl font-black text-white tabular-nums mt-0.5" id="lb-expected-amount">0.00 ₪</div></div>
+              <div class="flex items-center justify-between py-2.5"><span class="text-white/45">طريقة الدفع:</span><span class="font-bold text-white" id="lb-pay-method">—</span></div>
+              <div class="py-2.5"><div class="text-white/45 mb-1">تاريخ ووقت رفع الإشعار:</div><div class="font-bold text-white text-[11px]" id="lb-upload-time">—</div></div>
+            </div>
+            <div class="mt-4 p-3 rounded-2xl bg-white/5 border border-white/8">
+              <div class="text-[9px] text-white/30 mb-2 uppercase font-bold tracking-widest">حالة التحقق الحالية</div>
+              <div id="lb-current-status-badge"></div>
+            </div>
+          </div>
+          <div class="p-4 border-t border-white/8 space-y-2.5" id="lb-actions-panel">
+            <button id="btn-lb-approve" data-order-id=""
+              class="w-full flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-2xl bg-gradient-to-l from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white text-sm font-black transition shadow-lg cursor-pointer active:scale-[0.97]">
+              <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              اعتماد الإيصال وتأكيد الدفع
+            </button>
+            <button id="btn-lb-reject" data-order-id=""
+              class="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-2xl bg-white/6 hover:bg-rose-600 border border-white/10 hover:border-rose-500 text-white text-sm font-bold transition cursor-pointer active:scale-[0.97]">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              رفض الإيصال
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL B: Rejection Dialog -->
+  <div id="rejection-dialog" class="hidden fixed inset-0 z-[70] overflow-y-auto" role="dialog" aria-modal="true" aria-label="رفض الإيصال">
+    <div class="fixed inset-0 bg-slate-900/70 backdrop-blur-xs" id="reject-dialog-backdrop"></div>
+    <div class="flex min-h-full items-center justify-center p-4">
+      <div id="rejection-dialog-inner" class="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+        <div class="bg-gradient-to-l from-rose-600 to-rose-700 text-white p-5 flex items-start justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center shrink-0"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></div>
+            <div>
+              <h3 class="text-base font-black">رفض إيصال الدفع</h3>
+              <p class="text-xs text-rose-200/75 mt-0.5" id="reject-dialog-subtitle">سيُشعَر العميل بسبب الرفض وطلب إعادة رفع إيصال صحيح.</p>
+            </div>
+          </div>
+          <button id="btn-close-reject-dialog" class="text-white/50 hover:text-white cursor-pointer p-1.5 rounded-xl hover:bg-white/10 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+        </div>
+        <form id="reject-receipt-form" class="p-5 space-y-4" dir="rtl">
+          <input type="hidden" id="reject-dialog-order-id" value="">
+          <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-700 block">حدد سبب رفض الإيصال:</label>
+            <label class="reason-option" for="rr-amount"><input type="radio" id="rr-amount" name="receipt_reject_reason" value="amount_mismatch" checked class="mt-0.5 text-rose-600 shrink-0"><div><div class="text-xs font-bold text-slate-800">المبلغ غير مطابق</div><div class="text-[11px] text-slate-500 mt-0.5">المبلغ المحوّل لا يتطابق مع إجمالي الطلب</div></div></label>
+            <label class="reason-option" for="rr-ref"><input type="radio" id="rr-ref" name="receipt_reject_reason" value="ref_unclear" class="mt-0.5 text-rose-600 shrink-0"><div><div class="text-xs font-bold text-slate-800">رقم الحوالة غير واضح</div><div class="text-[11px] text-slate-500 mt-0.5">تعذّر قراءة رقم المرجع بسبب جودة الصورة</div></div></label>
+            <label class="reason-option" for="rr-old"><input type="radio" id="rr-old" name="receipt_reject_reason" value="old_duplicate" class="mt-0.5 text-rose-600 shrink-0"><div><div class="text-xs font-bold text-slate-800">إشعار قديم / مكرر</div><div class="text-[11px] text-slate-500 mt-0.5">تاريخ الإيصال لا يتوافق مع الطلب، أو سبق استخدامه</div></div></label>
+            <label class="reason-option" for="rr-acc"><input type="radio" id="rr-acc" name="receipt_reject_reason" value="wrong_account" class="mt-0.5 text-rose-600 shrink-0"><div><div class="text-xs font-bold text-slate-800">حُوِّل لحساب خاطئ</div><div class="text-[11px] text-slate-500 mt-0.5">رقم الحساب المحوّل إليه لا يطابق حساب المتجر</div></div></label>
+            <label class="reason-option" for="rr-other"><input type="radio" id="rr-other" name="receipt_reject_reason" value="other" class="mt-0.5 text-rose-600 shrink-0"><div class="text-xs font-bold text-slate-800">سبب آخر (يُذكر في الملاحظة)</div></label>
+          </div>
+          <div>
+            <label for="reject-dialog-notes" class="text-xs font-bold text-slate-700 block mb-1.5">ملاحظة إضافية للعميل <span class="text-slate-400 font-normal">(اختياري)</span>:</label>
+            <textarea id="reject-dialog-notes" rows="2" class="w-full p-3 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/25 focus:border-rose-500 transition resize-none" placeholder="يُرجى رفع إيصال واضح يُظهر رقم المرجع والمبلغ وتاريخ التحويل..."></textarea>
+          </div>
+          <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+            <button type="button" id="btn-cancel-reject-dialog" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer">إلغاء</button>
+            <button type="submit" id="btn-confirm-reject-receipt" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition shadow-sm cursor-pointer flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              تأكيد الرفض وإشعار العميل
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL C: Cash Payment Logging -->
+  <div id="cash-log-modal" class="hidden fixed inset-0 z-[70] overflow-y-auto" role="dialog" aria-modal="true" aria-label="تسجيل استلام النقد">
+    <div class="fixed inset-0 bg-slate-900/65 backdrop-blur-xs" id="cash-modal-backdrop"></div>
+    <div class="flex min-h-full items-center justify-center p-4">
+      <div id="cash-log-modal-inner" class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+        <div class="bg-gradient-to-l from-[#12372A] to-[#1b5040] text-white p-5 flex items-start justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-white/12 border border-white/15 flex items-center justify-center shrink-0"><svg class="w-6 h-6 text-[#D4A373]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg></div>
+            <div>
+              <h3 class="text-base font-black">تسجيل استلام المبلغ نقداً</h3>
+              <p class="text-xs text-emerald-200/65 mt-0.5" id="cash-modal-order-ref">طلب رقم #ORD-0000</p>
+            </div>
+          </div>
+          <button id="btn-close-cash-modal" class="text-white/45 hover:text-white cursor-pointer p-1.5 rounded-xl hover:bg-white/10 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+        </div>
+        <form id="cash-log-form" class="p-5 space-y-4" dir="rtl">
+          <input type="hidden" id="cash-log-order-id" value="">
+          <div class="bg-[#EAF1ED] border border-[#436850]/20 rounded-2xl p-4">
+            <div class="text-xs font-bold text-slate-500 mb-1">المبلغ المطلوب استلامه:</div>
+            <div class="text-2xl font-black text-[#12372A] tabular-nums" id="cash-expected-amount">0.00 ₪</div>
+            <div class="text-xs text-slate-500 mt-1" id="cash-customer-info">—</div>
+          </div>
+          <div>
+            <label for="cash-collected-amount" class="text-xs font-bold text-slate-700 block mb-1.5">المبلغ المُستلم فعلياً: <span class="text-rose-500">*</span></label>
+            <div class="relative">
+              <input type="number" id="cash-collected-amount" min="0" step="0.01" placeholder="0.00"
+                class="w-full pr-12 pl-4 py-3.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-[#436850]/25 focus:border-[#436850] transition tabular-nums" required>
+              <span class="absolute inset-y-0 right-0 pr-4 flex items-center text-sm font-bold text-slate-400 pointer-events-none">₪</span>
+            </div>
+          </div>
+          <div id="cash-amount-match-indicator" class="hidden text-xs font-bold rounded-xl p-2.5 flex items-center gap-2"></div>
+          <div>
+            <label for="cash-agent-note" class="text-xs font-bold text-slate-700 block mb-1.5">ملاحظة الكاشير / المندوب <span class="text-slate-400 font-normal">(اختياري)</span>:</label>
+            <textarea id="cash-agent-note" rows="2" class="w-full p-3 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#436850]/25 focus:border-[#436850] transition resize-none" placeholder="مثال: تم استلام المبلغ كاملاً نقداً من العميل عند الباب..."></textarea>
+          </div>
+          <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+            <button type="button" id="btn-cancel-cash-log" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer">إلغاء</button>
+            <button type="submit" id="btn-confirm-cash-log" class="px-5 py-2.5 rounded-xl bg-[#12372A] hover:bg-[#0A2018] text-white text-xs font-black transition shadow-sm cursor-pointer flex items-center gap-2">
+              <svg class="w-4 h-4 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+              تأكيد استلام المبلغ نقداً
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[90] flex flex-col gap-2 pointer-events-none min-w-[320px] max-w-[90vw]"></div>
+
+  <!-- Scripts -->
+  <script src="js/config.js" defer></script>
+  <script src="js/api.js" defer></script>
+  <script src="js/auth.js" defer></script>
+  <script src="js/layout.js" defer></script>
+  <script src="js/notifications.js" defer></script>
+  <script src="js/main.js" defer></script>
+  <script src="js/payment-review.js" defer></script>
+</body>
+</html>

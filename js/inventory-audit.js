@@ -1,5 +1,15 @@
+var FASTAPI_BASE_URL = (typeof window !== 'undefined' && window.CONFIG && window.CONFIG.FASTAPI_BASE_URL)
+  ? window.CONFIG.FASTAPI_BASE_URL.replace(/\/+$/, '')
+  : ((typeof CONFIG !== 'undefined' && CONFIG.FASTAPI_BASE_URL) ? CONFIG.FASTAPI_BASE_URL : 'https://dawwer-backend-fastapi.onrender.com');
+
+function getStoreId() {
+  return localStorage.getItem('activeStoreId') ||
+         localStorage.getItem('storeId') ||
+         '3fa85f64-5717-4562-b3fc-2c963f66afa6';
+}
+
 const CATALOG_STORAGE_KEY = 'dawwer_merchant_catalog_products';
-    const AUDIT_STORAGE_KEY = 'dawwer_merchant_audit_log';
+const AUDIT_STORAGE_KEY = 'dawwer_merchant_audit_log';
 
     let productsList = [];
     let auditLogsList = [];
@@ -96,38 +106,46 @@ const CATALOG_STORAGE_KEY = 'dawwer_merchant_catalog_products';
         auditLogsList = [...DEFAULT_AUDIT_LOGS];
       }
 
-      if (typeof ApiClient !== 'undefined' && ApiClient.products) {
-        ApiClient.products.list().then(res => {
-          const items = res?.data || (Array.isArray(res) ? res : null);
-          if (Array.isArray(items) && items.length > 0) {
-            const idMap = new Map();
-            productsList.forEach(p => idMap.set(String(p.id), p));
-            let hasNew = false;
-            items.forEach(it => {
-              const k = String(it.id || it.store_sku || it.sku);
-              if (!idMap.has(k)) {
-                idMap.set(k, {
-                  id: k,
-                  name: it.product_name || it.name,
-                  sku: it.store_sku || it.sku,
-                  category: it.category || 'عام',
-                  price: it.price || 0,
-                  quantity: it.quantity || 10,
-                  lowStockThreshold: 5,
-                  isAvailable: it.quantity > 0,
-                  location: { zone: it.zone || 'المنطقة أ', aisle: it.aisle || 'ممر 01', rack: it.rack || 'R1', shelf: it.shelf || 'رف 1' }
-                });
-                hasNew = true;
-              }
-            });
-            if (hasNew) {
-              productsList = Array.from(idMap.values());
-              saveProducts();
-              renderAll();
+      const storeId = getStoreId();
+      const token = localStorage.getItem('storeToken') || localStorage.getItem('accessToken') || '';
+      fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      }).then(r => r.ok ? r.json() : null).then(items => {
+        const liveItems = Array.isArray(items) ? items : (items?.data || null);
+        if (Array.isArray(liveItems) && liveItems.length > 0) {
+          const idMap = new Map();
+          productsList.forEach(p => idMap.set(String(p.id), p));
+          let hasNew = false;
+          liveItems.forEach(it => {
+            const k = String(it.id || it.store_sku || it.sku);
+            if (!idMap.has(k)) {
+              idMap.set(k, {
+                id: k,
+                name: it.product_name || it.name,
+                sku: it.store_sku || it.sku,
+                category: it.category || 'عام',
+                price: it.price || 0,
+                quantity: it.quantity || 10,
+                lowStockThreshold: 5,
+                isAvailable: it.quantity > 0,
+                location: { zone: it.zone || 'المنطقة أ', aisle: it.aisle || 'ممر 01', rack: it.rack || 'R1', shelf: it.shelf || 'رف 1' }
+              });
+              hasNew = true;
             }
+          });
+          if (hasNew) {
+            productsList = Array.from(idMap.values());
+            saveProducts();
+            renderAll();
           }
-        }).catch(() => {});
-      }
+        }
+      }).catch(e => {
+        console.warn('[Inventory Live Fetch Note]:', e);
+      });
     }
 
     function saveProducts() {
@@ -505,15 +523,25 @@ const CATALOG_STORAGE_KEY = 'dawwer_merchant_catalog_products';
         `سبب التعديل: ${reason}`
       );
 
-      if (typeof ApiClient !== 'undefined' && ApiClient.products && ApiClient.products.update) {
-        const storeId = ApiClient.getActiveStoreId();
-        if (storeId && p.id && !String(p.id).startsWith('prod-')) {
-          ApiClient.products.update(storeId, p.id, {
-            quantity: newQty,
-            stock_status: newQty > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK'
-          }, { suppressToastOnError: true, throwOnError: false }).catch(err => {
+      const storeId = getStoreId();
+      const token = localStorage.getItem('storeToken') || localStorage.getItem('accessToken') || '';
+      if (p.id && !String(p.id).startsWith('prod-')) {
+        try {
+          fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products/${encodeURIComponent(p.id)}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({
+              quantity: newQty,
+              stock_status: newQty > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK'
+            })
+          }).catch(err => {
             console.warn('[Inventory Live Sync Warning]:', err);
           });
+        } catch (e) {
+          console.warn('[Inventory Live Sync Error]:', e);
         }
       }
 

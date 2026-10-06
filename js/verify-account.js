@@ -108,45 +108,58 @@ async function handleVerifyCode(event) {
       codeType: 1
     };
 
-    const res = await ApiClient.post('/Auth/verify-code', payload);
-    sessionStorage.removeItem('dawwer_registered_email');
-
-    if (res.data && (res.data.accessToken || res.data.token)) {
-      Auth.saveSession(res.data);
-      const successMsg = res.message || 'تم تفعيل الحساب بنجاح! جاري تحويلك للوحة التحكم...';
-      if (alertBox) {
-        alertBox.innerHTML = successMsg;
-        alertBox.className = 'mb-4 p-3.5 rounded-xl text-sm font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 block';
-      }
-      if (typeof showToast === 'function') {
-        showToast({ title: 'تم تفعيل الحساب', message: successMsg, type: 'success' });
-      }
-
-      setTimeout(() => {
-        if (res.data.role === 'Admin' || res.data.role === 4) {
-          window.location.href = 'admin-dashboard.html';
-        } else {
-          window.location.href = 'index.html';
-        }
-      }, 1200);
+    let data;
+    if (window.ApiClient && ApiClient.core) {
+      data = await ApiClient.core('/Auth/verify-code', {
+        method: 'POST',
+        body: payload
+      });
     } else {
-      const successMsg = res.message || 'تم تأكيد حسابك بنجاح! جاري تحويلك لتسجيل الدخول...';
-      if (alertBox) {
-        alertBox.innerHTML = successMsg;
-        alertBox.className = 'mb-4 p-3.5 rounded-xl text-sm font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 block';
-      }
-      if (typeof showToast === 'function') {
-        showToast({ title: 'تم التأكيد بنجاح', message: successMsg, type: 'success' });
-      }
-
-      setTimeout(() => {
-        window.location.href = 'login.html?verified=true';
-      }, 1400);
+      const res = await ApiClient.post('/Auth/verify-code', payload, {}, { throwOnError: true });
+      data = res?.data || res;
     }
-  } catch (err) {
-    const errorMsg = err.message || 'رمز التحقق غير صحيح أو منتهي الصلاحية.';
+
+    sessionStorage.removeItem('dawwer_registered_email');
+    sessionStorage.removeItem('email');
+
+    const accessToken = data?.accessToken || data?.token;
+    const refreshToken = data?.refreshToken;
+
+    if (accessToken) {
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('token', accessToken);
+      localStorage.setItem('dawwer_access_token', accessToken);
+      if (typeof CONFIG !== 'undefined' && CONFIG.TOKEN_KEY) {
+        localStorage.setItem(CONFIG.TOKEN_KEY, accessToken);
+      }
+    }
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+      localStorage.setItem('dawwer_refresh_token', refreshToken);
+      if (typeof CONFIG !== 'undefined' && CONFIG.REFRESH_TOKEN_KEY) {
+        localStorage.setItem(CONFIG.REFRESH_TOKEN_KEY, refreshToken);
+      }
+    }
+    if (data?.userId) {
+      localStorage.setItem('userId', data.userId);
+    }
+
+    const successMsg = 'تم تفعيل الحساب بنجاح! جاري تحويلك...';
     if (alertBox) {
-      alertBox.innerHTML = errorMsg;
+      alertBox.textContent = successMsg;
+      alertBox.className = 'mb-4 p-3.5 rounded-xl text-sm font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 block';
+    }
+    if (typeof showToast === 'function') {
+      showToast({ title: 'تم تفعيل الحساب', message: successMsg, type: 'success' });
+    }
+
+    setTimeout(() => {
+      window.location.href = 'index.html';
+    }, 1000);
+  } catch (err) {
+    const errorMsg = (err && (err.message || (Array.isArray(err.errors) ? err.errors.join(' | ') : null))) || 'رمز التحقق غير صحيح أو منتهي الصلاحية.';
+    if (alertBox) {
+      alertBox.textContent = errorMsg;
       alertBox.className = 'mb-4 p-3.5 rounded-xl text-sm font-bold bg-red-50 border border-red-200 text-red-700 block';
     }
     if (typeof showToast === 'function') {
