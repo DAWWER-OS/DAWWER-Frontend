@@ -4,7 +4,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   _indexInitialized = true;
 
   if (window.Auth && typeof Auth.requireAuth === 'function') {
-    Auth.requireAuth();
+    const isAuthed = Auth.requireAuth();
+    if (!isAuthed) return;
   }
 
   await loadDashboard();

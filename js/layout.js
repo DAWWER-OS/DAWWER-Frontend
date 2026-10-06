@@ -16,6 +16,11 @@ const DawwerLayout = {
     this.setupKeyboardShortcuts();
     this.applyInitialState();
 
+    if (typeof Auth !== 'undefined' && typeof Auth.requireAuth === 'function') {
+      const isAuthed = Auth.requireAuth();
+      if (!isAuthed) return;
+    }
+
     if (typeof Auth !== 'undefined') {
       Auth.applyPermissionTrimming();
     }

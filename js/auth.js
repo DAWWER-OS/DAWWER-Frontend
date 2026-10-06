@@ -125,27 +125,78 @@ const Auth = {
   },
 
   getToken() {
-    return (
-      localStorage.getItem("storeToken") ||
-      localStorage.getItem("store_token") ||
-      localStorage.getItem("dawwer_store_token") ||
-      localStorage.getItem("accessToken") ||
-      localStorage.getItem("token") ||
-      localStorage.getItem("access_token") ||
-      localStorage.getItem("dawwer_access_token") ||
-      (typeof CONFIG !== 'undefined' && CONFIG.TOKEN_KEY && localStorage.getItem(CONFIG.TOKEN_KEY)) ||
-      null
-    );
+    const candidateKeys = [
+      "storeToken", "store_token", "dawwer_store_token",
+      "accessToken", "token", "access_token", "dawwer_access_token"
+    ];
+    if (typeof CONFIG !== 'undefined' && CONFIG.TOKEN_KEY) {
+      candidateKeys.push(CONFIG.TOKEN_KEY);
+    }
+    if (typeof CONFIG !== 'undefined' && CONFIG.STORE_TOKEN_KEY) {
+      candidateKeys.push(CONFIG.STORE_TOKEN_KEY);
+    }
+
+    for (const key of candidateKeys) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw && typeof raw === 'string') {
+          const clean = raw.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
+          if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && clean !== '') {
+            return clean;
+          }
+        }
+      } catch (e) {}
+    }
+    return null;
+  },
+
+  isTokenExpired(token) {
+    if (!token || typeof token !== 'string') return true;
+    const clean = token.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
+    if (!clean || clean.toLowerCase() === 'null' || clean.toLowerCase() === 'undefined') return true;
+    try {
+      const parts = clean.split('.');
+      if (parts.length !== 3) return false;
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      if (!payload.exp) return false;
+      // Expired if current time in seconds is at or past expiry (with 10s grace window)
+      return (Date.now() / 1000) >= (payload.exp - 10);
+    } catch (e) {
+      return false;
+    }
+  },
+
+  clearLocalSession() {
+    const keys = [
+      'token', 'accessToken', 'access_token', 'dawwer_access_token',
+      'storeToken', 'store_token', 'dawwer_store_token',
+      'refreshToken', 'refresh_token', 'dawwer_refresh_token',
+      'userId', 'userData', 'dawwer_user_data', 'user',
+      'storeId', 'store_id', 'activeStoreId', 'active_store_id', 'dawwer_active_store_id', 'dawwer_store_id',
+      'storeName', 'store_name', 'dawwer_store_name', 'dawwer_active_store'
+    ];
+    keys.forEach(k => {
+      try { localStorage.removeItem(k); } catch (e) {}
+    });
+    if (typeof CONFIG !== 'undefined') {
+      ['TOKEN_KEY', 'REFRESH_TOKEN_KEY', 'USER_KEY', 'STORE_TOKEN_KEY', 'ACTIVE_STORE_KEY'].forEach(ck => {
+        if (CONFIG[ck]) {
+          try { localStorage.removeItem(CONFIG[ck]); } catch (e) {}
+        }
+      });
+    }
+    try { sessionStorage.clear(); } catch (e) {}
   },
 
   isAuthenticated() {
-    return !!(
-      localStorage.getItem("storeToken") ||
-      localStorage.getItem("accessToken") ||
-      localStorage.getItem("token") ||
-      localStorage.getItem("dawwer_access_token") ||
-      (typeof CONFIG !== 'undefined' && CONFIG.TOKEN_KEY && localStorage.getItem(CONFIG.TOKEN_KEY))
-    );
+    const token = this.getToken();
+    if (!token) return false;
+    if (this.isTokenExpired(token)) {
+      console.warn('[Auth] Session token is expired. Purging stale credentials.');
+      this.clearLocalSession();
+      return false;
+    }
+    return true;
   },
 
   async selectStore(storeId) {
@@ -370,11 +421,11 @@ const Auth = {
     if (this._authChecked) return true;
     this._authChecked = true;
 
-    const currentPath = window.location.pathname.split("/").pop() || 'index.html';
-    const loginTarget = (window.location.protocol === 'file:') ? 'login.html' : '/login.html';
+    const currentPath = (window.location.pathname.split("/").pop() || 'index.html').toLowerCase();
+    const loginTarget = 'login.html';
 
     if (!this.isAuthenticated()) {
-      const authPages = ['login.html', 'register.html', 'verify-account.html', 'forgot-password.html', 'reset-password.html', 'admin-login.html', 'select-store.html'];
+      const authPages = ['login.html', 'register.html', 'verify-account.html', 'forgot-password.html', 'reset-password.html', 'admin-login.html'];
       if (!authPages.includes(currentPath)) {
         if (currentPath === 'admin-dashboard.html') {
           try {
@@ -386,7 +437,8 @@ const Auth = {
           } catch (e) {}
           window.location.replace(`${loginTarget}?unauthorized=true`);
         } else {
-          window.location.href = `login.html?redirect=${encodeURIComponent(currentPath)}`;
+          const redirectParam = (currentPath !== 'index.html' && currentPath !== '') ? `?redirect=${encodeURIComponent(currentPath)}` : '';
+          window.location.replace(`${loginTarget}${redirectParam}`);
         }
       }
       return false;

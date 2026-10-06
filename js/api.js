@@ -1038,40 +1038,33 @@ const ApiClient = {
     if (this._reauthPromptActive) return;
     this._reauthPromptActive = true;
 
-    const message = customMessage || "انتهت صلاحية جلسة العمل أو يلزم تسجيل الدخول مجدداً للمتابعة.";
+    const message = customMessage || "انتهت صلاحية جلسة العمل، يرجى تسجيل الدخول مجدداً للمتابعة.";
     console.warn(`[ApiClient] Authentication required: ${message}`);
 
-    if (typeof window !== 'undefined') {
-      if (typeof window.showToast === 'function') {
-        window.showToast({
-          title: 'يلزم تسجيل الدخول',
-          message: message,
-          type: 'warning',
-          duration: 7000
-        });
-      }
+    this.clearSession();
 
+    if (typeof window !== 'undefined') {
       try {
-        window.dispatchEvent(new CustomEvent('dawwer:auth-required', {
-          detail: { message }
+        sessionStorage.setItem('dawwer_pending_toast', JSON.stringify({
+          title: 'جلسة العمل منتهية',
+          message: message,
+          type: 'warning'
         }));
       } catch (e) {}
 
-      const alertBox = typeof document !== 'undefined' ? document.getElementById("alert-banner") : null;
-      if (alertBox) {
-        alertBox.innerHTML = `
-          <div class="flex items-center justify-between">
-            <span>${message}</span>
-            <a href="login.html" class="underline font-bold text-amber-900 hover:text-black mr-2">تسجيل الدخول الآن</a>
-          </div>
-        `;
-        alertBox.className = "mb-6 p-4 rounded-2xl text-sm font-bold bg-amber-50 border border-amber-200 text-amber-800 block";
+      const currentPath = (window.location.pathname || '').split('/').pop() || 'index.html';
+      const exemptPages = ['login.html', 'register.html', 'verify-account.html', 'forgot-password.html', 'reset-password.html', 'admin-login.html'];
+      if (!exemptPages.includes(currentPath.toLowerCase())) {
+        setTimeout(() => {
+          const redirectParam = (currentPath !== 'index.html' && currentPath !== '') ? `?redirect=${encodeURIComponent(currentPath)}` : '';
+          window.location.replace(`login.html${redirectParam}`);
+        }, 300);
       }
     }
 
     setTimeout(() => {
       this._reauthPromptActive = false;
-    }, 3000);
+    }, 2000);
   },
 
   /**
