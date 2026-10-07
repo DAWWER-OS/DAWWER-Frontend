@@ -16,6 +16,11 @@ const DawwerLayout = {
     this.setupKeyboardShortcuts();
     this.applyInitialState();
 
+    if (typeof Auth !== 'undefined' && typeof Auth.requireAuth === 'function') {
+      const isAuthed = Auth.requireAuth();
+      if (!isAuthed) return;
+    }
+
     if (typeof Auth !== 'undefined') {
       Auth.applyPermissionTrimming();
     }
@@ -336,6 +341,16 @@ const DawwerLayout = {
 
       <!-- CENTER: Clean Icon-Only Navigation Buttons -->
       <nav class="flex flex-col items-center gap-2 my-auto w-full py-2 sidebar-nav overflow-visible">
+        ${(typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function' && Auth.isAdmin()) ? `
+        <!-- 0. الإدارة المركزية (للمسؤولين) -->
+        <div class="relative group flex items-center justify-center">
+          <a href="admin-dashboard.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-amber-300 hover:text-white hover:bg-amber-500/20 transition-colors shrink-0" aria-label="الإدارة المركزية">
+            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          </a>
+          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
+            لوحة الإدارة المركزية
+          </div>
+        </div>` : ''}
         <!-- 1. لوحة التحكم -->
         <div class="relative group flex items-center justify-center">
           <a href="index.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="لوحة التحكم">
@@ -666,7 +681,9 @@ const DawwerLayout = {
   },
 
   initStoreIdentity() {
-    const isSuperAdmin = (typeof Auth !== 'undefined' && Auth.getUser && Auth.getUser() && (Auth.getUser().role === 'Admin' || Auth.getUser().role === 4));
+    const isSuperAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
+      ? Auth.isAdmin()
+      : (typeof Auth !== 'undefined' && Auth.getUser && Auth.getUser() && (Auth.getUser().role === 'Admin' || Auth.getUser().role === 4 || /admin|superadmin/i.test(String(Auth.getUser().role))));
     const fallbackName = isSuperAdmin ? "الإدارة العامة لمنظومة دوّر" : "المتجر الحالي";
 
     const currentStoreName = this.getStoredStoreName() || fallbackName;
@@ -694,13 +711,15 @@ const DawwerLayout = {
       });
     }
 
-    if (typeof Auth !== 'undefined' && Auth.isAuthenticated && Auth.isAuthenticated()) {
+    if (!isSuperAdmin && typeof Auth !== 'undefined' && Auth.isAuthenticated && Auth.isAuthenticated()) {
       this.fetchStoreProfile();
     }
   },
 
   updateStoreIdentity(storeName, status = null) {
-    const isSuperAdmin = (typeof Auth !== 'undefined' && Auth.getUser && Auth.getUser() && (Auth.getUser().role === 'Admin' || Auth.getUser().role === 4));
+    const isSuperAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
+      ? Auth.isAdmin()
+      : (typeof Auth !== 'undefined' && Auth.getUser && Auth.getUser() && (Auth.getUser().role === 'Admin' || Auth.getUser().role === 4 || /admin|superadmin/i.test(String(Auth.getUser().role))));
     const fallbackName = isSuperAdmin ? "الإدارة العامة لمنظومة دوّر" : "المتجر الحالي";
     const finalName = (storeName && String(storeName).trim() && String(storeName).trim() !== 'null' && String(storeName).trim() !== 'undefined')
       ? String(storeName).trim()
@@ -763,6 +782,11 @@ const DawwerLayout = {
   },
 
   async fetchStoreProfile(storeId = null) {
+    const isSuperAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
+      ? Auth.isAdmin()
+      : (typeof Auth !== 'undefined' && Auth.getUser && Auth.getUser() && (Auth.getUser().role === 'Admin' || Auth.getUser().role === 4 || /admin|superadmin/i.test(String(Auth.getUser().role))));
+    if (isSuperAdmin) return null;
+
     try {
       const targetId = storeId || (typeof ApiClient !== 'undefined' && ApiClient.getActiveStoreId ? ApiClient.getActiveStoreId() : null);
       if (!targetId) return null;
@@ -793,6 +817,14 @@ const DawwerLayout = {
   },
 
   async openStoreSwitcher() {
+    const isSuperAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
+      ? Auth.isAdmin()
+      : (typeof Auth !== 'undefined' && Auth.getUser && Auth.getUser() && (Auth.getUser().role === 'Admin' || Auth.getUser().role === 4 || /admin|superadmin/i.test(String(Auth.getUser().role))));
+    if (isSuperAdmin) {
+      console.info('[DawwerLayout] openStoreSwitcher suppressed for SuperAdmin');
+      return;
+    }
+
     let modal = document.getElementById('dawwer-store-selector-modal');
     if (modal) {
       modal.classList.remove('hidden');
@@ -877,7 +909,7 @@ const DawwerLayout = {
       });
 
       document.querySelectorAll('[data-user-role]').forEach(el => {
-        if (user.role === 'Admin' || user.role === 4) {
+        if ((typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function' && Auth.isAdmin(user)) || user.role === 'Admin' || user.role === 4 || /admin|superadmin/i.test(String(user.role))) {
           el.innerText = 'مدير المنصة الرئيسي';
         } else if (store && store.roleName) {
           el.innerText = store.roleName;

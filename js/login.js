@@ -3,10 +3,18 @@ if (typeof Auth !== 'undefined' && Auth.isAuthenticated && Auth.isAuthenticated(
   const urlParams = new URLSearchParams(window.location.search);
   const redirect = urlParams.get('redirect');
   const user = Auth.getUser();
-  if (redirect && !redirect.includes('login.html')) {
+  const isAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
+    ? Auth.isAdmin(user)
+    : (function(r) {
+        if (!r) return false;
+        if (Array.isArray(r)) return r.some(x => /admin|superadmin/i.test(String(x)));
+        return r === 4 || r === '4' || /admin|superadmin/i.test(String(r));
+      })(user?.role);
+
+  if (isAdmin) {
+    window.location.href = (redirect && redirect.includes('admin') && !redirect.includes('login.html')) ? redirect : 'admin-dashboard.html';
+  } else if (redirect && !redirect.includes('login.html') && !redirect.includes('register.html')) {
     window.location.href = redirect;
-  } else if (user && (user.role === 'Admin' || user.role === 4 || user.role === '4')) {
-    window.location.href = 'admin-dashboard.html';
   } else if (!localStorage.getItem('activeStoreId') && !localStorage.getItem('storeToken')) {
     window.location.href = 'select-store.html';
   } else if (user && (user.role === 'Merchant' || user.role === 2 || user.role === '2')) {
@@ -35,6 +43,20 @@ function initLoginForm() {
     }
     if (typeof showToast === 'function') {
       showToast({ title: 'تم تأكيد الحساب', message: 'يمكنك الآن تسجيل الدخول بنجاح', type: 'success' });
+    }
+  }
+
+  // 1.1 Session expired query handler
+  if (urlParams.get('session_expired') === 'true') {
+    const errorBox = document.getElementById('error-message');
+    if (errorBox) {
+      errorBox.innerHTML = `
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <span>انتهت صلاحية جلسة العمل، يرجى تسجيل الدخول مجدداً للمتابعة.</span>
+        </div>
+      `;
+      errorBox.className = 'mb-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-bold block';
     }
   }
 
@@ -280,12 +302,34 @@ async function handleLogin(event) {
         showToast({ title: 'تسجيل دخول ناجح', message: 'مرحباً بك في دوّر', type: 'success' });
       }
 
-      // Redirect to select-store.html (or redirect URL if explicitly provided)
+      // Smart role-based redirection:
+      // Super Admin and Platform Admins MUST be directed to admin-dashboard.html and NEVER to the merchant portal (select-store.html).
       const urlParams = new URLSearchParams(window.location.search);
       const redirect = urlParams.get('redirect') || urlParams.get('returnUrl');
-      const targetUrl = (redirect && !redirect.includes('login.html') && !redirect.includes('register.html') && !redirect.includes('index.html'))
-        ? redirect
-        : 'select-store.html';
+
+      const isUserAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
+        ? Auth.isAdmin(userObj)
+        : (function(r) {
+            if (!r) return false;
+            if (Array.isArray(r)) return r.some(x => /admin|superadmin/i.test(String(x)));
+            return r === 4 || r === '4' || /admin|superadmin/i.test(String(r));
+          })(role);
+
+      let targetUrl;
+      if (isUserAdmin) {
+        targetUrl = (redirect && redirect.includes('admin') && !redirect.includes('login.html'))
+          ? redirect
+          : 'admin-dashboard.html';
+      } else {
+        // Merchant / Staff: redirect to requested page, or select-store.html if no active store context
+        if (redirect && !redirect.includes('login.html') && !redirect.includes('register.html') && !redirect.includes('index.html')) {
+          targetUrl = redirect;
+        } else if (storeId) {
+          targetUrl = 'index.html';
+        } else {
+          targetUrl = 'select-store.html';
+        }
+      }
 
       setTimeout(() => {
         window.location.replace(targetUrl);

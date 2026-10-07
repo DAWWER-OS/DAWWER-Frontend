@@ -95,7 +95,10 @@ const Auth = {
           const parts = token.split('.');
           if (parts.length === 3) {
             const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-            const role = payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || payload.role || 2;
+            const rawRole = payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ||
+                            payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/roles"] ||
+                            payload.role || payload.roles || 2;
+            const role = Array.isArray(rawRole) ? (rawRole.find(r => /admin|superadmin/i.test(String(r))) || rawRole[0]) : rawRole;
             const email = payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"] || payload.email || "";
             const userId = payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] || payload.nameid || payload.sub || localStorage.getItem("userId") || "";
             const fullName = payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] || payload.unique_name || payload.name || "مستخدم دوّر";
@@ -125,27 +128,78 @@ const Auth = {
   },
 
   getToken() {
-    return (
-      localStorage.getItem("storeToken") ||
-      localStorage.getItem("store_token") ||
-      localStorage.getItem("dawwer_store_token") ||
-      localStorage.getItem("accessToken") ||
-      localStorage.getItem("token") ||
-      localStorage.getItem("access_token") ||
-      localStorage.getItem("dawwer_access_token") ||
-      (typeof CONFIG !== 'undefined' && CONFIG.TOKEN_KEY && localStorage.getItem(CONFIG.TOKEN_KEY)) ||
-      null
-    );
+    const candidateKeys = [
+      "storeToken", "store_token", "dawwer_store_token",
+      "accessToken", "token", "access_token", "dawwer_access_token"
+    ];
+    if (typeof CONFIG !== 'undefined' && CONFIG.TOKEN_KEY) {
+      candidateKeys.push(CONFIG.TOKEN_KEY);
+    }
+    if (typeof CONFIG !== 'undefined' && CONFIG.STORE_TOKEN_KEY) {
+      candidateKeys.push(CONFIG.STORE_TOKEN_KEY);
+    }
+
+    for (const key of candidateKeys) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw && typeof raw === 'string') {
+          const clean = raw.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
+          if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && clean !== '') {
+            return clean;
+          }
+        }
+      } catch (e) {}
+    }
+    return null;
+  },
+
+  isTokenExpired(token) {
+    if (!token || typeof token !== 'string') return true;
+    const clean = token.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
+    if (!clean || clean.toLowerCase() === 'null' || clean.toLowerCase() === 'undefined') return true;
+    try {
+      const parts = clean.split('.');
+      if (parts.length !== 3) return false;
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      if (!payload.exp) return false;
+      // Expired if current time in seconds is at or past expiry (with 10s grace window)
+      return (Date.now() / 1000) >= (payload.exp - 10);
+    } catch (e) {
+      return false;
+    }
+  },
+
+  clearLocalSession() {
+    const keys = [
+      'token', 'accessToken', 'access_token', 'dawwer_access_token',
+      'storeToken', 'store_token', 'dawwer_store_token',
+      'refreshToken', 'refresh_token', 'dawwer_refresh_token',
+      'userId', 'userData', 'dawwer_user_data', 'user',
+      'storeId', 'store_id', 'activeStoreId', 'active_store_id', 'dawwer_active_store_id', 'dawwer_store_id',
+      'storeName', 'store_name', 'dawwer_store_name', 'dawwer_active_store'
+    ];
+    keys.forEach(k => {
+      try { localStorage.removeItem(k); } catch (e) {}
+    });
+    if (typeof CONFIG !== 'undefined') {
+      ['TOKEN_KEY', 'REFRESH_TOKEN_KEY', 'USER_KEY', 'STORE_TOKEN_KEY', 'ACTIVE_STORE_KEY'].forEach(ck => {
+        if (CONFIG[ck]) {
+          try { localStorage.removeItem(CONFIG[ck]); } catch (e) {}
+        }
+      });
+    }
+    try { sessionStorage.clear(); } catch (e) {}
   },
 
   isAuthenticated() {
-    return !!(
-      localStorage.getItem("storeToken") ||
-      localStorage.getItem("accessToken") ||
-      localStorage.getItem("token") ||
-      localStorage.getItem("dawwer_access_token") ||
-      (typeof CONFIG !== 'undefined' && CONFIG.TOKEN_KEY && localStorage.getItem(CONFIG.TOKEN_KEY))
-    );
+    const token = this.getToken();
+    if (!token) return false;
+    if (this.isTokenExpired(token)) {
+      console.warn('[Auth] Session token is expired. Purging stale credentials.');
+      this.clearLocalSession();
+      return false;
+    }
+    return true;
   },
 
   async selectStore(storeId) {
@@ -270,16 +324,63 @@ const Auth = {
     }
   },
 
+  isAdmin(userParam = null) {
+    const user = userParam || this.getUser();
+    if (user && user.role !== undefined && user.role !== null) {
+      return this._isRoleAdmin(user.role);
+    }
+    const storedRole = localStorage.getItem('userRole') || localStorage.getItem('role');
+    if (storedRole && this._isRoleAdmin(storedRole)) return true;
+
+    const token = this.getToken();
+    if (token && typeof token === 'string' && token.includes('.')) {
+      try {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(decodeURIComponent(escape(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))));
+          const r = payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ||
+                    payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/roles"] ||
+                    payload.role || payload.roles;
+          if (this._isRoleAdmin(r)) return true;
+        }
+      } catch (e) {}
+    }
+    return false;
+  },
+
+  _isRoleAdmin(role) {
+    if (role === null || role === undefined) return false;
+    if (Array.isArray(role)) {
+      return role.some(r => this._isRoleAdmin(r));
+    }
+    if (typeof role === 'number') {
+      const adminCode = (typeof CONFIG !== 'undefined' && CONFIG.ROLES) ? CONFIG.ROLES.ADMIN : 4;
+      return role === adminCode || role === 4;
+    }
+    const s = String(role).trim().toLowerCase();
+    return s === '4' || s === 'admin' || s === 'superadmin' || s === 'super_admin' || s === 'administrator' || s.includes('admin');
+  },
+
   hasRole(role) {
     const user = this.getUser();
     if (!user) return false;
+    const roles = (typeof CONFIG !== 'undefined' && CONFIG.ROLES) ? CONFIG.ROLES : { ADMIN: 4, MERCHANT: 2, STAFF: 3, CUSTOMER: 1 };
+
+    // SuperAdmin and Admin match any admin check
+    if (role === roles.ADMIN || role === 4 || role === '4' || String(role).toLowerCase().includes('admin')) {
+      return this.isAdmin(user);
+    }
+
     if (typeof role === "number") {
-      const roles = (typeof CONFIG !== 'undefined' && CONFIG.ROLES) ? CONFIG.ROLES : { ADMIN: 4, MERCHANT: 2, STAFF: 3, CUSTOMER: 1 };
-      if (role === roles.ADMIN && (user.role === "Admin" || user.role === 4)) return true;
       if (role === roles.MERCHANT && (user.role === "Merchant" || user.role === 2)) return true;
       if (role === roles.STAFF && (user.role === "Staff" || user.role === 3)) return true;
       if (role === roles.CUSTOMER && (user.role === "Customer" || user.role === 1)) return true;
     }
+
+    if (Array.isArray(user.role)) {
+      return user.role.some(r => String(r).toLowerCase() === String(role).toLowerCase());
+    }
+
     return (user.role || "").toString().toLowerCase() === role.toString().toLowerCase();
   },
 
@@ -370,11 +471,11 @@ const Auth = {
     if (this._authChecked) return true;
     this._authChecked = true;
 
-    const currentPath = window.location.pathname.split("/").pop() || 'index.html';
-    const loginTarget = (window.location.protocol === 'file:') ? 'login.html' : '/login.html';
+    const currentPath = (window.location.pathname.split("/").pop() || 'index.html').toLowerCase();
+    const loginTarget = 'login.html';
 
     if (!this.isAuthenticated()) {
-      const authPages = ['login.html', 'register.html', 'verify-account.html', 'forgot-password.html', 'reset-password.html', 'admin-login.html', 'select-store.html'];
+      const authPages = ['login.html', 'register.html', 'verify-account.html', 'forgot-password.html', 'reset-password.html', 'admin-login.html'];
       if (!authPages.includes(currentPath)) {
         if (currentPath === 'admin-dashboard.html') {
           try {
@@ -386,7 +487,8 @@ const Auth = {
           } catch (e) {}
           window.location.replace(`${loginTarget}?unauthorized=true`);
         } else {
-          window.location.href = `login.html?redirect=${encodeURIComponent(currentPath)}`;
+          const redirectParam = (currentPath !== 'index.html' && currentPath !== '') ? `?redirect=${encodeURIComponent(currentPath)}` : '';
+          window.location.replace(`${loginTarget}${redirectParam}`);
         }
       }
       return false;

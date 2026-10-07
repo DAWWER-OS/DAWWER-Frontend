@@ -64,10 +64,11 @@
           userRole = tokenRole;
         }
 
+        const roleStr = Array.isArray(userRole) ? userRole.join(',') : String(userRole ?? '');
         const isAdmin = (
           userRole === 4 ||
           userRole === '4' ||
-          userRole === 'Admin'
+          /admin|superadmin|administrator/i.test(roleStr)
         );
 
         if (!isAdmin) {

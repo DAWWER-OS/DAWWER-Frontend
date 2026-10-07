@@ -52,48 +52,35 @@
 ,GRO-ERR-801,5.00,زيوت ومؤونة,المنطقة أ,ممر 02
 صنف بسعر غير صالح,GRO-ERR-802,-3.50,تسالي وحلويات,المنطقة ج,ممر 07`;
 
-      var FASTAPI_BASE_URL = (window.CONFIG && window.CONFIG.FASTAPI_BASE_URL)
-        ? window.CONFIG.FASTAPI_BASE_URL.replace(/\/+$/, '')
-        : 'https://dawwer-backend-fastapi.onrender.com';
-
-      const getStoreContext = () => ({
-        storeId: localStorage.getItem('activeStoreId') || localStorage.getItem('storeId') || '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-        token: localStorage.getItem('storeToken') || localStorage.getItem('accessToken') || ''
-      });
+      const FASTAPI_BASE_URL = (typeof CONFIG !== 'undefined' && CONFIG.FASTAPI_BASE_URL)
+        ? CONFIG.FASTAPI_BASE_URL
+        : (typeof window !== 'undefined' && window.FASTAPI_BASE_URL ? window.FASTAPI_BASE_URL : 'https://dawwer-backend-fastapi.onrender.com');
 
       function getStoreId() {
-        return getStoreContext().storeId;
+        return localStorage.getItem('activeStoreId') ||
+               localStorage.getItem('storeId') ||
+               '3fa85f64-5717-4562-b3fc-2c963f66afa6';
       }
 
       function getAuthToken() {
-        const token = getStoreContext().token;
-        if (token) return token.replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '').trim();
+        const storeToken = localStorage.getItem('storeToken') || localStorage.getItem('store_token');
+        if (storeToken) return storeToken.replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '').trim();
+        const accessToken = localStorage.getItem('accessToken') || localStorage.getItem('token');
+        if (accessToken) return accessToken.replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '').trim();
         return (typeof ApiClient !== 'undefined' && typeof ApiClient.getToken === 'function') ? ApiClient.getToken() : '';
       }
 
-      const CATALOG_STORAGE_KEY = 'dawwer_catalog_products';
-      const LEGACY_STORAGE_KEY = 'dawwer_merchant_catalog_products';
+      const CATALOG_STORAGE_KEY = 'dawwer_merchant_catalog_products';
 
       function loadCatalogProducts() {
         try {
-          const stored = localStorage.getItem(CATALOG_STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
+          const stored = localStorage.getItem(CATALOG_STORAGE_KEY);
           if (stored) {
             const parsed = JSON.parse(stored);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              return parsed.map((p, idx) => ({
-                id: p.id || ('prod-local-' + (idx + 1)),
-                name: p.name || p.product_name || 'منتج بدون اسم',
-                sku: p.barcode || p.sku || p.store_sku || 'SKU-000',
-                barcode: p.barcode || p.sku || '',
-                category: p.category || 'عام',
-                price: typeof p.price === 'number' ? p.price : parseFloat(p.price || 0),
-                quantity: (typeof p.stock_quantity === 'number') ? p.stock_quantity : ((typeof p.quantity === 'number') ? p.quantity : (p.isAvailable !== false ? 10 : 0)),
-                stock_quantity: (typeof p.stock_quantity === 'number') ? p.stock_quantity : ((typeof p.quantity === 'number') ? p.quantity : 10),
-                isAvailable: p.stock_status !== 'OUT_OF_STOCK' && (p.isAvailable !== false),
-                shelf_location: p.shelf_location || (p.location ? `${p.location.zone} › ${p.location.aisle}` : 'المنطقة أ - ممر 01'),
-                location: p.location || { zone: 'المنطقة أ', aisle: 'ممر 01', rack: 'R1', shelf: 'رف 1' },
-                status: p.status || 'Published',
-                updatedAt: p.updatedAt || 'اليوم'
+              return parsed.map(p => ({
+                ...p,
+                quantity: (typeof p.quantity === 'number') ? p.quantity : (p.isAvailable ? 12 : 0)
               }));
             }
           }
@@ -106,7 +93,6 @@
       function saveCatalogProducts() {
         try {
           localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(state.products));
-          localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(state.products));
         } catch (e) {
           console.error('Error saving products to localStorage:', e);
         }
@@ -1688,7 +1674,7 @@
               ? `<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">منشور</span>`
               : (p.status === 'Draft' ? `<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">مسودة</span>` : `<span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">غير نشط</span>`);
 
-            const qty = (typeof p.stock_quantity === 'number') ? p.stock_quantity : ((typeof p.quantity === 'number') ? p.quantity : (p.isAvailable !== false ? 10 : 0));
+            const qty = (typeof p.quantity === 'number') ? p.quantity : (p.isAvailable ? 12 : 0);
             let stockBadge = '';
             if (qty === 0) {
               stockBadge = `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black bg-rose-50 text-rose-700 border border-rose-200"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>نفد (0)</span>`;
@@ -1705,14 +1691,14 @@
                 </td>
                 <td class="px-6 py-4 font-bold text-slate-900">
                   <div class="text-sm font-extrabold text-slate-900">${escapeHtml(p.name)}</div>
-                  <div class="text-[11px] font-mono text-slate-400 font-normal" dir="ltr">${escapeHtml(p.barcode || p.sku || '—')}</div>
+                  <div class="text-[11px] font-mono text-slate-400 font-normal" dir="ltr">${p.sku}</div>
                   <div class="text-[11px] text-slate-500 font-medium mt-0.5">المتوفر بالمخزون: <strong class="text-slate-800">${qty}</strong> قطعة</div>
                 </td>
                 <td class="px-6 py-4"><span class="px-3 py-1 rounded-xl text-xs font-bold bg-[#edf5f0] text-[#153f2d]">${escapeHtml(p.category)}</span></td>
                 <td class="px-6 py-4 font-bold text-slate-900">${formatCurrency(p.price)}</td>
                 <td class="px-6 py-4 text-xs font-bold text-slate-700">
                   <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-xl">
-                    <span>${escapeHtml(p.shelf_location || (p.location ? `${p.location.zone} › ${p.location.aisle}` : '—'))}</span>
+                    <span>${p.location ? `${p.location.zone} › ${p.location.aisle}` : '—'}</span>
                   </div>
                 </td>
                 <td class="px-6 py-4 text-center">
@@ -1733,23 +1719,11 @@
           }).join('');
         }
 
-        const totalCount = state.products.length;
-        const totalValue = state.products.reduce((acc, p) => {
-          const price = Number(p.price) || 0;
-          const q = (typeof p.stock_quantity === 'number') ? p.stock_quantity : ((typeof p.quantity === 'number') ? p.quantity : (p.isAvailable !== false ? 10 : 0));
-          return acc + (price * q);
-        }, 0);
-
-        if (DOM.totalCountBadge) DOM.totalCountBadge.textContent = totalCount;
-        if (DOM.countAll) DOM.countAll.textContent = totalCount;
+        DOM.totalCountBadge.textContent = state.products.length;
+        DOM.countAll.textContent = state.products.length;
         DOM.countPublished.textContent = state.products.filter(p => p.status === 'Published').length;
         DOM.countDraft.textContent = state.products.filter(p => p.status === 'Draft').length;
         DOM.countInactive.textContent = state.products.filter(p => p.status === 'Inactive').length;
-
-        const totalValElem = document.getElementById('total-catalog-value');
-        if (totalValElem) {
-          totalValElem.textContent = formatCurrency(totalValue);
-        }
 
         // Pagination summary
         const startItem = total === 0 ? 0 : start + 1;
@@ -2408,7 +2382,8 @@
       }
 
       async function fetchLiveProducts() {
-        const { storeId } = getStoreContext();
+        const storeId = getStoreId();
+        const token = getAuthToken();
 
         try {
           if (DOM.tableBody && state.products.length === 0) {
@@ -2428,80 +2403,54 @@
           }
 
           const headers = { 'Accept': 'application/json' };
-          const authToken = getAuthToken();
-          if (authToken) {
-            headers['Authorization'] = `Bearer ${authToken}`;
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
           }
 
           const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
           const timer = controller ? setTimeout(() => controller.abort(), 12000) : null;
 
-          let serverItems = [];
-          try {
-            const res = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products`, {
-              method: 'GET',
-              headers,
-              signal: controller ? controller.signal : undefined
-            });
-
-            if (res.ok) {
-              const json = await res.json().catch(() => null);
-              serverItems = Array.isArray(json) ? json : (json && Array.isArray(json.data) ? json.data : []);
-            } else {
-              console.warn(`[Catalog] Products request returned HTTP ${res.status}. Falling back to cached items.`);
-            }
-          } catch (fetchErr) {
-            console.warn('[Catalog] Backend request failed or timed out:', fetchErr);
-          } finally {
+          const res = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products`, {
+            method: 'GET',
+            headers,
+            signal: controller ? controller.signal : undefined
+          }).finally(() => {
             if (timer) clearTimeout(timer);
-          }
-
-          const mappedServerProducts = (serverItems || []).map((p, idx) => ({
-            id: p.id || ('prod-srv-' + (idx + 1)),
-            name: p.product_name || p.name || 'منتج بدون اسم',
-            sku: p.barcode || p.store_sku || p.sku || 'SKU-000',
-            barcode: p.barcode || p.sku || p.store_sku || '',
-            category: p.category || 'عام',
-            price: typeof p.price === 'number' ? p.price : parseFloat(p.price || 0),
-            quantity: typeof p.stock_quantity === 'number' ? p.stock_quantity : (typeof p.quantity === 'number' ? p.quantity : (p.stock_status !== 'OUT_OF_STOCK' ? 12 : 0)),
-            stock_quantity: typeof p.stock_quantity === 'number' ? p.stock_quantity : (typeof p.quantity === 'number' ? p.quantity : 10),
-            isAvailable: p.stock_status !== 'OUT_OF_STOCK' && (p.stock_quantity === undefined || p.stock_quantity > 0),
-            shelf_location: p.shelf_location || (p.location ? `${p.location.zone} › ${p.location.aisle}` : (p.zone ? `${p.zone} - ${p.aisle || '1'} - ${p.shelf || '2'}` : 'المنطقة أ - ممر 01')),
-            location: p.location || {
-              zone: p.zone || 'المنطقة أ',
-              aisle: p.aisle ? (String(p.aisle).includes('ممر') ? p.aisle : `ممر ${p.aisle}`) : 'ممر 01',
-              rack: p.rack ? (String(p.rack).startsWith('R') ? p.rack : `R${p.rack}`) : 'R1',
-              shelf: p.shelf ? (String(p.shelf).includes('رف') ? p.shelf : `رف ${p.shelf}`) : 'رف 1'
-            },
-            status: p.stock_status === 'OUT_OF_STOCK' ? 'Draft' : (p.status || 'Published'),
-            updatedAt: p.updated_at ? new Date(p.updated_at).toLocaleDateString('ar-SA') : 'اليوم'
-          }));
-
-          // Read local newly approved items from localStorage.dawwer_catalog_products / localStorage.dawwer_merchant_catalog_products
-          const cachedLocal = loadCatalogProducts();
-
-          // Merge: prioritize server items, but merge locally saved newly approved items that aren't yet on server
-          const merged = [...mappedServerProducts];
-          const existingIdentifiers = new Set(
-            mappedServerProducts.map(p => (p.barcode || p.sku || p.name || '').trim().toLowerCase()).filter(Boolean)
-          );
-
-          cachedLocal.forEach(localItem => {
-            const idKey = (localItem.barcode || localItem.sku || localItem.name || '').trim().toLowerCase();
-            if (!idKey || !existingIdentifiers.has(idKey)) {
-              merged.unshift(localItem);
-              if (idKey) existingIdentifiers.add(idKey);
-            }
           });
 
-          if (merged.length > 0) {
-            state.products = merged;
-            saveCatalogProducts();
+          if (!res.ok) {
+            console.warn(`[Catalog] Products request returned HTTP ${res.status}. Preserving local items.`);
+            renderCatalog();
+            return;
           }
 
+          let json = await res.json().catch(() => null);
+          const liveItems = Array.isArray(json) ? json : (json && Array.isArray(json.data) ? json.data : null);
+
+          if (Array.isArray(liveItems) && liveItems.length > 0) {
+            state.products = liveItems.map((p, idx) => ({
+              id: p.id || ('prod-' + (idx + 1)),
+              name: p.product_name || p.name || 'منتج بدون اسم',
+              sku: p.store_sku || p.sku || 'SKU-000',
+              category: p.category || 'عام',
+              price: typeof p.price === 'number' ? p.price : parseFloat(p.price || 0),
+              quantity: typeof p.quantity === 'number' ? p.quantity : (typeof p.stock_quantity === 'number' ? p.stock_quantity : (p.stock_status !== 'OUT_OF_STOCK' ? 12 : 0)),
+              isAvailable: p.stock_status !== 'OUT_OF_STOCK' && (p.quantity === undefined || p.quantity > 0),
+              location: {
+                zone: p.zone || 'المنطقة أ',
+                aisle: p.aisle ? (String(p.aisle).includes('ممر') ? p.aisle : `ممر ${p.aisle}`) : 'ممر 01',
+                rack: p.rack ? (String(p.rack).startsWith('R') ? p.rack : `R${p.rack}`) : 'R1',
+                shelf: p.shelf ? (String(p.shelf).includes('رف') ? p.shelf : `رف ${p.shelf}`) : 'رف 1'
+              },
+              status: p.stock_status === 'OUT_OF_STOCK' ? 'Draft' : (p.status || 'Published'),
+              updatedAt: p.updated_at ? new Date(p.updated_at).toLocaleDateString('ar-SA') : 'اليوم'
+            }));
+
+            saveCatalogProducts();
+          }
           renderCatalog();
         } catch (err) {
-          console.warn('[Catalog] Error processing catalog products:', err);
+          console.warn('[Catalog] Render server is sleeping or returned an error. Displaying fallback mock items:', err.message || err);
           if (state.products.length === 0) {
             state.products = loadCatalogProducts();
           }
