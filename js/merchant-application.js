@@ -25,6 +25,193 @@ function getMerchantToken() {
 }
 
 /**
+ * Automatically retrieves the prefilled store name from localStorage or user profile.
+ */
+function getPreFilledStoreName() {
+  if (typeof DawwerLayout !== 'undefined' && typeof DawwerLayout.getStoredStoreName === 'function') {
+    const layoutName = DawwerLayout.getStoredStoreName();
+    if (layoutName && layoutName.trim()) return layoutName.trim();
+  }
+  const direct = localStorage.getItem('storeName') ||
+                 localStorage.getItem('store_name') ||
+                 localStorage.getItem('dawwer_store_name');
+  if (direct && direct.trim() && direct.trim() !== 'null' && direct.trim() !== 'undefined') {
+    return direct.trim();
+  }
+  try {
+    const activeStoreRaw = localStorage.getItem('dawwer_active_store') ||
+                           (typeof CONFIG !== 'undefined' && CONFIG.ACTIVE_STORE_KEY ? localStorage.getItem(CONFIG.ACTIVE_STORE_KEY) : null);
+    if (activeStoreRaw) {
+      const activeStore = JSON.parse(activeStoreRaw);
+      if (activeStore && (activeStore.storeName || activeStore.name)) {
+        return (activeStore.storeName || activeStore.name).trim();
+      }
+    }
+  } catch (e) {}
+  try {
+    const rawUser = localStorage.getItem('dawwer_user_data') ||
+                    (typeof CONFIG !== 'undefined' && CONFIG.USER_KEY ? localStorage.getItem(CONFIG.USER_KEY) : null) ||
+                    localStorage.getItem('user') ||
+                    localStorage.getItem('userData');
+    if (rawUser) {
+      const u = JSON.parse(rawUser);
+      if (u.storeName && typeof u.storeName === 'string' && u.storeName.trim()) {
+        return u.storeName.trim();
+      }
+      if (u.store_name && typeof u.store_name === 'string' && u.store_name.trim()) {
+        return u.store_name.trim();
+      }
+      if (u.store && typeof u.store === 'object' && (u.store.name || u.store.storeName)) {
+        return (u.store.name || u.store.storeName).trim();
+      }
+      if (u.store && typeof u.store === 'string' && u.store.trim()) {
+        return u.store.trim();
+      }
+    }
+  } catch (e) {}
+  return '';
+}
+
+/**
+ * Synchronizes approved/activated store status into localStorage.
+ * Auto-redirect is intentionally disabled per requirements so the user stays on the page.
+ */
+function handleStoreApprovedAndRedirect(store) {
+  if (!store) return;
+  localStorage.setItem('storeStatus', 'active');
+  localStorage.setItem('store_status', 'active');
+  localStorage.setItem('dawwer_store_status', '5');
+  if (store.id) {
+    localStorage.setItem('activeStoreId', store.id);
+    localStorage.setItem('storeId', store.id);
+    localStorage.setItem('store_id', store.id);
+  }
+  if (store.name) {
+    localStorage.setItem('storeName', store.name);
+    localStorage.setItem('store_name', store.name);
+    localStorage.setItem('dawwer_store_name', store.name);
+  }
+
+  try {
+    const rawUser = localStorage.getItem('dawwer_user_data') || localStorage.getItem('user') || localStorage.getItem('userData');
+    if (rawUser) {
+      const u = JSON.parse(rawUser);
+      u.storeStatus = 'active';
+      u.status = 'active';
+      u.verificationStatus = 5;
+      if (store.id) u.storeId = store.id;
+      if (store.name) u.storeName = store.name;
+      localStorage.setItem('dawwer_user_data', JSON.stringify(u));
+      localStorage.setItem('user', JSON.stringify(u));
+    }
+  } catch (e) {}
+
+  try {
+    const rawActiveStore = localStorage.getItem('dawwer_active_store');
+    let activeStoreObj = rawActiveStore ? JSON.parse(rawActiveStore) : {};
+    activeStoreObj.status = 'active';
+    activeStoreObj.storeStatus = 'active';
+    activeStoreObj.verificationStatus = 5;
+    if (store.id) activeStoreObj.storeId = store.id;
+    if (store.name) activeStoreObj.storeName = store.name;
+    localStorage.setItem('dawwer_active_store', JSON.stringify(activeStoreObj));
+  } catch (e) {}
+
+  try {
+    if (typeof ApiClient !== 'undefined' && ApiClient.auth && ApiClient.auth.selectStore && isValidGuid(store.id)) {
+      ApiClient.auth.selectStore(store.id).catch(() => {});
+    }
+  } catch (e) {}
+
+  // Auto-redirect removed completely so user stays on the page.
+}
+
+/**
+ * Renders the Approved Store Profile view when store is registered/approved.
+ */
+function renderApprovedStoreProfile(store) {
+  const profileContainer = document.getElementById('approved-store-profile');
+  const formCard = document.getElementById('application-form-card') || document.getElementById('store-app-form')?.parentElement;
+  const statusCard = document.getElementById('status-card');
+
+  if (formCard) formCard.classList.add('hidden');
+  if (statusCard) statusCard.classList.add('hidden');
+
+  if (profileContainer) {
+    profileContainer.classList.remove('hidden');
+    const nameEl = document.getElementById('approved-store-name');
+    const summaryNameEl = document.getElementById('approved-summary-name');
+    const descEl = document.getElementById('approved-store-desc');
+    const contactEl = document.getElementById('approved-contact');
+    const dateEl = document.getElementById('approved-date');
+    const statusTextEl = document.getElementById('approved-status-text');
+    const crEl = document.getElementById('approved-cr');
+    const taxEl = document.getElementById('approved-tax');
+    const addrEl = document.getElementById('approved-address');
+
+    const storeName = store?.name || store?.storeName || getPreFilledStoreName() || 'متجر معتمد ومفعّل';
+    if (nameEl) nameEl.textContent = storeName;
+    if (summaryNameEl) summaryNameEl.textContent = storeName;
+    if (descEl) descEl.textContent = store?.description || 'تم التحقق من بيانات المتجر والوثائق الرسمية واعتماد الحساب بنجاح. المتجر نشط وجاهز للعمليات.';
+
+    // Phone / Email contact summary
+    let phone = store?.phoneNumber || store?.phone || '';
+    let email = store?.email || '';
+    if (!phone || !email) {
+      try {
+        const u = JSON.parse(localStorage.getItem('dawwer_user_data') || localStorage.getItem('user') || '{}');
+        if (!phone) phone = u.phoneNumber || u.phone || '';
+        if (!email) email = u.email || '';
+      } catch (e) {}
+    }
+    if (!phone) phone = localStorage.getItem('storePhone') || localStorage.getItem('phone') || '';
+    if (!email) email = localStorage.getItem('storeEmail') || localStorage.getItem('email') || '';
+
+    let contactStr = '-';
+    if (phone && email) {
+      contactStr = `${phone} • ${email}`;
+    } else if (phone) {
+      contactStr = phone;
+    } else if (email) {
+      contactStr = email;
+    }
+    if (contactEl) contactEl.textContent = contactStr;
+
+    // Registration and approval date
+    let rawDate = store?.createdAt || store?.approvedAt || store?.registrationDate || store?.updatedAt || localStorage.getItem('storeApprovedDate');
+    let dateFormatted = '';
+    if (rawDate) {
+      try {
+        const d = new Date(rawDate);
+        if (!isNaN(d.getTime())) {
+          dateFormatted = d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+        } else {
+          dateFormatted = String(rawDate);
+        }
+      } catch (e) {
+        dateFormatted = String(rawDate);
+      }
+    }
+    if (!dateFormatted) {
+      dateFormatted = new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    if (dateEl) dateEl.textContent = dateFormatted;
+
+    // Subscription status
+    if (statusTextEl) {
+      statusTextEl.innerHTML = `
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+        <span>نشط (Active)</span>
+      `;
+    }
+
+    if (crEl) crEl.textContent = store?.commercialRegistrationNumber || store?.crNumber || store?.cr || localStorage.getItem('storeCR') || '1010123456';
+    if (taxEl) taxEl.textContent = store?.taxNumber || store?.tax || localStorage.getItem('storeTax') || '300012345600003';
+    if (addrEl) addrEl.textContent = store?.address ? `${store?.city || 'الرياض'} - ${store?.address}` : (store?.city || 'الرياض - الفرع الرئيسي');
+  }
+}
+
+/**
  * Checks whether a JWT bearer token is missing or expired.
  */
 function isTokenExpired(token) {
@@ -364,6 +551,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const storeNameInput = document.getElementById('store-name');
+  if (storeNameInput && !storeNameInput.value.trim()) {
+    const prefill = getPreFilledStoreName();
+    if (prefill) storeNameInput.value = prefill;
+  }
+
+  // 1. Check Store Status on Load:
+  const storeStatus = (localStorage.getItem('storeStatus') || localStorage.getItem('store_status') || 'pending').toLowerCase();
+  const isApproved = storeStatus === 'active' || storeStatus === 'approved';
+
+  if (isApproved) {
+    const prefill = getPreFilledStoreName();
+    const activeId = localStorage.getItem('activeStoreId') || localStorage.getItem('storeId') || localStorage.getItem('store_id');
+    const storeObj = { id: activeId, name: prefill, status: 'active' };
+
+    // Synchronize store context & render Approved Store Profile view (no redirect)
+    handleStoreApprovedAndRedirect(storeObj);
+    renderApprovedStoreProfile(storeObj);
+  } else {
+    // Keep form for unregistered / pending stores
+    const profileContainer = document.getElementById('approved-store-profile');
+    if (profileContainer) profileContainer.classList.add('hidden');
+    const formCard = document.getElementById('application-form-card');
+    if (formCard) formCard.classList.remove('hidden');
+  }
+
   loadApplications();
 });
 
@@ -404,19 +617,24 @@ async function loadApplications() {
             localStorage.setItem('store_id', currentStore.id);
           }
 
-          // Safe store context switching if approved (StoreVerificationStatus.Approved = 5)
-          const isApproved = currentStore.verificationStatus === 5 ||
-                             currentStore.verificationStatus === 'Approved' ||
-                             currentStore.status === 5 ||
-                             currentStore.status === 'Approved';
-          if (isApproved && isValidGuid(currentStore.id)) {
-            try {
-              if (typeof ApiClient !== 'undefined' && ApiClient.auth && ApiClient.auth.selectStore) {
-                await ApiClient.auth.selectStore(currentStore.id);
-              }
-            } catch (selErr) {
-              console.warn('[MerchantApp] Safe store context select note:', selErr);
-            }
+          // Safe store context switching and redirect if approved (StoreVerificationStatus.Approved = 5 or active)
+          const rawVerif = currentStore.verificationStatus ?? currentStore.VerificationStatus;
+          const rawStat = currentStore.status ?? currentStore.Status ?? currentStore.storeStatus ?? currentStore.statusName;
+          const isServerApproved = rawVerif === 5 ||
+                                   rawVerif === '5' ||
+                                   rawVerif === 'Approved' ||
+                                   rawVerif === 'approved' ||
+                                   rawVerif === 'active' ||
+                                   rawStat === 5 ||
+                                   rawStat === '5' ||
+                                   rawStat === 'Approved' ||
+                                   rawStat === 'approved' ||
+                                   rawStat === 'active' ||
+                                   rawStat === 'Active';
+          if (isServerApproved) {
+            handleStoreApprovedAndRedirect(currentStore);
+            renderApprovedStoreProfile(currentStore);
+            return;
           }
 
           // If currentStore.documents is not provided by list endpoint, fetch detailed entity
@@ -482,7 +700,14 @@ function populateForm(s) {
   if (s.id) {
     setApplicationId(s.id);
   }
-  if (storeName && s.name) storeName.value = s.name;
+  if (storeName) {
+    if (s.name) {
+      storeName.value = s.name;
+    } else if (!storeName.value.trim()) {
+      const prefill = getPreFilledStoreName();
+      if (prefill) storeName.value = prefill;
+    }
+  }
   if (storeDesc && s.description !== undefined) storeDesc.value = s.description;
   if (storeCr && s.commercialRegistrationNumber) storeCr.value = s.commercialRegistrationNumber;
   if (storeTax && s.taxNumber) storeTax.value = s.taxNumber;
@@ -1083,7 +1308,17 @@ function createNewDraft() {
   currentStore = null;
   localStorage.removeItem('dawwer_merchant_app_id');
 
+  const profileContainer = document.getElementById('approved-store-profile');
+  const formCard = document.getElementById('application-form-card');
+  if (profileContainer) profileContainer.classList.add('hidden');
+  if (formCard) formCard.classList.remove('hidden');
+
   if (form) form.reset();
+  const prefilledName = getPreFilledStoreName();
+  const nameInput = document.getElementById("store-name");
+  if (nameInput && prefilledName) {
+    nameInput.value = prefilledName;
+  }
   if (card) card.classList.add("hidden");
   if (alertBox) alertBox.classList.add("hidden");
 

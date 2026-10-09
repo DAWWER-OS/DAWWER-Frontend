@@ -1,3 +1,23 @@
+function revealMainContent() {
+  const skeleton = document.getElementById('review-skeleton-loader');
+  const mainContent = document.getElementById('main-review-content');
+  if (skeleton) {
+    skeleton.classList.add('hidden');
+  }
+  if (mainContent) {
+    mainContent.classList.remove('hidden');
+    void mainContent.offsetHeight; // trigger browser reflow
+    mainContent.classList.remove('opacity-0');
+    mainContent.classList.add('opacity-100');
+  }
+}
+
+// Storage Hygiene: Clear legacy test keys
+try {
+  localStorage.removeItem('shelf_jobs');
+  localStorage.removeItem('mock_drafts');
+} catch (e) {}
+
 /**
  * Dawwer Merchant AI Shelf Capture - Split-Screen Review & Approval Engine
  * Two-Backend Architecture Integration:
@@ -10,9 +30,32 @@ var FASTAPI_BASE_URL = (typeof window !== 'undefined' && window.CONFIG && window
   ? window.CONFIG.FASTAPI_BASE_URL.replace(/\/+$/, '')
   : 'https://dawwer-backend-fastapi.onrender.com';
 
+function getApiHeaders() {
+  const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
+  const cleanToken = token ? token.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '') : '';
+  return {
+    'Authorization': cleanToken ? `Bearer ${cleanToken}` : '',
+    'Accept': 'application/json'
+  };
+}
+
+function handleUnauthorizedResponse() {
+  if (typeof showToast === 'function') {
+    showToast('انتهت صلاحية الجلسة، يرجى إعادة تسجيل الدخول لمتابعة العمليات', 'warning');
+  } else {
+    alert('انتهت صلاحية الجلسة، يرجى إعادة تسجيل الدخول');
+  }
+}
+
 function getStoreContext() {
   const urlParams = new URLSearchParams(typeof window !== 'undefined' && window.location ? window.location.search : '');
-  const jobId = urlParams.get('jobId') || urlParams.get('job_id') || 'JOB-8942';
+  let jobId = urlParams.get('job_id') || urlParams.get('jobId') || localStorage.getItem('dawwer_active_job_id') || '';
+  if (!jobId) {
+    try {
+      const cur = JSON.parse(localStorage.getItem('dawwer_current_job') || '{}');
+      jobId = cur.id || cur.job_id || '';
+    } catch (e) {}
+  }
   let storeId = '3fa85f64-5717-4562-b3fc-2c963f66afa6';
   let token = '';
 
@@ -21,34 +64,127 @@ function getStoreContext() {
               localStorage.getItem('storeId') ||
               localStorage.getItem('active_store_id') ||
               '3fa85f64-5717-4562-b3fc-2c963f66afa6';
-    token = localStorage.getItem('storeToken') ||
-            localStorage.getItem('accessToken') ||
+    token = localStorage.getItem('accessToken') ||
+            localStorage.getItem('token') ||
+            localStorage.getItem('storeToken') ||
             '';
   } catch (e) {}
 
   return { jobId, storeId, token };
 }
 
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+let availableCategories = [
+  'الألبان والمبردات',
+  'المخبوزات',
+  'المعلبات',
+  'المشروبات',
+  'منتجات طازجة',
+  'زيوت ومؤونة',
+  'تسالي وحلويات',
+  'لحوم ومأكولات بحرية',
+  'عام'
+];
+
+async function loadAvailableCategories() {
+  const { storeId } = getStoreContext();
+  const headers = getApiHeaders();
+
+  try {
+    let res = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/categories`, { headers }).catch(() => null);
+    if (!res || !res.ok) {
+      res = await fetch(`${FASTAPI_BASE_URL}/api/v1/categories`, { headers }).catch(() => null);
+    }
+
+    if (res && res.status === 401) {
+      handleUnauthorizedResponse();
+      return;
+    }
+
+    if (res && res.ok) {
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : (data?.categories || data?.data || []);
+      if (Array.isArray(list) && list.length > 0) {
+        const names = list.map(c => typeof c === 'string' ? c : (c.name || c.category_name || c.title)).filter(Boolean);
+        if (names.length > 0) {
+          availableCategories = Array.from(new Set([...availableCategories, ...names]));
+        }
+      }
+    } else {
+      // Fallback: extract unique categories from products
+      try {
+        const pRes = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products?limit=100`, { headers }).catch(() => null);
+        if (pRes && pRes.ok) {
+          const pData = await pRes.json();
+          const items = Array.isArray(pData) ? pData : (pData?.items || pData?.data || []);
+          if (Array.isArray(items) && items.length > 0) {
+            const pCats = items.map(p => p.category).filter(Boolean);
+            if (pCats.length > 0) {
+              availableCategories = Array.from(new Set([...availableCategories, ...pCats]));
+            }
+          }
+        }
+      } catch (e) {}
+    }
+  } catch (e) {
+    console.warn('[review-drafts] Categories fetch fallback:', e);
+  }
+
+  // Populate modal select
+  const manualCategorySelect = document.getElementById('manual-category');
+  if (manualCategorySelect) {
+    manualCategorySelect.innerHTML = availableCategories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  }
+}
+
 const JOBS_STORAGE_KEY = 'dawwer_ai_extraction_jobs';
 const CATALOG_STORAGE_KEY = 'dawwer_merchant_catalog_products';
 const SAMPLE_SHELF_IMAGE = 'assets/images/sample_shelf.jpg';
 
-function resolveShelfImageUrl(rawUrl) {
-  if (!rawUrl || typeof rawUrl !== 'string' || rawUrl.trim() === '' || rawUrl === 'null' || rawUrl === 'undefined') {
-    return SAMPLE_SHELF_IMAGE;
+function resolveShelfImageUrl(jobData) {
+  if (!jobData) return '';
+  let imgUrl = '';
+
+  if (typeof jobData === 'string') {
+    imgUrl = jobData.trim();
+  } else if (typeof jobData === 'object') {
+    // 1. Check all possible server response keys
+    imgUrl = jobData.image_url || jobData.photo_url || jobData.shelf_image || jobData.image_path || jobData.image || jobData.shelf_image_url || jobData.imageDataUrl || jobData.thumbnail;
   }
-  const trimmed = rawUrl.trim();
-  if (trimmed.startsWith('data:image/')) return trimmed;
-  if (trimmed.startsWith('assets/') || trimmed.startsWith('./assets/') || trimmed.startsWith('/assets/')) {
-    return trimmed.startsWith('/') ? trimmed.slice(1) : trimmed;
+
+  // Guard against job IDs (e.g. 'JOB-2026-9041') being used as image URLs
+  if (imgUrl && (imgUrl.startsWith('JOB-') || /^JOB[-_]/i.test(imgUrl))) {
+    imgUrl = '';
   }
-  if (trimmed === 'sample_shelf.jpg' || trimmed.endsWith('/sample_shelf.jpg')) return SAMPLE_SHELF_IMAGE;
-  if (/gemini/i.test(trimmed)) return SAMPLE_SHELF_IMAGE;
-  if (trimmed.startsWith('blob:')) return SAMPLE_SHELF_IMAGE;
-  if (trimmed.includes('onrender.com') || trimmed.includes('localhost:') || trimmed.includes('127.0.0.1:')) return SAMPLE_SHELF_IMAGE;
-  if (trimmed.startsWith('uploads/') || trimmed.startsWith('/uploads/') || trimmed.startsWith('static/') || trimmed.startsWith('/static/')) return SAMPLE_SHELF_IMAGE;
-  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) return SAMPLE_SHELF_IMAGE;
-  return trimmed;
+
+  // 2. Fallback to cached upload preview if server didn't provide a public URL
+  if (!imgUrl || imgUrl === 'null' || imgUrl === 'undefined') {
+    imgUrl = sessionStorage.getItem('current_shelf_image') || 
+             sessionStorage.getItem('dawwer_current_shelf_image') || 
+             localStorage.getItem('dawwer_current_shelf_image') || 
+             localStorage.getItem('current_shelf_image');
+  }
+
+  if (!imgUrl) return '';
+
+  // 3. If it's a relative backend path (e.g. /uploads/...), prepend the API base URL
+  if (!imgUrl.startsWith('http') && !imgUrl.startsWith('data:') && !imgUrl.startsWith('blob:')) {
+    if (imgUrl.startsWith('assets/') || imgUrl.startsWith('./assets/') || imgUrl === 'assets/images/placeholder-shelf.jpg') {
+      return imgUrl.startsWith('./') ? imgUrl.slice(2) : imgUrl;
+    }
+    const baseUrl = (typeof CONFIG !== 'undefined' && (CONFIG.API_BASE_URL || CONFIG.FASTAPI_BASE_URL)) 
+      ? (CONFIG.API_BASE_URL || CONFIG.FASTAPI_BASE_URL).replace(/\/+$/, '') 
+      : ((typeof FASTAPI_BASE_URL !== 'undefined' && FASTAPI_BASE_URL) ? FASTAPI_BASE_URL.replace(/\/+$/, '') : 'http://localhost:8000');
+    imgUrl = `${baseUrl}/${imgUrl.replace(/^\/+/, '')}`;
+  }
+
+  return imgUrl;
 }
 
 let allJobs = [];
@@ -73,75 +209,7 @@ let _syncDebounceTimers = {};
 /**
  * Resilient Demo Fallback Data for JOB-8942 (Guarantees editor never breaks)
  */
-const DEFAULT_DEMO_JOB = {
-  id: 'JOB-8942',
-  serverId: 'JOB-8942',
-  status: 'Review Required',
-  shelfLocation: {
-    zone: 'المنطقة أ',
-    aisle: '01',
-    rack: 'R1',
-    level: '1',
-    label: 'المنطقة أ > ممر 01 > رف 1'
-  },
-  thumbnail: SAMPLE_SHELF_IMAGE,
-  confidence: 98.4,
-  detectedCount: 4,
-  extractedItems: [
-    {
-      id: 'DRF-8942-01',
-      serverId: 'DRF-8942-01',
-      name: 'حليب كامل الدسم المراعي 1 لتر',
-      price: 6.50,
-      sku: '6281007012345',
-      category: 'الألبان والمبردات',
-      confidence: 99,
-      status: 'Draft',
-      shelfLocation: { zone: 'المنطقة أ', aisle: '01', rack: 'R1', level: '1', label: 'المنطقة أ > ممر 01 > رف 1' },
-      box: { x: 8, y: 15, w: 18, h: 26 },
-      hasDuplicateMatch: false
-    },
-    {
-      id: 'DRF-8942-02',
-      serverId: 'DRF-8942-02',
-      name: 'زبادي طازج الصافي 500 جم',
-      price: 4.25,
-      sku: '6281007098765',
-      category: 'الألبان والمبردات',
-      confidence: 97,
-      status: 'Draft',
-      shelfLocation: { zone: 'المنطقة أ', aisle: '01', rack: 'R1', level: '1', label: 'المنطقة أ > ممر 01 > رف 1' },
-      box: { x: 30, y: 15, w: 17, h: 26 },
-      hasDuplicateMatch: false
-    },
-    {
-      id: 'DRF-8942-03',
-      serverId: 'DRF-8942-03',
-      name: 'عصير برتقال طبيعي نادك 1.5 لتر',
-      price: 11.00,
-      sku: '6281007055443',
-      category: 'المشروبات',
-      confidence: 96,
-      status: 'Draft',
-      shelfLocation: { zone: 'المنطقة أ', aisle: '01', rack: 'R1', level: '2', label: 'المنطقة أ > ممر 01 > رف 2' },
-      box: { x: 52, y: 46, w: 19, h: 28 },
-      hasDuplicateMatch: false
-    },
-    {
-      id: 'DRF-8942-04',
-      serverId: 'DRF-8942-04',
-      name: 'جبنة شيدر كرافت مطبوخة 200 جم',
-      price: 14.50,
-      sku: '6281007022119',
-      category: 'الألبان والمبردات',
-      confidence: 98,
-      status: 'Draft',
-      shelfLocation: { zone: 'المنطقة أ', aisle: '01', rack: 'R1', level: '2', label: 'المنطقة أ > ممر 01 > رف 2' },
-      box: { x: 74, y: 46, w: 18, h: 27 },
-      hasDuplicateMatch: false
-    }
-  ]
-};
+const DEFAULT_DEMO_JOB = null;
 
 function generateShelfPlaceholderSVG(zoneName, count) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="520" viewBox="0 0 800 520" fill="#0f172a">
@@ -245,7 +313,14 @@ function normalizeServerJob(job) {
       level,
       label
     },
-    thumbnail: resolveShelfImageUrl(job.shelf_image_url || job.image_url || job.thumbnail || SAMPLE_SHELF_IMAGE),
+    image_url: (job.image_url && !String(job.image_url).startsWith('JOB-')) ? job.image_url : (job.imageDataUrl || 'assets/placeholder-product.png'),
+    thumbnail: resolveShelfImageUrl(
+      (job.shelf_image_url && !String(job.shelf_image_url).startsWith('JOB-'))
+        ? job.shelf_image_url
+        : ((job.image_url && !String(job.image_url).startsWith('JOB-'))
+          ? job.image_url
+          : ((job.thumbnail && !String(job.thumbnail).startsWith('JOB-')) ? job.thumbnail : 'assets/placeholder-product.png'))
+    ),
     imagesCount: job.imagesCount || 1,
     status: (job.status === 'REVIEW_REQUIRED' || job.status === 'Review Required') ? 'Review Required' :
             (job.status === 'COMPLETED' || job.status === 'Completed') ? 'Completed' :
@@ -297,7 +372,7 @@ function updateEmptyJobUI() {
   const shelfEl = document.getElementById('active-job-shelf');
   const confEl = document.getElementById('active-job-confidence');
   const badge = document.getElementById('active-job-status-badge');
-  const imgEl = document.getElementById('shelf-source-img');
+  const imgEl = document.getElementById('shelf-source-img') || document.getElementById('shelf-image') || document.getElementById('canvas-image');
 
   if (idEl) idEl.textContent = '-';
   if (shelfEl) shelfEl.textContent = 'لا توجد عملية نشطة';
@@ -306,7 +381,10 @@ function updateEmptyJobUI() {
     badge.className = 'px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold';
     badge.textContent = 'لا توجد عمليات';
   }
-  if (imgEl) imgEl.src = generateShelfPlaceholderSVG('لا توجد عملية', 0);
+  const storedImage = (typeof localStorage !== 'undefined') ? localStorage.getItem('dawwer_current_shelf_image') : '';
+  if (imgEl && storedImage) {
+    imgEl.src = storedImage;
+  }
 }
 
 // =========================================================================
@@ -314,20 +392,32 @@ function updateEmptyJobUI() {
 // =========================================================================
 
 async function fetchShelfJobAndDrafts(targetJobId) {
-  const { storeId, token } = getStoreContext();
-  const headers = {
-    'Accept': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-  };
+  const { storeId } = getStoreContext();
+  const headers = getApiHeaders();
 
   try {
     const jobUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/shelf-jobs/${encodeURIComponent(targetJobId)}`;
     const jobRes = await fetch(jobUrl, { headers });
 
+    if (jobRes.status === 401) {
+      handleUnauthorizedResponse();
+      return null;
+    }
+
     if (jobRes.ok) {
       const jobData = await jobRes.json();
       const serverJob = jobData?.data || jobData;
       if (serverJob) {
+        // Dynamic Image Binding: update image source with server URL
+        const shelfImgElement = document.getElementById('shelf-source-img') || document.getElementById('shelf-image') || document.getElementById('canvas-image');
+        const imgPlaceholder = document.getElementById('image-loading-placeholder');
+        const validServerImg = resolveShelfImageUrl(serverJob || jobData);
+        if (shelfImgElement && validServerImg) {
+          shelfImgElement.src = validServerImg;
+          shelfImgElement.classList.remove('opacity-0');
+          if (imgPlaceholder) imgPlaceholder.classList.add('hidden');
+        }
+
         let extracted = serverJob.extracted_items || serverJob.draft_products || serverJob.items || [];
 
         // If job object has no drafts array, query the drafts endpoint directly
@@ -335,7 +425,9 @@ async function fetchShelfJobAndDrafts(targetJobId) {
           try {
             const draftsUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/draft-products?shelf_job_id=${encodeURIComponent(targetJobId)}&limit=100`;
             const draftsRes = await fetch(draftsUrl, { headers });
-            if (draftsRes.ok) {
+            if (draftsRes.status === 401) {
+              handleUnauthorizedResponse();
+            } else if (draftsRes.ok) {
               const draftsData = await draftsRes.json();
               extracted = Array.isArray(draftsData) ? draftsData : (draftsData?.data || []);
             }
@@ -369,19 +461,38 @@ async function fetchShelfJobAndDrafts(targetJobId) {
     console.warn('[review-drafts] Backend fetch shelf job fallback:', err);
   }
 
-  return null;
+  // Fallback to local storage
+  try {
+    const curRaw = localStorage.getItem('dawwer_current_job');
+    if (curRaw) {
+      const cur = JSON.parse(curRaw);
+      if (cur && (String(cur.id) === String(targetJobId) || String(cur.job_id) === String(targetJobId) || !targetJobId)) {
+        const norm = normalizeServerJob(cur);
+        const idx = allJobs.findIndex(j => String(j.id) === String(norm.id));
+        if (idx !== -1) allJobs[idx] = norm;
+        else allJobs.unshift(norm);
+        saveJobsData();
+        populateJobSelector();
+        return norm;
+      }
+    }
+  } catch (e) {}
+
+  return allJobs.find(j => String(j.id) === String(targetJobId)) || null;
 }
 
 async function fetchAllStoreJobs() {
-  const { storeId, token } = getStoreContext();
+  const { storeId } = getStoreContext();
+  const headers = getApiHeaders();
+  if (!headers.Authorization) return;
+
   try {
     const url = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/shelf-jobs`;
-    const res = await fetch(url, {
-      headers: {
-        'Accept': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      }
-    });
+    const res = await fetch(url, { headers });
+    if (res.status === 401) {
+      handleUnauthorizedResponse();
+      return;
+    }
     if (res.ok) {
       const data = await res.json();
       const remoteJobs = Array.isArray(data) ? data : (data?.data || []);
@@ -447,16 +558,46 @@ function setActiveJob(jobId, triggerBackendSync = false) {
   resetZoomAndPan();
 
   // Shelf source image
-  const imgEl = document.getElementById('shelf-source-img');
+  const imgEl = document.getElementById('shelf-source-img') || document.getElementById('shelf-image') || document.getElementById('canvas-image');
+  const imgPlaceholder = document.getElementById('image-loading-placeholder');
   if (imgEl) {
+    imgEl.crossOrigin = "anonymous";
     imgEl.onerror = function() {
-      this.onerror = null;
-      this.src = SAMPLE_SHELF_IMAGE;
+      console.warn("Failed to load server image, checking session cache...");
+      const cachedBase64 = sessionStorage.getItem('current_shelf_image') || 
+                           sessionStorage.getItem('dawwer_current_shelf_image') || 
+                           localStorage.getItem('dawwer_current_shelf_image') || 
+                           localStorage.getItem('current_shelf_image');
+      if (cachedBase64 && this.src !== cachedBase64) {
+        this.src = cachedBase64;
+      } else {
+        this.src = 'assets/images/placeholder-shelf.jpg'; // safe fallback
+      }
     };
-    imgEl.src = resolveShelfImageUrl(activeJob.thumbnail || activeJob.shelf_image_url || activeJob.image_url);
+    imgEl.onload = function() {
+      imgEl.classList.remove('opacity-0');
+      if (imgPlaceholder) imgPlaceholder.classList.add('hidden');
+      renderBoundingBoxes();
+    };
+
+    const resolved = resolveShelfImageUrl(activeJob);
+    if (resolved) {
+      if (imgEl.src !== resolved) {
+        imgEl.src = resolved;
+      } else if (imgEl.complete && imgEl.naturalWidth > 0) {
+        imgEl.classList.remove('opacity-0');
+        if (imgPlaceholder) imgPlaceholder.classList.add('hidden');
+      }
+    }
   }
 
-  renderBoundingBoxes();
+  // Remove loading state when job is activated
+  const loadingEl = document.getElementById('drafts-loading-state');
+  if (loadingEl) loadingEl.remove();
+
+  if (!imgEl || (imgEl.complete && imgEl.naturalWidth > 0)) {
+    renderBoundingBoxes();
+  }
   renderDraftCards();
   updateSelectionSummary();
 
@@ -543,156 +684,286 @@ async function syncDraftUpdateToBackend(itemId) {
 }
 
 // =========================================================================
-// 4. Approve Single / Bulk Draft Products
+// 4. Approve Single / Bulk Draft Products & Catalog Insertion
 // =========================================================================
+
+function formatProductPayload(item) {
+  const cleanZone = item.shelfLocation?.zone || activeJob?.shelfLocation?.zone || "المنطقة أ";
+  const rawAisle = item.shelfLocation?.aisle || activeJob?.shelfLocation?.aisle || "01";
+  const cleanAisle = String(rawAisle).replace(/[^0-9]/g, '') || "01";
+  const rawRack = item.shelfLocation?.rack || activeJob?.shelfLocation?.rack || "1";
+  const cleanRack = String(rawRack).replace(/[^0-9]/g, '') || "1";
+  const rawShelf = item.shelfLocation?.level || activeJob?.shelfLocation?.level || "1";
+  const cleanShelf = String(rawShelf).replace(/[^0-9]/g, '') || "1";
+  const shelfLocLabel = item.shelfLocation?.label || `${cleanZone} > ممر ${cleanAisle} > رف ${cleanShelf}`;
+
+  const cleanName = (item.name || '').trim();
+  const cleanBarcode = item.barcode ? String(item.barcode).trim() : (item.sku ? String(item.sku).trim() : null);
+  const cleanCategory = (item.category || "عام").trim();
+  const cleanPrice = parseFloat(item.price) || 0.0;
+
+  return {
+    name: cleanName,
+    product_name: cleanName,
+    category_id: item.category_id || null,
+    category: cleanCategory,
+    price: cleanPrice,
+    barcode: cleanBarcode,
+    store_sku: cleanBarcode || `SKU-${Date.now().toString().slice(-6)}`,
+    shelf_location: item.shelf_location || shelfLocLabel,
+    zone: cleanZone,
+    aisle: cleanAisle,
+    rack: cleanRack,
+    shelf: cleanShelf,
+    map_target: `${cleanZone} - ممر ${cleanAisle} - رف ${cleanShelf}`,
+    quantity: 10,
+    stock_status: "IN_STOCK"
+  };
+}
 
 async function approveSingleDraft(itemId) {
   const item = draftItems.find(d => d.id === itemId);
   if (!item || item.status === 'Approved') return;
 
-  const { storeId, token } = getStoreContext();
-  const draftId = item.serverId || item.id;
+  const btn = document.querySelector(`[data-action="approve-single"][data-id="${itemId}"]`) ||
+              document.querySelector(`[data-action="approve-draft"][data-id="${itemId}"]`) ||
+              document.querySelector(`button[data-id="${itemId}"]`);
+  let originalBtnHtml = '';
+  if (btn) {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.style.pointerEvents = 'none';
+    originalBtnHtml = btn.innerHTML;
+    btn.classList.add('opacity-75', 'cursor-not-allowed');
+    btn.innerHTML = `
+      <span class="inline-flex items-center gap-1">
+        <svg class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+        </svg>
+        <span>جاري الاعتماد...</span>
+      </span>
+    `;
+  }
 
-  // 1. Call Backend Approve Endpoint
   try {
-    const approveUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/draft-products/${encodeURIComponent(draftId)}/approve`;
-    await fetch(approveUrl, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    const { storeId } = getStoreContext();
+    const headers = getApiHeaders();
+    const draftId = item.serverId || item.id;
+
+    // 1. Call Backend Approve Endpoint
+    try {
+      const approveUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/draft-products/${encodeURIComponent(draftId)}/approve`;
+      const appRes = await fetch(approveUrl, {
+        method: 'POST',
+        headers
+      });
+      if (appRes.status === 401) {
+        handleUnauthorizedResponse();
+        return;
       }
-    });
-  } catch (err) {
-    console.warn('[review-drafts] Backend single approve note:', err);
+    } catch (err) {
+      console.warn('[review-drafts] Backend single approve note:', err);
+    }
+
+    // 2. Register into products catalog on backend
+    try {
+      const prodRes = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products`, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formatProductPayload(item))
+      });
+      if (prodRes.status === 401) {
+        handleUnauthorizedResponse();
+        return;
+      }
+    } catch (e) {}
+
+    // 3. Mark Approved locally and commit to catalog storage
+    item.status = 'Approved';
+    if (activeJob && activeJob.extractedItems) {
+      const parentItem = activeJob.extractedItems.find(x => (x.id === itemId || x.sku === item.sku));
+      if (parentItem) parentItem.status = 'Approved';
+      saveJobsData();
+    }
+
+    try {
+      const stored = localStorage.getItem(CATALOG_STORAGE_KEY);
+      const catalog = stored ? JSON.parse(stored) : [];
+      catalog.unshift(createCatalogEntryFromDraft(item, new Date().toISOString()));
+      localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(catalog));
+      localStorage.setItem('dawwer_merchant_catalog_v2', JSON.stringify(catalog));
+    } catch (e) {}
+
+    renderBoundingBoxes();
+    renderDraftCards();
+    updateSelectionSummary();
+    showToast('تم اعتماد الصنف وإضافته للكتالوج بنجاح', 'success');
+  } finally {
+    if (btn && item.status !== 'Approved') {
+      btn.disabled = false;
+      btn.style.pointerEvents = '';
+      btn.classList.remove('opacity-75', 'cursor-not-allowed');
+      if (originalBtnHtml) btn.innerHTML = originalBtnHtml;
+    }
   }
-
-  // 2. Optionally register directly into products catalog
-  try {
-    const cleanZone = item.shelfLocation?.zone || activeJob?.shelfLocation?.zone || "المنطقة أ";
-    const rawAisle = item.shelfLocation?.aisle || activeJob?.shelfLocation?.aisle || "01";
-    const cleanAisle = String(rawAisle).replace(/[^0-9]/g, '') || "01";
-    const rawRack = item.shelfLocation?.rack || activeJob?.shelfLocation?.rack || "1";
-    const cleanRack = String(rawRack).replace(/[^0-9]/g, '') || "1";
-    const rawShelf = item.shelfLocation?.level || activeJob?.shelfLocation?.level || "1";
-    const cleanShelf = String(rawShelf).replace(/[^0-9]/g, '') || "1";
-
-    await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      },
-      body: JSON.stringify({
-        store_sku: item.sku || `SKU-${Date.now().toString().slice(-6)}`,
-        product_name: item.name,
-        category: item.category || 'عام',
-        price: Number(item.price) || 0,
-        quantity: 10,
-        stock_status: "IN_STOCK",
-        zone: cleanZone,
-        aisle: cleanAisle,
-        rack: cleanRack,
-        shelf: cleanShelf,
-        map_target: `${cleanZone} - ممر ${cleanAisle} - رف ${cleanShelf}`
-      })
-    }).catch(() => {});
-  } catch (e) {}
-
-  // 3. Mark Approved locally and commit to catalog storage
-  item.status = 'Approved';
-  if (activeJob && activeJob.extractedItems) {
-    const parentItem = activeJob.extractedItems.find(x => (x.id === itemId || x.sku === item.sku));
-    if (parentItem) parentItem.status = 'Approved';
-    saveJobsData();
-  }
-
-  try {
-    const stored = localStorage.getItem(CATALOG_STORAGE_KEY);
-    const catalog = stored ? JSON.parse(stored) : [];
-    catalog.unshift(createCatalogEntryFromDraft(item, new Date().toISOString()));
-    localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(catalog));
-  } catch (e) {}
-
-  renderBoundingBoxes();
-  renderDraftCards();
-  updateSelectionSummary();
-  showToast('تم اعتماد الصنف بنجاح', `تم نشر "${item.name}" بالكتالوج وتعطيل التعديل`, 'success');
 }
 
 async function approveAllDrafts() {
-  const pendingItems = draftItems.filter(d => d.status !== 'Approved');
-  if (pendingItems.length === 0 && draftItems.length > 0) {
-    showToast('جميع الأصناف معتمدة بالفعل', 'يمكنك الاطلاع عليها في الكتالوج', 'info');
-    openPublishSuccessModal(draftItems.length);
+  const pendingItems = draftItems.filter(d => (selectedDraftIds.has(d.id) || selectedDraftIds.size === 0) && d.status !== 'Approved');
+  if (pendingItems.length === 0) {
+    if (draftItems.length > 0 && draftItems.every(d => d.status === 'Approved')) {
+      showToast('جميع الأصناف معتمدة بالفعل في الكتالوج', 'info');
+      setTimeout(() => { window.location.href = 'catalog.html'; }, 500);
+      return;
+    }
+    showToast('يرجى تحديد صنف واحد على الأقل للاعتماد', 'warning');
     return;
   }
 
-  const { storeId, token } = getStoreContext();
-  const headers = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-  };
-
-  // 1. Batch approve on backend
-  try {
-    const draftIds = pendingItems.map(d => d.serverId || d.id);
-    const batchUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/draft-products/batch-approve`;
-    await fetch(batchUrl, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ draft_ids: draftIds })
-    });
-  } catch (e) {
-    console.warn('[review-drafts] Backend batch approve note:', e);
+  // Prevent double submissions: disable button immediately and display loading state
+  const btn = document.getElementById('btn-approve-all-drafts') || document.querySelector('[data-alias="btn-publish-catalog"]');
+  let originalBtnHtml = '';
+  if (btn) {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.style.pointerEvents = 'none';
+    originalBtnHtml = btn.innerHTML;
+    btn.classList.add('opacity-75', 'cursor-not-allowed');
+    btn.innerHTML = `
+      <span class="inline-flex items-center gap-2">
+        <svg class="animate-spin h-4 w-4 text-[#d6a950]" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+        </svg>
+        <span>جاري اعتماد وإضافة الأصناف للكتالوج...</span>
+      </span>
+    `;
   }
 
-  // 2. Mark all items as Approved locally
-  pendingItems.forEach(item => {
-    item.status = 'Approved';
-  });
+  try {
+    const { storeId } = getStoreContext();
+    const headers = getApiHeaders();
 
-  if (activeJob) {
-    activeJob.status = 'Completed';
-    if (activeJob.extractedItems) {
-      activeJob.extractedItems.forEach(xi => {
-        xi.status = 'Approved';
+    // 1. Batch approve on backend
+    try {
+      const draftIds = pendingItems.map(d => d.serverId || d.id);
+      const batchApproveUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/draft-products/batch-approve`;
+      const baRes = await fetch(batchApproveUrl, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ draft_ids: draftIds })
       });
+      if (baRes.status === 401) {
+        handleUnauthorizedResponse();
+        return;
+      }
+    } catch (e) {
+      console.warn('[review-drafts] Backend draft batch approve note:', e);
     }
-    saveJobsData();
-  }
 
-  // 3. Mark shelf job completed on backend if supported
-  try {
-    if (activeJob && activeJob.id) {
-      const jobStatusUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/shelf-jobs/${encodeURIComponent(activeJob.id)}`;
-      await fetch(jobStatusUrl, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify({ status: 'Completed' })
-      }).catch(() => {});
+    // 2. Batch catalog creation / insertion
+    let batchCreated = false;
+    try {
+      const batchUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products/batch`;
+      const bRes = await fetch(batchUrl, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          products: pendingItems.map(formatProductPayload)
+        })
+      });
+      if (bRes.status === 401) {
+        handleUnauthorizedResponse();
+        return;
+      }
+      if (bRes.ok) batchCreated = true;
+    } catch (e) {}
+
+    // Fallback: iterate individual product creation if batch endpoint is not present
+    if (!batchCreated) {
+      for (const item of pendingItems) {
+        try {
+          const pRes = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products`, {
+            method: 'POST',
+            headers: {
+              ...headers,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formatProductPayload(item))
+          });
+          if (pRes.status === 401) {
+            handleUnauthorizedResponse();
+            return;
+          }
+        } catch (e) {}
+      }
     }
-  } catch (e) {}
 
-  // 4. Save to catalog cache
-  try {
-    const stored = localStorage.getItem(CATALOG_STORAGE_KEY);
-    const catalog = stored ? JSON.parse(stored) : [];
+    // 3. Mark all items as Approved locally
     pendingItems.forEach(item => {
-      catalog.unshift(createCatalogEntryFromDraft(item, new Date().toISOString()));
+      item.status = 'Approved';
     });
-    localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(catalog));
-  } catch (e) {}
 
-  renderBoundingBoxes();
-  renderDraftCards();
-  updateSelectionSummary();
+    if (activeJob) {
+      activeJob.status = 'Completed';
+      if (activeJob.extractedItems) {
+        activeJob.extractedItems.forEach(xi => {
+          xi.status = 'Approved';
+        });
+      }
+      saveJobsData();
+    }
 
-  // Show publication success modal with direct link to catalog.html
-  openPublishSuccessModal(draftItems.length);
-  showToast('تم اعتماد جميع الأصناف', `تم نشر ${draftItems.length} صنفاً في الكتالوج بنجاح`, 'success');
+    // 4. Save to catalog cache (both legacy and v2 keys)
+    try {
+      const stored = localStorage.getItem(CATALOG_STORAGE_KEY);
+      const catalog = stored ? JSON.parse(stored) : [];
+      pendingItems.forEach(item => {
+        catalog.unshift(createCatalogEntryFromDraft(item, new Date().toISOString()));
+      });
+      localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(catalog));
+      localStorage.setItem('dawwer_merchant_catalog_v2', JSON.stringify(catalog));
+    } catch (e) {}
+
+    // 5. Clear draft cache
+    try {
+      localStorage.removeItem('dawwer_current_job');
+      localStorage.removeItem('dawwer_current_draft_products');
+      sessionStorage.removeItem('dawwer_current_review_job');
+      sessionStorage.removeItem('dawwer_current_draft_products');
+    } catch (e) {}
+
+    renderBoundingBoxes();
+    renderDraftCards();
+    updateSelectionSummary();
+
+    // 6. Show success toast and redirect to catalog.html
+    showToast('تم اعتماد وإضافة الأصناف للكتالوج بنجاح!', 'success');
+    setTimeout(() => {
+      window.location.href = 'catalog.html';
+    }, 700);
+
+  } catch (err) {
+    console.error('[review-drafts] Bulk approval error:', err);
+    showToast('حدث خطأ أثناء اعتماد الأصناف، يرجى المحاولة مرة أخرى', 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.style.pointerEvents = '';
+      btn.classList.remove('opacity-75', 'cursor-not-allowed');
+      if (originalBtnHtml) btn.innerHTML = originalBtnHtml;
+    }
+  }
 }
 
 // =========================================================================
@@ -789,12 +1060,128 @@ function discardSelectedDrafts() {
 // UI Rendering: Bounding Boxes & Draft Cards
 // =========================================================================
 
+function calculateNormalizedBox(boxData, naturalWidth, naturalHeight) {
+  if (!boxData) {
+    return { x: 10, y: 10, w: 20, h: 20 };
+  }
+
+  // Handle [ymin, xmin, ymax, xmax] array format (e.g., Gemini Vision)
+  if (Array.isArray(boxData) && boxData.length >= 4) {
+    let [ymin, xmin, ymax, xmax] = boxData.map(Number);
+    if (ymin > 1 || xmin > 1 || ymax > 1 || xmax > 1) {
+      if (ymin > 100 || xmin > 100 || ymax > 100 || xmax > 100) {
+        if (naturalWidth > 0 && naturalHeight > 0 && (xmax > 1000 || ymax > 1000)) {
+          xmin = (xmin / naturalWidth) * 100;
+          ymin = (ymin / naturalHeight) * 100;
+          xmax = (xmax / naturalWidth) * 100;
+          ymax = (ymax / naturalHeight) * 100;
+          return {
+            x: Math.max(0, Math.min(95, xmin)),
+            y: Math.max(0, Math.min(95, ymin)),
+            w: Math.max(2, Math.min(100 - xmin, xmax - xmin)),
+            h: Math.max(2, Math.min(100 - ymin, ymax - ymin))
+          };
+        } else {
+          ymin = ymin / 10;
+          xmin = xmin / 10;
+          ymax = ymax / 10;
+          xmax = xmax / 10;
+        }
+      }
+    } else {
+      ymin = ymin * 100;
+      xmin = xmin * 100;
+      ymax = ymax * 100;
+      xmax = xmax * 100;
+    }
+    const x = Math.max(0, Math.min(95, xmin));
+    const y = Math.max(0, Math.min(95, ymin));
+    const w = Math.max(2, Math.min(100 - x, xmax - xmin));
+    const h = Math.max(2, Math.min(100 - y, ymax - ymin));
+    return { x, y, w, h };
+  }
+
+  // Handle object formats
+  if (typeof boxData === 'object') {
+    if (boxData.xmin !== undefined && boxData.xmax !== undefined) {
+      let xmin = Number(boxData.xmin);
+      let ymin = Number(boxData.ymin);
+      let xmax = Number(boxData.xmax);
+      let ymax = Number(boxData.ymax);
+      if (xmin <= 1 && ymin <= 1 && xmax <= 1 && ymax <= 1) {
+        xmin *= 100; ymin *= 100; xmax *= 100; ymax *= 100;
+      } else if (naturalWidth > 0 && naturalHeight > 0 && (xmax > 100 || ymax > 100)) {
+        xmin = (xmin / naturalWidth) * 100;
+        ymin = (ymin / naturalHeight) * 100;
+        xmax = (xmax / naturalWidth) * 100;
+        ymax = (ymax / naturalHeight) * 100;
+      }
+      return {
+        x: Math.max(0, Math.min(95, xmin)),
+        y: Math.max(0, Math.min(95, ymin)),
+        w: Math.max(2, Math.min(100 - xmin, xmax - xmin)),
+        h: Math.max(2, Math.min(100 - ymin, ymax - ymin))
+      };
+    }
+
+    let bx = Number(boxData.x !== undefined ? boxData.x : (boxData.left !== undefined ? boxData.left : 10));
+    let by = Number(boxData.y !== undefined ? boxData.y : (boxData.top !== undefined ? boxData.top : 10));
+    let bw = Number(boxData.w !== undefined ? boxData.w : (boxData.width !== undefined ? boxData.width : 20));
+    let bh = Number(boxData.h !== undefined ? boxData.h : (boxData.height !== undefined ? boxData.height : 20));
+
+    if (bx <= 1 && by <= 1 && bw <= 1 && bh <= 1 && (bx > 0 || by > 0 || bw > 0 || bh > 0)) {
+      bx *= 100;
+      by *= 100;
+      bw *= 100;
+      bh *= 100;
+    } else if (naturalWidth > 0 && naturalHeight > 0 && (bx > 100 || by > 100 || bw > 100 || bh > 100)) {
+      bx = (bx / naturalWidth) * 100;
+      by = (by / naturalHeight) * 100;
+      bw = (bw / naturalWidth) * 100;
+      bh = (bh / naturalHeight) * 100;
+    }
+
+    return {
+      x: Math.max(0, Math.min(95, bx)),
+      y: Math.max(0, Math.min(95, by)),
+      w: Math.max(2, Math.min(100 - bx, bw)),
+      h: Math.max(2, Math.min(100 - by, bh))
+    };
+  }
+
+  return { x: 10, y: 10, w: 20, h: 20 };
+}
+
 function renderBoundingBoxes() {
   const layer = document.getElementById('image-boxes-layer');
   if (!layer) return;
 
+  if (!Array.isArray(draftItems) || draftItems.length === 0) {
+    layer.innerHTML = '';
+    return;
+  }
+
+  const shelfImg = document.getElementById('shelf-source-img') || document.getElementById('shelf-image') || document.getElementById('canvas-image');
+
+  // Align Bounding Boxes after Image Loads:
+  // Ensure bounding boxes are drawn ONLY after shelfImg.onload triggers,
+  // guaranteeing that the bounding boxes calculate their positions against the true rendered dimensions of the picture,
+  // rather than drawing over an empty canvas.
+  if (shelfImg && shelfImg.src && (!shelfImg.complete || shelfImg.naturalWidth === 0)) {
+    shelfImg.onload = function() {
+      const imgPlaceholder = document.getElementById('image-loading-placeholder');
+      if (imgPlaceholder) imgPlaceholder.classList.add('hidden');
+      shelfImg.classList.remove('opacity-0');
+      renderBoundingBoxes();
+    };
+    return;
+  }
+  const naturalWidth = (shelfImg && shelfImg.naturalWidth) ? shelfImg.naturalWidth : (shelfImg ? shelfImg.clientWidth : 0);
+  const naturalHeight = (shelfImg && shelfImg.naturalHeight) ? shelfImg.naturalHeight : (shelfImg ? shelfImg.clientHeight : 0);
+
   layer.innerHTML = draftItems.map((item, index) => {
-    const box = item.box || { x: 10, y: 10, w: 20, h: 20 };
+    const rawBox = item.bounding_box || item.box;
+    const box = calculateNormalizedBox(rawBox, naturalWidth, naturalHeight);
     const isDuplicate = item.hasDuplicateMatch;
     const isApproved = item.status === 'Approved';
 
@@ -802,7 +1189,7 @@ function renderBoundingBoxes() {
       <div 
         class="bounding-box ${isDuplicate ? 'duplicate-box' : ''} ${isApproved ? 'approved-box' : ''}" 
         id="bbox-${item.id}"
-        style="left: ${box.x}%; top: ${box.y}%; width: ${box.w}%; height: ${box.h}%;"
+        style="left: ${box.x.toFixed(2)}%; top: ${box.y.toFixed(2)}%; width: ${box.w.toFixed(2)}%; height: ${box.h.toFixed(2)}%;"
         data-box-id="${item.id}"
       >
         <div class="bounding-tag">
@@ -868,8 +1255,12 @@ function getFilteredDrafts() {
 }
 
 function renderDraftCards() {
-  const container = document.getElementById('draft-cards-container') || document.getElementById('drafts-list');
+  const container = document.getElementById('draft-cards-container') || document.getElementById('draft-items-list') || document.getElementById('items-container') || document.getElementById('drafts-list');
   if (!container) return;
+
+  // Remove loading state when data is ready to be rendered
+  const loadingEl = document.getElementById('drafts-loading-state');
+  if (loadingEl) loadingEl.remove();
 
   const filtered = getFilteredDrafts();
 
@@ -884,18 +1275,18 @@ function renderDraftCards() {
   if (filtered.length === 0) {
     if (draftItems.length === 0) {
       container.innerHTML = `
-        <div class="p-8 sm:p-12 text-center bg-white rounded-3xl border border-amber-200 shadow-2xs">
-          <div class="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-4 border border-amber-200">
+        <div id="drafts-empty-state" class="p-8 sm:p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-amber-200 dark:border-amber-900/50 shadow-2xs">
+          <div class="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto mb-4 border border-amber-200 dark:border-amber-800/60">
             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
           </div>
-          <h4 class="text-base font-bold text-slate-800 mb-1.5">لم يتم استخراج أي منتجات لهذه العملية</h4>
-          <p class="text-xs text-slate-500 max-w-md mx-auto mb-6">يمكنك التقاط صورة جديدة بإضاءة واضحة أو إضافة الأصناف يدوياً بالزر أدناه.</p>
+          <h4 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-1.5">لم يتم التعرف على منتجات في هذه الصورة</h4>
+          <p class="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">يمكنك التقاط صورة جديدة بإضاءة واضحة أو إضافة الأصناف يدوياً بالزر أدناه.</p>
           <div class="flex flex-wrap items-center justify-center gap-3">
             <a href="ai-capture.html" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#153f2d] text-white text-xs font-bold hover:bg-[#0f2d20] transition shadow-xs">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
               <span>التقاط صورة جديدة للرف</span>
             </a>
-            <button type="button" onclick="document.getElementById('btn-add-manual-draft')?.click()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold transition">
+            <button type="button" onclick="document.getElementById('btn-add-manual-draft')?.click()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold transition">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
               <span>إضافة صنف يدوياً</span>
             </button>
@@ -904,11 +1295,11 @@ function renderDraftCards() {
       `;
     } else {
       container.innerHTML = `
-        <div class="p-12 text-center bg-white rounded-3xl border border-slate-200 shadow-2xs">
-          <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+        <div class="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+          <div class="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-3">
             <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
           </div>
-          <h4 class="text-sm font-bold text-slate-700">لا توجد أصناف مطابقة للبحث أو التصفية</h4>
+          <h4 class="text-sm font-bold text-slate-700 dark:text-slate-200">لا توجد أصناف مطابقة للبحث أو التصفية</h4>
           <p class="text-xs text-slate-400 mt-1">جرب تغيير معايير البحث أو اختيار تبويب تصفية آخر</p>
         </div>
       `;
@@ -1023,7 +1414,7 @@ function renderDraftCards() {
 
           <!-- Barcode / SKU Input -->
           <div class="sm:col-span-6">
-            <label class="block text-[11px] font-bold text-slate-600 mb-1">الباركود المكتشف / SKU</label>
+            <label class="block text-[11px] font-bold text-slate-600 mb-1">الباركود المكتشف / SKU <span class="text-slate-400 font-normal">(اختياري)</span></label>
             <div class="relative">
               <input 
                 type="text" 
@@ -1044,13 +1435,9 @@ function renderDraftCards() {
               ${isApproved ? 'disabled' : ''}
               class="w-full p-2 rounded-xl border border-slate-200 ${isApproved ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-slate-50/70 text-slate-800 focus:bg-white focus:border-[#153f2d] focus:ring-1 focus:ring-[#153f2d]'} text-xs font-bold outline-none"
             >
-              <option value="الألبان والمبردات" ${item.category === 'الألبان والمبردات' ? 'selected' : ''}>الألبان والمبردات</option>
-              <option value="المخبوزات" ${item.category === 'المخبوزات' ? 'selected' : ''}>المخبوزات</option>
-              <option value="المعلبات" ${item.category === 'المعلبات' ? 'selected' : ''}>المعلبات</option>
-              <option value="المشروبات" ${item.category === 'المشروبات' ? 'selected' : ''}>المشروبات</option>
-              <option value="منتجات طازجة" ${item.category === 'منتجات طازجة' ? 'selected' : ''}>منتجات طازجة</option>
-              <option value="زيوت ومؤونة" ${item.category === 'زيوت ومؤونة' ? 'selected' : ''}>زيوت ومؤونة</option>
-              <option value="عام" ${item.category === 'عام' ? 'selected' : ''}>عام</option>
+              ${availableCategories.map(cat => `
+                <option value="${escapeHtml(cat)}" ${item.category === cat ? 'selected' : ''}>${escapeHtml(cat)}</option>
+              `).join('')}
             </select>
           </div>
 
@@ -1222,7 +1609,7 @@ function handleManualDraftSubmit(e) {
     originalPrice: price,
     confidence: 100,
     category,
-    shelfLocation: { ...(activeJob?.shelfLocation || DEFAULT_DEMO_JOB.shelfLocation) },
+    shelfLocation: { ...(activeJob?.shelfLocation || { zone: 'Zone A', aisle: 'Aisle 1', rack: 'Rack 1', level: 'Shelf 1', label: 'المتجر > رف رئيسي' }) },
     box: { x: 42, y: 40, w: 18, h: 22 },
     status: 'Draft',
     hasDuplicateMatch: false
@@ -1273,12 +1660,26 @@ function createCatalogEntryFromDraft(item, timestamp) {
   };
 }
 
-function showToast(title, message, type = 'success') {
+function showToast(titleOrMsg, messageOrType = '', type = 'success') {
+  let title = titleOrMsg;
+  let message = messageOrType;
+  let finalType = type;
+
+  if (arguments.length === 2 && ['success', 'error', 'warning', 'info'].includes(messageOrType)) {
+    title = 'مراجعة واعتماد المسودات';
+    message = titleOrMsg;
+    finalType = messageOrType;
+  } else if (arguments.length === 1) {
+    title = 'مراجعة واعتماد المسودات';
+    message = titleOrMsg;
+    finalType = 'info';
+  }
+
   if (window.DawwerNotifications && typeof window.DawwerNotifications.show === 'function') {
     window.DawwerNotifications.show({
       title: title || 'مراجعة واعتماد المسودات',
       message: message || '',
-      type: type === 'error' ? 'error' : (type === 'info' ? 'info' : 'success')
+      type: finalType === 'error' ? 'error' : (finalType === 'warning' ? 'warning' : (finalType === 'info' ? 'info' : 'success'))
     });
     return;
   }
@@ -1294,10 +1695,13 @@ function showToast(title, message, type = 'success') {
   if (toastMsg) toastMsg.textContent = message;
 
   if (toastIcon) {
-    if (type === 'error') {
+    if (finalType === 'error') {
       toastIcon.className = 'w-8 h-8 rounded-xl bg-red-500 text-white flex items-center justify-center font-bold shrink-0';
       toastIcon.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
-    } else if (type === 'info') {
+    } else if (finalType === 'warning') {
+      toastIcon.className = 'w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shrink-0';
+      toastIcon.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`;
+    } else if (finalType === 'info') {
       toastIcon.className = 'w-8 h-8 rounded-xl bg-sky-500 text-white flex items-center justify-center font-bold shrink-0';
       toastIcon.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
     } else {
@@ -1456,64 +1860,89 @@ function initReviewEvents() {
 
 let _reviewInitialized = false;
 function bootstrapReview() {
-  if (_reviewInitialized) return;
-  _reviewInitialized = true;
+  loadJobsData();
 
-  initCatalogStorage();
-
-  // Read context from URL and localStorage
-  const { jobId } = getStoreContext();
-
-  // Read local jobs cache or session storage
+  // 1. First priority: Check immediate session cache 'current_shelf_job'
+  let sessionJob = null;
   try {
-    const rawJobs = localStorage.getItem(JOBS_STORAGE_KEY);
-    if (rawJobs) {
-      allJobs = JSON.parse(rawJobs);
-    }
-  } catch (e) {}
-
-  if (Array.isArray(allJobs) && allJobs.length > 0) {
-    allJobs = allJobs.map(normalizeServerJob).filter(Boolean);
-  } else {
-    allJobs = [];
-  }
-
-  // If sessionStorage has active job passed from ai-capture.html, integrate it
-  try {
-    const sessionRaw = sessionStorage.getItem('dawwer_current_review_job');
-    if (sessionRaw) {
-      const parsed = JSON.parse(sessionRaw);
-      if (parsed && parsed.id) {
-        const exIdx = allJobs.findIndex(j => String(j.id) === String(parsed.id));
-        if (exIdx !== -1) allJobs[exIdx] = normalizeServerJob(parsed);
-        else allJobs.unshift(normalizeServerJob(parsed));
+    const raw = sessionStorage.getItem('current_shelf_job') || sessionStorage.getItem('dawwer_current_review_job');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && (parsed.id || parsed.job_id)) {
+        sessionJob = normalizeServerJob(parsed);
+        const exIdx = allJobs.findIndex(j => String(j.id) === String(sessionJob.id));
+        if (exIdx !== -1) allJobs[exIdx] = sessionJob;
+        else allJobs.unshift(sessionJob);
       }
     }
   } catch (e) {}
 
-  // Guarantee at least one valid fallback demo job so editor never renders blank
-  if (allJobs.length === 0) {
-    allJobs = [DEFAULT_DEMO_JOB];
-    saveJobsData();
-  }
+  // Also check localStorage
+  try {
+    const curRaw = localStorage.getItem('dawwer_current_job');
+    if (curRaw) {
+      const cur = JSON.parse(curRaw);
+      if (cur && (cur.id || cur.job_id) && !String(cur.id).includes('8942') && !String(cur.id).includes('9041') && !String(cur.id).includes('8910') && !String(cur.id).includes('1938')) {
+        const norm = normalizeServerJob(cur);
+        const exIdx = allJobs.findIndex(j => String(j.id) === String(norm.id));
+        if (exIdx !== -1) allJobs[exIdx] = norm;
+        else allJobs.unshift(norm);
+      }
+    }
+  } catch (e) {}
 
-  // Populate UI immediately
   populateJobSelector();
   initReviewEvents();
 
-  // Set initial active job
-  const requestedJob = allJobs.find(j => String(j.id) === String(jobId)) || allJobs[0];
-  setActiveJob(requestedJob.id, false);
+  const urlParams = new URLSearchParams(window.location.search);
+  const requestedJobId = urlParams.get('job_id') || urlParams.get('id');
 
-  // Background non-blocking sync with Render FastAPI backend
-  setTimeout(() => {
-    fetchShelfJobAndDrafts(jobId).then(remoteJob => {
-      if (remoteJob && remoteJob.extractedItems && remoteJob.extractedItems.length > 0) {
+  // Match requested job or fallback to session cache / most recent job
+  const matchingCachedJob = requestedJobId
+    ? allJobs.find(j => String(j.id) === String(requestedJobId))
+    : (sessionJob || (allJobs.length > 0 ? allJobs[0] : null));
+
+  const hasImmediateValidItems = matchingCachedJob && Array.isArray(matchingCachedJob.extractedItems) && matchingCachedJob.extractedItems.length > 0;
+
+  if (hasImmediateValidItems) {
+    // Immediate instant cache render: zero delay, no empty flash
+    setActiveJob(matchingCachedJob.id, false);
+    revealMainContent();
+  }
+
+  const targetFetchId = requestedJobId || (matchingCachedJob ? matchingCachedJob.id : null);
+  if (targetFetchId) {
+    fetchShelfJobAndDrafts(targetFetchId).then(remoteJob => {
+      if (remoteJob) {
         setActiveJob(remoteJob.id, false);
+        revealMainContent();
+      } else if (!hasImmediateValidItems) {
+        // If fetch returns null and cache had no items, reveal and show empty state
+        draftItems = [];
+        renderDraftCards();
+        renderBoundingBoxes();
+        updateSelectionSummary();
+        revealMainContent();
+      }
+    }).catch(err => {
+      console.warn('[review-drafts] Backend fetch shelf job note:', err);
+      if (!hasImmediateValidItems) {
+        draftItems = [];
+        renderDraftCards();
+        renderBoundingBoxes();
+        updateSelectionSummary();
+        revealMainContent();
       }
     });
-    fetchAllStoreJobs();
-  }, 100);
+  } else if (!hasImmediateValidItems) {
+    draftItems = [];
+    renderDraftCards();
+    renderBoundingBoxes();
+    updateSelectionSummary();
+    revealMainContent();
+  }
+
+  fetchAllStoreJobs();
 }
 
 // Global exposure for event callbacks
@@ -1536,6 +1965,24 @@ if (typeof window !== 'undefined') {
   window.getStoreContext = getStoreContext;
   window.bootstrapReview = bootstrapReview;
 }
+
+// Immediate dynamic image binding check on script evaluation / DOM ready
+(function bindImmediateShelfImage() {
+  if (typeof document === 'undefined' || typeof localStorage === 'undefined') return;
+  const stored = localStorage.getItem('dawwer_current_shelf_image');
+  if (!stored) return;
+  const setSrc = () => {
+    const img = document.getElementById('shelf-source-img') || document.getElementById('shelf-image') || document.getElementById('canvas-image');
+    if (img && (!img.src || img.src === window.location.href)) {
+      img.src = stored;
+    }
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setSrc);
+  } else {
+    setSrc();
+  }
+})();
 
 if (typeof document !== 'undefined') {
   if (document.readyState === 'loading') {

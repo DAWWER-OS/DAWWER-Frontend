@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const form = document.getElementById('forgot-form');
+  const form = document.getElementById('forgot-form') || document.getElementById('forgot-password-form');
   if (form) {
     form.addEventListener('submit', handleForgotPassword);
   }
@@ -9,7 +9,7 @@ async function handleForgotPassword(event) {
   event.preventDefault();
 
   const emailInput = document.getElementById('email-input');
-  const alertBox = document.getElementById('alert-message');
+  const alertBox = document.getElementById('alert-message') || document.getElementById('error-message');
   const btn = document.getElementById('submit-btn');
 
   if (!emailInput) return;

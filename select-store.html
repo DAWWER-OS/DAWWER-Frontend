@@ -10,7 +10,15 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+    <script>
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
   <link rel="stylesheet" href="css/output.css">
+  <script src="js/theme.js"></script>
   <script>
     (function() {
       try {
@@ -47,16 +55,27 @@
     })();
   </script>
 </head>
-<body class="bg-[#f8f6f0] font-sans text-slate-800 min-h-screen flex flex-col justify-between antialiased">
+<body class="bg-slate-50 dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100 min-h-screen flex flex-col justify-between antialiased transition-colors duration-200">
 
   <!-- Header minimal brand bar -->
-  <header class="w-full py-4 px-6 sm:px-10 flex justify-between items-center border-b border-slate-200/60 bg-white/70 backdrop-blur-md">
+  <header class="w-full py-4 px-6 sm:px-10 flex justify-between items-center border-b border-slate-200/60 bg-white/70 dark:bg-slate-900/90 backdrop-blur-md dark:border-slate-800">
     <div class="flex items-center gap-3">
       <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-8 w-auto object-contain" style="max-height: 32px; object-fit: contain;">
       <span class="text-sm font-bold text-[#1c5335]">بوابة التاجر</span>
     </div>
     <div class="flex items-center gap-3">
       <span id="user-greeting" class="text-xs font-semibold text-slate-600 hidden sm:inline-block"></span>
+            <!-- زر تبديل الوضع الليلي -->
+      <button id="theme-toggle-btn" type="button" aria-label="تبديل الوضع الليلي" class="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-sm focus:outline-none cursor-pointer active:scale-95">
+        <!-- Moon Icon (shown in Light Mode) -->
+        <svg id="theme-moon-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+        </svg>
+        <!-- Sun Icon (shown in Dark Mode) -->
+        <svg id="theme-sun-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+        </svg>
+      </button>
       <button id="logout-btn" data-action="logout" type="button" class="text-xs bg-red-50 hover:bg-red-100 text-red-700 font-bold px-3 py-1.5 rounded-xl border border-red-200/80 transition cursor-pointer">
         تسجيل الخروج
       </button>
@@ -65,7 +84,7 @@
 
   <!-- Main Container -->
   <main class="flex-1 flex items-center justify-center p-4 sm:p-8">
-    <div class="w-full max-w-2xl bg-white p-6 sm:p-10 rounded-3xl shadow-sm border border-slate-100">
+    <div class="w-full max-w-2xl bg-white p-6 sm:p-10 rounded-3xl shadow-sm border border-slate-100 dark:bg-slate-900 dark:border-slate-800">
       
       <!-- Top Branding & Titles -->
       <div class="text-center mb-8">

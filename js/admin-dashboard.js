@@ -211,7 +211,7 @@
   // =========================================================================
   function setupTabControls() {
     // Slim Sidebar buttons ([data-tab])
-    document.querySelectorAll('#sidebar-box [data-tab]').forEach(btn => {
+    document.querySelectorAll('#main-sidebar [data-tab], #sidebar-box [data-tab]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         const tab = btn.getAttribute('data-tab');
@@ -238,7 +238,7 @@
     if (targetPanel) targetPanel.classList.remove('hidden');
 
     // Update Slim Sidebar Buttons
-    document.querySelectorAll('#sidebar-box [data-tab]').forEach(b => {
+    document.querySelectorAll('#main-sidebar [data-tab], #sidebar-box [data-tab]').forEach(b => {
       b.classList.remove('active', 'active-tab', 'text-white', 'bg-white/20');
       b.classList.add('text-white/70');
     });
@@ -852,13 +852,28 @@
       return;
     }
     if (!confirm("هل أنت متأكد من اعتماد هذا المتجر وتفعيله على منصة دوّر؟")) return;
+
+    const btn = document.querySelector(`[data-action="approve-store"][data-id="${applicationId}"]`) || document.getElementById('btn-approve-store');
+    if (btn) {
+      if (btn.disabled) return;
+      btn.disabled = true;
+    }
+
     try {
       await ApiClient.admin.approveApplication(applicationId);
+      const curStoreId = localStorage.getItem('storeId') || localStorage.getItem('activeStoreId');
+      if (curStoreId && curStoreId === applicationId) {
+        localStorage.setItem('storeStatus', 'active');
+        localStorage.setItem('store_status', 'active');
+        localStorage.setItem('dawwer_store_status', '5');
+      }
       showSuccessNotification('تم الاعتماد', 'تم اعتماد المتجر وتفعيله رسمياً على المنصة!');
       closeModal("store-modal");
       loadStores();
     } catch (err) {
       showErrorNotification(err, "فشل اعتماد المتجر");
+    } finally {
+      if (btn) btn.disabled = false;
     }
   }
 

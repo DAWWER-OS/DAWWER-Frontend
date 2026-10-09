@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
     "./*.html",
     "./**/*.html",
@@ -16,6 +17,9 @@ module.exports = {
       },
       colors: {
         brand: {
+          DEFAULT: '#22553d',
+          hover: '#19422e',
+          light: '#eef5f1',
           primary: '#12372A',
           secondary: '#436850',
           canvas: '#FBFADA',

@@ -3,26 +3,44 @@ document.addEventListener('DOMContentLoaded', () => {
   if (registerForm) {
     registerForm.addEventListener('submit', handleRegister);
   }
+  initTermsModal();
 });
 
 async function handleRegister(event) {
   event.preventDefault();
 
-  const nameInput = document.getElementById('store-name-input');
-  const emailInput = document.getElementById('register-email-input');
-  const phoneInput = document.getElementById('register-phone-input');
-  const passInput = document.getElementById('register-pass-input');
-  const confirmInput = document.getElementById('register-confirm-input');
-  const msgBox = document.getElementById('register-msg-box');
-  const btn = document.getElementById('register-btn');
+  const storeInput = document.getElementById('store-name-input');
+  const ownerInput = document.getElementById('owner-name-input');
+  const emailInput = document.getElementById('email-input') || document.getElementById('register-email-input');
+  const phoneInput = document.getElementById('phone-input') || document.getElementById('register-phone-input');
+  const passInput = document.getElementById('password-input') || document.getElementById('register-pass-input');
+  const confirmInput = document.getElementById('confirm-password-input') || document.getElementById('register-confirm-input');
+  const msgBox = document.getElementById('register-msg-box') || document.getElementById('error-message');
+  const btn = document.getElementById('register-btn') || document.getElementById('submit-btn');
 
-  if (!nameInput || !emailInput || !phoneInput || !passInput || !confirmInput) return;
+  if (!emailInput || !phoneInput || !passInput || !confirmInput) return;
 
-  const fullName = nameInput.value.trim();
+  const storeName = storeInput ? storeInput.value.trim() : '';
+  const ownerName = ownerInput ? ownerInput.value.trim() : '';
+  const fullName = ownerName || storeName || 'تاجر دوّر';
   const email = emailInput.value.trim();
   const phoneNumber = phoneInput.value.trim();
   const password = passInput.value;
   const confirmPass = confirmInput.value;
+
+  const termsCheckbox = document.getElementById('terms-checkbox') || document.getElementById('terms-box');
+  if (termsCheckbox && !termsCheckbox.checked) {
+    const errorMsg = 'يرجى الموافقة على شروط الاستخدام وسياسة الخصوصية للمتابعة.';
+    if (msgBox) {
+      msgBox.textContent = errorMsg;
+      msgBox.className = 'mb-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-bold block';
+    }
+    if (typeof showToast === 'function') {
+      showToast({ title: 'تنبيه', message: errorMsg, type: 'warning' });
+    }
+    termsCheckbox.focus();
+    return;
+  }
 
   if (password !== confirmPass) {
     const errorMsg = 'كلمتا المرور غير متطابقتين.';
@@ -45,6 +63,7 @@ async function handleRegister(event) {
   try {
     const payload = {
       fullName,
+      storeName: storeName || fullName,
       email,
       phoneNumber,
       password,
@@ -95,4 +114,86 @@ async function handleRegister(event) {
       btn.disabled = false;
     }
   }
+}
+
+
+// =========================================================================
+// Glassmorphism Terms of Service & Privacy Policy Modal Controller
+// =========================================================================
+function initTermsModal() {
+  const modal = document.getElementById('terms-modal');
+  const modalCard = document.getElementById('terms-modal-card');
+  const openBtn = document.getElementById('open-terms-modal-btn');
+  const closeBtn = document.getElementById('close-terms-modal-btn');
+  const acceptBtn = document.getElementById('accept-terms-btn');
+  const checkbox = document.getElementById('terms-checkbox') || document.getElementById('terms-box');
+
+  if (!modal) return;
+  if (modal._termsModalInit) return;
+  modal._termsModalInit = true;
+
+  function openModal() {
+    modal.classList.remove('opacity-0', 'pointer-events-none');
+    modal.classList.add('opacity-100', 'pointer-events-auto');
+    if (modalCard) {
+      modalCard.classList.remove('scale-95');
+      modalCard.classList.add('scale-100');
+    }
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    modal.classList.remove('opacity-100', 'pointer-events-auto');
+    modal.classList.add('opacity-0', 'pointer-events-none');
+    if (modalCard) {
+      modalCard.classList.remove('scale-100');
+      modalCard.classList.add('scale-95');
+    }
+    document.body.style.overflow = '';
+  }
+
+  if (openBtn) {
+    openBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openModal();
+    });
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeModal();
+    });
+  }
+
+  if (acceptBtn) {
+    acceptBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (checkbox) {
+        checkbox.checked = true;
+        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      closeModal();
+    });
+  }
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeModal();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.classList.contains('pointer-events-none')) {
+      closeModal();
+    }
+  });
+
+  window.openTermsModal = openModal;
+  window.closeTermsModal = closeModal;
+}
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  initTermsModal();
 }

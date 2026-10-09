@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,163 +9,155 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
 
-  <link rel="stylesheet" href="css/output.css">
+  <!-- الوضع الليلي المانع للوميض -->
+  <script>
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+  <link rel="stylesheet" href="css/output.css?v=5.0">
+  <style>
+    @media (max-width: 1023px) {
+      .auth-right-half {
+        width: 100vw !important;
+        padding: 40px 24px !important;
+      }
+    }
+  </style>
 </head>
-<body class="bg-[#f8f6f0] font-sans text-slate-800 min-h-screen">
 
-  <div class="flex min-h-screen w-full">
-    
-    <div class="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
-      <div class="w-full max-w-md bg-white p-8 sm:p-10 rounded-3xl shadow-sm border border-slate-100">
-        
+<body class="m-0 p-0 w-full min-h-screen font-sans bg-[#fcfbf9] text-slate-800" style="margin: 0; padding: 0; width: 100vw; overflow-x: hidden;">
+
+  <div class="w-full min-h-screen flex flex-col-reverse lg:flex-row bg-[#fcfbf9]" dir="ltr">
+
+    <!-- LEFT: Image Section (Desktop Left) -->
+    <div class="w-full lg:w-1/2 relative min-h-screen overflow-hidden">
+      <img 
+        src="assests/image/Image par.jpeg" 
+        alt="متجر دوّر" 
+        class="absolute inset-0 w-full h-full object-cover object-left"
+        style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: left center;"
+        onerror="this.src='assets/images/Image.png'"
+      >
+      <div class="absolute inset-0 bg-[#163828]/25 mix-blend-multiply"></div>
+      <div class="absolute top-8 left-8 z-20">
+        <img src="assets/images/FrameLogo.png" alt="دوّر" class="h-14 w-auto drop-shadow-md">
+      </div>
+      <!-- Floating Glass Badge -->
+      <div class="absolute top-[16%] left-1/2 -translate-x-1/2 z-20 w-80 sm:w-96 bg-black/40 backdrop-blur-md border border-white/30 rounded-2xl p-6 text-center text-white pointer-events-none shadow-2xl" style="top: 16%; left: 50%; transform: translateX(-50%); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);">
+        <h2 class="text-2xl sm:text-3xl font-extrabold mb-2 tracking-wide drop-shadow-md text-white">أهلاً بعودتك</h2>
+        <p class="text-sm sm:text-base text-white leading-relaxed font-medium drop-shadow-sm">سجل دخولك لتحكم كامل بمتجرك<br>بمكان واحد</p>
+      </div>
+    </div>
+
+    <!-- RIGHT: Form Section (Desktop Right) -->
+    <div class="w-full lg:w-1/2 min-h-screen flex items-center justify-center bg-[#fcfbf9] px-6 sm:px-10 lg:px-12" style="width: 50vw; min-height: 100vh; display: flex; align-items: center; justify-content: center; box-sizing: border-box;" dir="rtl">
+      <div style="width: 100%; max-width: 480px; margin: 0 auto; box-sizing: border-box;">
+
+        <!-- شعار الموبايل فقط -->
         <div class="flex justify-center mb-6 lg:hidden">
           <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-12 w-auto">
         </div>
 
-        <div class="mb-6 text-center sm:text-right">
-          <h1 class="text-2xl sm:text-3xl font-bold text-[#1c5335] mb-1">تسجيل الدخول</h1>
-          <p class="text-slate-500 text-sm">أهلاً بعودتك إلى دوّر</p>
+        <!-- رأس الصفحة -->
+        <div class="text-right w-full">
+          <h1 class="text-3xl sm:text-4xl font-extrabold text-[#21543d] dark:text-emerald-400 mb-2 tracking-tight text-right">تسجيل الدخول</h1>
+          <p class="text-slate-400 dark:text-slate-400 text-sm sm:text-base mb-6 text-right">أهلاً بعودتك إلى دوّر</p>
         </div>
 
-        <div id="error-message" class="hidden mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-bold"></div>
+        <div id="error-message"
+          class="hidden mb-4 p-3.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm font-bold">
+        </div>
 
-        <form id="login-form" class="flex flex-col gap-4">
-          
-          <div>
-            <label class="block text-sm font-bold text-[#1c5335] mb-1" for="email-input">البريد الالكتروني</label>
-            <input 
-              type="email" 
-              id="email-input" 
-              class="w-full p-3.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335]" 
-              placeholder="name@example.com" 
-              value="merchant@dawwer.com"
-              required
-            >
+        <form id="login-form" class="w-full space-y-5" style="width: 100%; display: block;">
+
+          <!-- حقل البريد الإلكتروني -->
+          <div style="width: 100%; display: block;">
+            <label class="block text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5 text-right" for="email-input">البريد الالكتروني</label>
+            <div class="relative" style="width: 100%; position: relative;">
+              <input type="email" id="email-input"
+                class="w-full border border-[#dcdad5] dark:border-slate-700 rounded-2xl bg-transparent dark:bg-slate-900 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-[#21543d] dark:focus:border-emerald-500 transition"
+                style="width: 100%; box-sizing: border-box; padding: 14px 18px 14px 48px; border-radius: 16px; border: 1.5px solid #dcdad5; font-size: 14px;"
+                placeholder="أدخل بريدك الالكتروني" value="merchant@dawwer.com" required>
+              <!-- أيقونة البريد على اليسار -->
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </span>
+            </div>
           </div>
 
-          <div>
-            <label class="block text-sm font-bold text-[#1c5335] mb-1" for="password-input">كلمة المرور</label>
-            <div class="relative">
-              <input 
-                type="password" 
-                id="password-input" 
-                class="w-full p-3.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#1c5335] focus:ring-1 focus:ring-[#1c5335] pr-3.5 pl-10" 
-                placeholder="••••••••" 
-                value="StrongPassword123!"
-                required
-              >
-              <button 
-                type="button" 
-                id="password-toggle-btn"
-                data-toggle-password="password-input"
-                class="password-toggle-btn absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#1c5335] p-1 rounded-lg transition"
-                title="إظهار/إخفاء كلمة المرور"
-                aria-label="إظهار/إخفاء كلمة المرور"
-              >
-                <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+          <!-- حقل كلمة المرور -->
+          <div style="width: 100%; display: block;">
+            <label class="block text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5 text-right" for="password-input">كلمة المرور</label>
+            <div class="relative" style="width: 100%; position: relative;">
+              <!-- أيقونة القفل على اليمين -->
+              <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </span>
+              <input type="password" id="password-input"
+                class="w-full border border-[#dcdad5] dark:border-slate-700 rounded-2xl bg-transparent dark:bg-slate-900 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-[#21543d] dark:focus:border-emerald-500 transition"
+                style="width: 100%; box-sizing: border-box; padding: 14px 48px 14px 48px; border-radius: 16px; border: 1.5px solid #dcdad5; font-size: 14px;"
+                placeholder="أدخل كلمة المرور" value="StrongPassword123!" required>
+              <!-- زر إظهار/إخفاء كلمة المرور على اليسار -->
+              <button type="button" id="password-toggle-btn" data-toggle-password="password-input"
+                class="password-toggle-btn absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#21543d] dark:hover:text-emerald-400 p-1.5 rounded-lg transition cursor-pointer"
+                title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
               </button>
             </div>
           </div>
 
-          <div class="flex items-center justify-between text-sm">
-            <label class="flex items-center gap-2 cursor-pointer text-slate-600">
-              <input type="checkbox" id="remember-checkbox" checked class="w-4 h-4 rounded text-[#1c5335] accent-[#1c5335]">
+          <!-- تذكرني ونسيت كلمة المرور -->
+          <div class="flex items-center justify-between text-xs sm:text-sm pt-1" style="width: 100%;">
+            <label class="flex items-center gap-2 cursor-pointer text-slate-500 dark:text-slate-400 select-none accent-[#21543d]">
+              <input type="checkbox" id="remember-checkbox" checked
+                class="w-4 h-4 rounded border-slate-300 dark:border-slate-700 text-[#21543d] accent-[#21543d] cursor-pointer">
               <span>تذكرني</span>
             </label>
-            <a href="forgot-password.html" class="text-xs text-slate-500 hover:text-[#1c5335] font-medium">نسيت كلمة المرور؟</a>
+            <a href="forgot-password.html"
+              class="text-slate-500 hover:text-[#21543d] dark:text-slate-400 dark:hover:text-emerald-400 transition font-medium">نسيت كلمة المرور؟</a>
           </div>
 
-          <button type="submit" id="submit-btn" class="w-full bg-[#1c5335] hover:bg-[#143e27] text-white font-bold p-3.5 rounded-xl shadow text-sm transition">
+          <!-- زر تسجيل الدخول الأساسي -->
+          <button type="submit" id="submit-btn"
+            class="w-full bg-[#21543d] hover:bg-[#183f2e] text-white font-bold py-3.5 rounded-2xl shadow-md text-base transition duration-150 cursor-pointer"
+            style="width: 100%;">
             تسجيل الدخول
           </button>
 
-          <div class="text-center my-1 text-xs text-slate-400 font-bold">أو</div>
+          <!-- خط فاصل -->
+          <div class="relative flex items-center justify-center my-4" style="width: 100%;">
+            <div class="border-t border-[#e5e3de] dark:border-slate-800 w-full"></div>
+            <span class="bg-[#fcfbf9] dark:bg-slate-950 px-3 text-xs text-slate-400 shrink-0">أو</span>
+            <div class="border-t border-[#e5e3de] dark:border-slate-800 w-full"></div>
+          </div>
 
-          <a href="register.html" class="w-full border-2 border-[#1c5335] text-[#1c5335] font-bold p-3 rounded-xl text-center text-sm hover:bg-[#1c5335]/5 block transition">
+          <!-- زر إنشاء حساب جديد -->
+          <a href="register.html"
+            class="w-full block text-center border border-[#cfd6d1] dark:border-slate-700 text-[#21543d] dark:text-emerald-400 font-bold py-3 rounded-2xl text-base hover:bg-slate-50 dark:hover:bg-slate-900 transition duration-150"
+            style="width: 100%;">
             إنشاء حساب جديد
           </a>
-
-
-
-
 
         </form>
 
       </div>
-    </div>
-
-    <div class="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-12 overflow-hidden text-white" style="background: linear-gradient(180deg, #143e27 0%, #1c5335 100%);">
-      
-      <div class="absolute inset-0 pointer-events-none">
-        <div class="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl"></div>
-        <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-[#2a754c]/20 rounded-full blur-3xl"></div>
-        
-        <svg class="absolute inset-0 w-full h-full opacity-10" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" fill="none">
-          <circle cx="400" cy="400" r="300" stroke="white" stroke-width="1.5" stroke-dasharray="8 8" />
-          <circle cx="400" cy="400" r="200" stroke="white" stroke-width="1.5" />
-          <circle cx="400" cy="400" r="100" stroke="white" stroke-width="1.5" stroke-dasharray="4 4" />
-          <path d="M0 400h800M400 0v800" stroke="white" stroke-width="1" stroke-dasharray="6 6" />
-          <path d="M150 150l500 500M650 150L150 650" stroke="white" stroke-width="0.5" stroke-dasharray="10 10" />
-        </svg>
-      </div>
-
-      <div class="relative z-10 my-auto max-w-lg mx-auto w-full flex flex-col gap-7">
-        
-        <div class="text-right">
-          <div class="flex items-center gap-3 mb-4">
-            <img src="assets/images/FrameLogo.png" alt="شعار دوّر" class="h-12 w-auto">
-          </div>
-          <h2 class="text-3xl font-extrabold text-white leading-tight tracking-tight">
-            تحكم كامل بمتجرك،<br>
-            <span class="text-emerald-200">بمكان واحد.</span>
-          </h2>
-          <p class="text-white/80 text-sm mt-2 leading-relaxed">
-            المنصة الذكية الرائدة لإدارة مواقع المنتجات والرفوف وربط متجرك بمتسوقي منطقتك فورياً.
-          </p>
-        </div>
-
-        <div class="flex flex-col gap-3">
-          
-          <div class="bg-white/10 backdrop-blur-md border border-white/10 p-3.5 rounded-2xl flex items-center gap-3.5 transition hover:bg-white/15">
-            <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-lg shadow-inner">
-              📍
-            </div>
-            <div class="text-right">
-              <h3 class="font-bold text-sm text-white">خريطة ذكية للممرات</h3>
-              <p class="text-xs text-white/75 mt-0.5">دل زبائنك على مكان كل منتج بدقة داخل متجرك.</p>
-            </div>
-          </div>
-
-          <div class="bg-white/10 backdrop-blur-md border border-white/10 p-3.5 rounded-2xl flex items-center gap-3.5 transition hover:bg-white/15">
-            <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-lg shadow-inner">
-              📦
-            </div>
-            <div class="text-right">
-              <h3 class="font-bold text-sm text-white">إدارة سهلة للمنتجات</h3>
-              <p class="text-xs text-white/75 mt-0.5">نظّم رفوفك وتصنيفاتك بنقرات معدودة وبدون تعقيد.</p>
-            </div>
-          </div>
-
-          <div class="bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex items-center gap-4 transition hover:bg-white/15">
-            <div class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-xl shadow-inner">
-              ⚡
-            </div>
-            <div class="text-right">
-              <h3 class="font-bold text-sm text-white">تحديث لحظي</h3>
-              <p class="text-xs text-white/75 mt-0.5">ظهور مباشر لمتجرك أمام المتسوقين في منطقتك.</p>
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-
-      <div class="relative z-10 text-center text-xs text-white/50 pt-4">
-        منصة دوّر © جميع الحقوق محفوظة لشركاء النجاح
-      </div>
-
     </div>
 
   </div>
@@ -176,4 +169,5 @@
   <script src="js/main.js"></script>
   <script src="js/login.js"></script>
 </body>
+
 </html>

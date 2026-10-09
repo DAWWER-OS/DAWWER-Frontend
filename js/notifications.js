@@ -134,3 +134,27 @@ function showToast(optsOrTitle, message = '', type = 'success', duration = 4000)
 
 window.showToast = showToast;
 window.DawwerNotification = DawwerNotification;
+
+// Automatically check and display pending flash notifications across redirects
+(function checkFlashNotification() {
+  function displayPendingFlash() {
+    try {
+      const flash = sessionStorage.getItem('dawwer_flash_notification') || localStorage.getItem('dawwer_flash_notification');
+      if (flash) {
+        sessionStorage.removeItem('dawwer_flash_notification');
+        localStorage.removeItem('dawwer_flash_notification');
+        const data = JSON.parse(flash);
+        setTimeout(() => {
+          DawwerNotification.show(data.title || 'إشعار', data.message || '', data.type || 'success', data.duration || 5000);
+        }, 150);
+      }
+    } catch (e) {}
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', displayPendingFlash);
+  } else {
+    displayPendingFlash();
+  }
+})();
+

@@ -10,7 +10,15 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+    <script>
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
   <link rel="stylesheet" href="css/output.css">
+  <script src="js/theme.js"></script>
 
   <style>
     ::-webkit-scrollbar {
@@ -44,14 +52,14 @@
     }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans" dir="rtl">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased min-h-screen flex flex-col font-sans mr-0 md:mr-20 transition-colors duration-200" dir="rtl">
 
   
-    <aside id="sidebar-box" class="fixed top-0 right-0 h-screen w-16 bg-[#153f2d] text-white flex flex-col justify-between items-center py-3 z-50 shadow-xl border-l border-white/10 select-none overflow-visible">
+    <aside id="sidebar-box" class="fixed top-0 right-0 h-screen w-16 bg-[#153f2d] dark:bg-slate-900 text-white flex flex-col justify-between items-center py-3 z-50 shadow-xl border-l border-white/10 dark:border-slate-800 select-none overflow-visible">
       <!-- TOP: Minimal Brand Icon/Logo Only -->
       <div class="flex flex-col items-center w-full pt-1 px-1.5 shrink-0 overflow-visible">
         <div class="relative group flex items-center justify-center">
-          <a href="index.html" class="flex items-center justify-center w-11 h-11 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-colors shadow-xs" aria-label="دوّر - الرئيسية">
+          <a href="index.html" class="flex items-center justify-center w-11 h-11 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-colors shadow-xs dark:bg-slate-900 dark:border-slate-800" aria-label="دوّر - الرئيسية">
             <img src="assets/images/FrameLogo.png" alt="دوّر" class="h-6 w-auto object-contain">
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
@@ -64,7 +72,7 @@
       <nav class="flex flex-col items-center gap-2 my-auto w-full py-2 sidebar-nav overflow-visible">
         <!-- 1. لوحة التحكم -->
         <div class="relative group flex items-center justify-center">
-          <a href="index.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="لوحة التحكم">
+          <a href="index.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="لوحة التحكم">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
@@ -74,7 +82,7 @@
 
         <!-- 2. الكتالوج والمخططات -->
         <div class="relative group flex items-center justify-center">
-          <a href="catalog.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الكتالوج والمخططات">
+          <a href="catalog.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="الكتالوج والمخططات">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
@@ -84,7 +92,7 @@
 
         <!-- 3. مسح الرفوف بالذكاء الاصطناعي (AI) -->
         <div class="relative group flex items-center justify-center">
-          <a href="ai-capture.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="مسح الرفوف بالذكاء">
+          <a href="ai-capture.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="مسح الرفوف بالذكاء">
             <svg class="w-5 h-5 text-[#d6a950] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.01.01"/></svg>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
@@ -94,7 +102,7 @@
 
         <!-- 4. مراجعة المسودات المستخرجة -->
         <div class="relative group flex items-center justify-center">
-          <a href="review-drafts.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="مراجعة المسودات">
+          <a href="review-drafts.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="مراجعة المسودات">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
@@ -104,7 +112,7 @@
 
         <!-- 5. المخزون وسجل التدقيق -->
         <div class="relative group flex items-center justify-center">
-          <a href="inventory-audit.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="المخزون والتدقيق">
+          <a href="inventory-audit.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="المخزون والتدقيق">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
@@ -114,7 +122,7 @@
 
         <!-- 6. الطلبات والمبيعات -->
         <div class="relative group flex items-center justify-center">
-          <a href="orders.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الطلبات والمبيعات">
+          <a href="orders.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="الطلبات والمبيعات">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
@@ -124,7 +132,7 @@
 
         <!-- 7. الممرات والرفوف -->
         <div class="relative group flex items-center justify-center">
-          <a href="shelves.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الممرات والرفوف">
+          <a href="shelves.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="الممرات والرفوف">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
@@ -134,7 +142,7 @@
 
         <!-- 8. فريق العمل والصلاحيات -->
         <div class="relative group flex items-center justify-center">
-          <a href="store-staff.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="فريق العمل">
+          <a href="store-staff.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="فريق العمل">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
@@ -144,7 +152,7 @@
 
         <!-- 9. تسجيل واعتماد المتجر -->
         <div class="relative group flex items-center justify-center">
-          <a href="merchant-application.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="بيانات المتجر">
+          <a href="merchant-application.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="بيانات المتجر">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z"/></svg>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
@@ -154,7 +162,7 @@
 
         <!-- 10. الملف الشخصي والإعدادات -->
         <div class="relative group flex items-center justify-center">
-          <a href="profile.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الملف الشخصي">
+          <a href="profile.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="الملف الشخصي">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
@@ -179,7 +187,7 @@
     <div id="sidebar-backdrop" class="backdrop-hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40"></div>
 <div id="toast-container" class="fixed top-5 left-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-2xs">
+  <header class="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-2xs dark:border-slate-800">
     <div class="flex items-center gap-3">
       <button id="sidebar-toggle-btn" class="sidebar-toggle-btn p-2 text-slate-600 hover:text-[#153f2d] hover:bg-slate-100 rounded-xl transition flex items-center justify-center cursor-pointer active:scale-95 md:hidden" title="القائمة الجانبية (Ctrl+B)">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
@@ -193,19 +201,32 @@
       </div>
     </div>
 
-    <div class="bg-white p-1 rounded-2xl flex items-center gap-1 border border-slate-200/80 shadow-xs self-start sm:self-auto overflow-x-auto">
-      <button id="tab-btn-catalog" class="tab-btn px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all bg-[#153f2d] text-white shadow-xs flex items-center gap-2 whitespace-nowrap">
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+    <div class="flex items-center gap-2 self-start sm:self-auto">
+      <button id="theme-toggle-btn" type="button" aria-label="تبديل الوضع الليلي" class="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-sm focus:outline-none cursor-pointer">
+        <!-- Moon Icon (shown in Light Mode) -->
+        <svg id="theme-moon-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
         </svg>
-        <span>كتالوج المنتجات</span>
-      </button>
-      <button id="tab-btn-floorplan" class="tab-btn px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all text-slate-600 hover:text-[#153f2d] hover:bg-slate-50 flex items-center gap-2 whitespace-nowrap">
-        <svg class="w-4 h-4 text-slate-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+        <!-- Sun Icon (shown in Dark Mode) -->
+        <svg id="theme-sun-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
         </svg>
-        <span>مخطط المتجر والممرات</span>
       </button>
+
+      <div class="bg-white p-1 rounded-2xl flex items-center gap-1 border border-slate-200/80 shadow-xs overflow-x-auto dark:bg-slate-900 dark:border-slate-800">
+        <button id="tab-btn-catalog" class="tab-btn px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all bg-[#153f2d] text-white shadow-xs flex items-center gap-2 whitespace-nowrap">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
+          <span>كتالوج المنتجات</span>
+        </button>
+        <button id="tab-btn-floorplan" class="tab-btn px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all text-slate-600 hover:text-[#153f2d] hover:bg-slate-50 flex items-center gap-2 whitespace-nowrap">
+          <svg class="w-4 h-4 text-slate-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+          </svg>
+          <span>مخطط المتجر والممرات</span>
+        </button>
+      </div>
     </div>
   </header>
 
@@ -227,7 +248,7 @@
               </svg>
               <span>مسح الرف بالذكاء الاصطناعي</span>
             </button>
-            <button id="btn-import-catalog" type="button" class="relative z-10 pointer-events-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-[#153f2d] bg-white hover:bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs transition cursor-pointer">
+            <button id="btn-import-catalog" type="button" class="relative z-10 pointer-events-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-[#153f2d] bg-white hover:bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs transition cursor-pointer dark:bg-slate-900 dark:border-slate-800">
               <svg class="w-4 h-4 text-[#153f2d] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
@@ -242,14 +263,14 @@
           </div>
         </div>
 
-        <div class="bg-white rounded-3xl shadow-xs border border-slate-200/70 overflow-hidden flex flex-col">
+        <div class="bg-white rounded-3xl shadow-xs border border-slate-200/70 overflow-hidden flex flex-col dark:bg-slate-900 dark:border-slate-800">
 
           <div class="p-6 border-b border-slate-100 space-y-4">
             
             <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 pb-4">
               <button data-status-tab="ALL" class="status-tab active px-4 py-2 rounded-xl text-xs font-bold tracking-wide transition flex items-center gap-2 bg-[#153f2d] text-white shadow-xs">
                 <span>كافة المنتجات</span>
-                <span id="count-all" class="px-2 py-0.5 bg-white/20 text-white rounded-full text-[10px]">0</span>
+                <span id="count-all" class="px-2 py-0.5 bg-white/20 text-white rounded-full text-[10px] dark:bg-slate-900">0</span>
               </button>
               <button data-status-tab="Published" class="status-tab px-4 py-2 rounded-xl text-xs font-bold tracking-wide transition flex items-center gap-2 text-slate-600 hover:bg-slate-100">
                 <span>منشور ومتاح</span>
@@ -276,7 +297,7 @@
                   id="search-input" 
                   type="text" 
                   placeholder="ابحث باسم المنتج أو رمز الـ SKU..." 
-                  class="w-full pr-10 pl-9 py-2.5 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 focus:border-[#153f2d] focus:ring-1 focus:ring-[#153f2d] rounded-2xl text-sm transition outline-none"
+                  class="w-full pr-10 pl-9 py-2.5 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 focus:border-[#153f2d] focus:ring-1 focus:ring-[#153f2d] rounded-2xl text-sm transition outline-none dark:bg-slate-900 dark:border-slate-800"
                 >
                 <button id="clear-search" class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 hover:text-slate-600 hidden">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -287,8 +308,8 @@
 
               <div class="flex items-center gap-3 w-full sm:w-auto justify-start sm:justify-end">
                 <div class="relative w-full sm:w-56">
-                  <select id="category-filter" class="w-full appearance-none bg-slate-50 hover:bg-white border border-slate-200 focus:border-[#153f2d] focus:ring-1 focus:ring-[#153f2d] text-slate-700 py-2.5 pr-4 pl-9 rounded-2xl text-sm font-bold outline-none cursor-pointer transition">
-                    <option value="ALL">جميع التصنيفات</option>
+                  <select id="category-filter" name="category" class="w-full appearance-none bg-slate-50 hover:bg-white border border-slate-200 focus:border-[#153f2d] focus:ring-1 focus:ring-[#153f2d] text-slate-700 py-2.5 pr-4 pl-9 rounded-2xl text-sm font-bold outline-none cursor-pointer transition dark:bg-slate-900 dark:border-slate-800">
+                    <option value="">اختر التصنيف...</option>
                   </select>
                   <div class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
@@ -311,7 +332,7 @@
               <span>عنصر محدد</span>
             </div>
             <div class="flex items-center gap-2">
-              <button id="bulk-set-available" class="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-800 font-bold rounded-xl border border-slate-200 shadow-2xs transition">
+              <button id="bulk-set-available" class="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-800 font-bold rounded-xl border border-slate-200 shadow-2xs transition dark:bg-slate-900 dark:border-slate-800">
                 تعيين كـ "متوفر"
               </button>
               <button id="bulk-delete" class="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl border border-rose-200 transition">
@@ -352,7 +373,7 @@
               </div>
               <h3 class="text-base font-bold text-slate-800 mb-1">لم يتم العثور على أي منتجات</h3>
               <p class="text-xs text-slate-500 max-w-sm mb-4">لا توجد نتائج مطابقة لبحثك أو الفلاتر المحددة حالياً.</p>
-              <button id="empty-reset-btn" class="px-5 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs rounded-2xl shadow-xs transition cursor-pointer">
+              <button id="empty-reset-btn" class="px-5 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs rounded-2xl shadow-xs transition cursor-pointer dark:bg-slate-900 dark:border-slate-800">
                 إعادة تعيين الفلاتر
               </button>
             </div>
@@ -362,7 +383,7 @@
             <div class="flex items-center gap-4 text-xs text-slate-500">
               <div class="flex items-center gap-2 font-medium">
                 <span>عرض</span>
-                <select id="items-per-page" class="bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs font-bold text-slate-700 outline-none cursor-pointer">
+                <select id="items-per-page" class="bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs font-bold text-slate-700 outline-none cursor-pointer dark:bg-slate-900 dark:border-slate-800">
                   <option value="5">5</option>
                   <option value="10" selected>10</option>
                   <option value="25">25</option>
@@ -383,7 +404,7 @@
 
       <div id="tab-content-floorplan" class="space-y-6 hidden">
         
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/70 shadow-xs">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/70 shadow-xs dark:bg-slate-900 dark:border-slate-800">
           <div>
             <h2 class="text-lg font-bold text-[#153f2d] flex items-center gap-2">
               <span>مخطط المتجر ونقاط التوجيه الذكية</span>
@@ -403,7 +424,7 @@
           </div>
         </div>
 
-        <div id="floorplan-dropzone-container" class="bg-white rounded-3xl border-2 border-dashed border-slate-300 hover:border-[#153f2d] p-10 text-center transition-all cursor-pointer group shadow-xs">
+        <div id="floorplan-dropzone-container" class="bg-white rounded-3xl border-2 border-dashed border-slate-300 hover:border-[#153f2d] p-10 text-center transition-all cursor-pointer group shadow-xs dark:bg-slate-900 dark:border-slate-800">
           <input type="file" id="floorplan-file-input" accept="image/png, image/jpeg, image/svg+xml" class="hidden">
           <div class="max-w-md mx-auto space-y-3">
             <div class="w-16 h-16 mx-auto bg-[#edf5f0] text-[#153f2d] rounded-3xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
@@ -428,7 +449,7 @@
         </div>
 
         <div id="floorplan-workspace" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="lg:col-span-2 bg-white rounded-3xl border border-slate-200/70 shadow-xs overflow-hidden flex flex-col">
+          <div class="lg:col-span-2 bg-white rounded-3xl border border-slate-200/70 shadow-xs overflow-hidden flex flex-col dark:bg-slate-900 dark:border-slate-800">
             <div class="p-4 bg-slate-900 text-white flex items-center justify-between flex-wrap gap-2 border-b border-slate-800">
               <div class="flex items-center gap-2 text-xs font-bold">
                 <span class="inline-block w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse"></span>
@@ -441,7 +462,7 @@
                 <button id="btn-zoom-in" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg></button>
                 <button id="btn-zoom-reset" class="px-3 py-1 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition">إعادة ضبط</button>
                 <div class="h-4 w-px bg-slate-700 mx-1"></div>
-                <button id="btn-replace-map" class="px-3 py-1 text-xs font-bold bg-white/10 hover:bg-white/20 text-white rounded-xl transition">تغيير الصورة</button>
+                <button id="btn-replace-map" class="px-3 py-1 text-xs font-bold bg-white/10 hover:bg-white/20 text-white rounded-xl transition dark:bg-slate-900">تغيير الصورة</button>
               </div>
             </div>
 
@@ -450,7 +471,7 @@
                 <img id="floorplan-image" src="" alt="مخطط المتجر" class="max-w-full h-auto block select-none pointer-events-none rounded-2xl border border-white/20">
                 <div id="pins-layer" class="absolute inset-0 pointer-events-auto"></div>
                 
-                <div id="pin-popover" class="absolute z-30 hidden bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 w-64 transform -translate-x-1/2 -translate-y-full mb-3 pointer-events-auto text-right">
+                <div id="pin-popover" class="absolute z-30 hidden bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 w-64 transform -translate-x-1/2 -translate-y-full mb-3 pointer-events-auto text-right dark:bg-slate-900 dark:border-slate-800">
                   <div class="flex items-center justify-between mb-2">
                     <span class="text-xs font-bold text-slate-800">تسمية الرف / الممر</span>
                     <button id="btn-close-popover" type="button" class="text-slate-400 hover:text-slate-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
@@ -485,7 +506,7 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-3xl border border-slate-200/70 shadow-xs p-6 flex flex-col h-full">
+          <div class="bg-white rounded-3xl border border-slate-200/70 shadow-xs p-6 flex flex-col h-full dark:bg-slate-900 dark:border-slate-800">
             <div class="flex items-center justify-between pb-4 border-b border-slate-100">
               <div>
                 <h3 class="text-sm font-bold text-slate-900">المناطق والرفوف المحددة</h3>
@@ -504,7 +525,7 @@
 
   <div id="import-wizard-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto hidden" aria-modal="true" role="dialog">
     <div id="wizard-backdrop" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm opacity-0 modal-backdrop"></div>
-    <div id="wizard-panel" class="relative bg-white rounded-2xl sm:rounded-3xl max-w-3xl w-full p-4 sm:p-6 md:p-8 shadow-2xl border border-slate-100 transform scale-95 opacity-0 modal-panel my-4 sm:my-8 z-10 flex flex-col max-h-[92vh] overflow-y-auto">
+    <div id="wizard-panel" class="relative bg-white rounded-2xl sm:rounded-3xl max-w-3xl w-full p-4 sm:p-6 md:p-8 shadow-2xl border border-slate-100 transform scale-95 opacity-0 modal-panel my-4 sm:my-8 z-10 flex flex-col max-h-[92vh] overflow-y-auto dark:bg-slate-900 dark:border-slate-800">
       
       <div class="flex items-center justify-between pb-5 border-b border-slate-100 shrink-0">
         <div class="flex items-center gap-3">
@@ -602,27 +623,27 @@
           <div class="bg-slate-50 p-5 rounded-3xl border border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">اسم المنتج <span class="text-rose-500">*</span></label>
-              <select id="map-name" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d]"></select>
+              <select id="map-name" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d] dark:bg-slate-900 dark:border-slate-800"></select>
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">رمز الباركود / SKU <span class="text-rose-500">*</span></label>
-              <select id="map-sku" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d]"></select>
+              <select id="map-sku" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d] dark:bg-slate-900 dark:border-slate-800"></select>
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">السعر <span class="text-rose-500">*</span></label>
-              <select id="map-price" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d]"></select>
+              <select id="map-price" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d] dark:bg-slate-900 dark:border-slate-800"></select>
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">التصنيف</label>
-              <select id="map-category" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d]"></select>
+              <select id="map-category" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d] dark:bg-slate-900 dark:border-slate-800"></select>
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">المنطقة (Zone)</label>
-              <select id="map-zone" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d]"></select>
+              <select id="map-zone" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d] dark:bg-slate-900 dark:border-slate-800"></select>
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">الممر والرف (Aisle)</label>
-              <select id="map-aisle" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d]"></select>
+              <select id="map-aisle" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d] dark:bg-slate-900 dark:border-slate-800"></select>
             </div>
           </div>
 
@@ -686,7 +707,7 @@
                 <svg class="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                 <span>الصفوف التي تحتوي على مشاكل (سيتم استبعادها):</span>
               </span>
-              <button type="button" id="btn-download-error-csv" class="px-3.5 py-1.5 bg-white hover:bg-rose-50 text-rose-700 font-bold border border-rose-300 rounded-xl shadow-2xs transition">
+              <button type="button" id="btn-download-error-csv" class="px-3.5 py-1.5 bg-white hover:bg-rose-50 text-rose-700 font-bold border border-rose-300 rounded-xl shadow-2xs transition dark:bg-slate-900 dark:border-slate-800">
                 تحميل تقرير الأخطاء (.csv)
               </button>
             </div>
@@ -758,7 +779,7 @@
 
   <div id="product-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto hidden" aria-modal="true" role="dialog">
     <div id="modal-backdrop" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm opacity-0 modal-backdrop"></div>
-    <div id="modal-panel" class="relative bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 transform scale-95 opacity-0 modal-panel my-8 z-10">
+    <div id="modal-panel" class="relative bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 transform scale-95 opacity-0 modal-panel my-8 z-10 dark:bg-slate-900 dark:border-slate-800">
       <div class="flex items-center justify-between pb-5 border-b border-slate-100">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-2xl bg-[#edf5f0] text-[#153f2d] flex items-center justify-center">
@@ -781,23 +802,16 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="sm:col-span-2">
               <label for="form-name" class="block text-xs font-bold text-slate-700 mb-1.5">اسم المنتج <span class="text-rose-500">*</span></label>
-              <input type="text" id="form-name" placeholder="مثال: أفوكادو هاس عضوي (عبوة 4 حبات)" class="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 focus:border-[#153f2d] focus:ring-1 focus:ring-[#153f2d] rounded-2xl text-sm outline-none">
+              <input type="text" id="form-name" placeholder="مثال: أفوكادو هاس عضوي (عبوة 4 حبات)" class="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 focus:border-[#153f2d] focus:ring-1 focus:ring-[#153f2d] rounded-2xl text-sm outline-none dark:bg-slate-900 dark:border-slate-800">
             </div>
             <div>
-              <label for="form-sku" class="block text-xs font-bold text-slate-700 mb-1.5">الباركود / SKU <span class="text-rose-500">*</span></label>
-              <input type="text" id="form-sku" placeholder="GRO-AVO-001" class="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 focus:border-[#153f2d] focus:ring-1 focus:ring-[#153f2d] rounded-2xl text-sm font-mono uppercase outline-none" dir="ltr">
+              <label for="form-sku" class="block text-xs font-bold text-slate-700 mb-1.5">الباركود / SKU <span class="text-xs font-normal text-slate-400">(اختياري)</span></label>
+              <input type="text" id="form-sku" placeholder="6281007010012 (اختياري)" class="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 focus:border-[#153f2d] focus:ring-1 focus:ring-[#153f2d] rounded-2xl text-sm font-mono uppercase outline-none dark:bg-slate-900 dark:border-slate-800" dir="ltr">
             </div>
             <div>
               <label for="form-category" class="block text-xs font-bold text-slate-700 mb-1.5">التصنيف <span class="text-rose-500">*</span></label>
-              <select id="form-category" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:border-[#153f2d] font-bold text-slate-700">
+              <select id="form-category" name="category" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:border-[#153f2d] font-bold text-slate-700">
                 <option value="">اختر التصنيف...</option>
-                <option value="منتجات طازجة">منتجات طازجة</option>
-                <option value="ألبان وأجبان">ألبان وأجبان</option>
-                <option value="مخبوزات">مخبوزات</option>
-                <option value="مشروبات">مشروبات</option>
-                <option value="زيوت ومؤونة">زيوت ومؤونة</option>
-                <option value="تسالي وحلويات">تسالي وحلويات</option>
-                <option value="لحوم ومأكولات بحرية">لحوم ومأكولات بحرية</option>
               </select>
             </div>
             <div>
@@ -825,19 +839,19 @@
             <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div>
                 <label for="loc-zone" class="block text-[11px] font-bold text-slate-600 mb-1">المنطقة (Zone) *</label>
-                <select id="loc-zone" class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#153f2d]"><option value="">اختر المنطقة</option></select>
+                <select id="loc-zone" class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#153f2d] dark:bg-slate-900 dark:border-slate-800"><option value="">اختر المنطقة</option></select>
               </div>
               <div>
                 <label for="loc-aisle" class="block text-[11px] font-bold text-slate-600 mb-1">الممر (Aisle) *</label>
-                <select id="loc-aisle" disabled class="w-full px-2.5 py-2 bg-white disabled:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#153f2d]"><option value="">اختر الممر</option></select>
+                <select id="loc-aisle" disabled class="w-full px-2.5 py-2 bg-white disabled:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#153f2d] dark:bg-slate-900 dark:border-slate-800"><option value="">اختر الممر</option></select>
               </div>
               <div>
                 <label for="loc-rack" class="block text-[11px] font-bold text-slate-600 mb-1">الوحدة (Rack) *</label>
-                <select id="loc-rack" disabled class="w-full px-2.5 py-2 bg-white disabled:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#153f2d]"><option value="">اختر الوحدة</option></select>
+                <select id="loc-rack" disabled class="w-full px-2.5 py-2 bg-white disabled:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#153f2d] dark:bg-slate-900 dark:border-slate-800"><option value="">اختر الوحدة</option></select>
               </div>
               <div>
                 <label for="loc-shelf" class="block text-[11px] font-bold text-slate-600 mb-1">مستوى الرف *</label>
-                <select id="loc-shelf" disabled class="w-full px-2.5 py-2 bg-white disabled:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#153f2d]"><option value="">اختر الرف</option></select>
+                <select id="loc-shelf" disabled class="w-full px-2.5 py-2 bg-white disabled:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#153f2d] dark:bg-slate-900 dark:border-slate-800"><option value="">اختر الرف</option></select>
               </div>
             </div>
             <div id="location-preview-badge" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#edf5f0] text-[#153f2d] border border-[#153f2d]/15 rounded-xl text-xs font-bold">
@@ -853,13 +867,13 @@
           </div>
           <label class="relative inline-flex items-center cursor-pointer select-none">
             <input type="checkbox" id="form-available" class="sr-only peer" checked>
-            <div class="w-11 h-6 bg-slate-300 rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#153f2d]"></div>
+            <div class="w-11 h-6 bg-slate-300 rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#153f2d] dark:bg-slate-900 dark:border-slate-800"></div>
           </label>
         </div>
 
         <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
           <button type="button" id="btn-cancel-modal" class="px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-2xl transition">إلغاء</button>
-          <button type="submit" class="px-6 py-2.5 text-xs font-bold text-white bg-[#153f2d] hover:bg-[#0f2d20] rounded-2xl shadow-sm transition">حفظ التغييرات</button>
+          <button type="submit" id="btn-save-product" class="px-6 py-2.5 text-xs font-bold text-white bg-[#153f2d] hover:bg-[#0f2d20] rounded-2xl shadow-sm transition">حفظ التغييرات</button>
         </div>
       </form>
     </div>
@@ -977,7 +991,7 @@
         </button>
 
         <button id="btn-snap-ai-photo" type="button" class="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black shadow-lg shadow-emerald-900/30 transition flex items-center gap-2 cursor-pointer active:scale-95">
-          <span class="w-2.5 h-2.5 rounded-full bg-white animate-pulse"></span>
+          <span class="w-2.5 h-2.5 rounded-full bg-white animate-pulse dark:bg-slate-900"></span>
           <span>التقاط وتحليل الرف (AI)</span>
         </button>
 

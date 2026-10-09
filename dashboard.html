@@ -1,20 +1,516 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0; url=index.html">
-  <script>
-    window.location.replace('index.html');
-  </script>
-  <title>لوحة التحكم - دوّر</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة التحكم التنفيذية - دوّر</title>
   <link rel="icon" type="image/png" href="assets/images/favicon-dawwer.png">
+
+  <!-- Google Fonts: IBM Plex Sans Arabic -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Core Stylesheet -->
+    <script>
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
   <link rel="stylesheet" href="css/output.css">
+
+  <!-- Theme Script (Early FOUC prevention) -->
+  <script src="js/theme.js"></script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased min-h-screen flex flex-col font-sans mr-0 md:mr-20 transition-colors duration-200" dir="rtl">
 
-<body class="bg-[#f8f6f0] flex items-center justify-center min-h-screen text-slate-700 font-sans">
-  <p>جاري تحويلك إلى لوحة التحكم الرئيسية... <a href="index.html" class="underline font-bold text-[#1c5335]">اضغط هنا
-      للمتابعة</a></p>
+  <!-- SIDEBAR (Slim 64px Fixed Rail) -->
+  <aside id="sidebar-box" class="fixed top-0 right-0 h-screen w-16 bg-[#153f2d] dark:bg-slate-900 text-white flex flex-col justify-between items-center py-3 z-50 shadow-xl border-l border-white/10 dark:border-slate-800 select-none overflow-visible">
+    <!-- TOP: Minimal Brand Logo -->
+    <div class="flex flex-col items-center w-full pt-1 px-1.5 shrink-0 overflow-visible">
+      <div class="relative group flex items-center justify-center">
+        <a href="dashboard.html" class="flex items-center justify-center w-11 h-11 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-colors shadow-xs dark:bg-slate-900 dark:border-slate-800" aria-label="دوّر - الرئيسية">
+          <img src="assets/images/FrameLogo.png" alt="دوّر" class="h-6 w-auto object-contain">
+        </a>
+        <div class="sidebar-tooltip">دوّر - الرئيسية</div>
+      </div>
+    </div>
+
+    <!-- CENTER: Navigation Buttons -->
+    <nav class="flex flex-col items-center gap-2 my-auto w-full py-2 sidebar-nav overflow-visible">
+      <!-- 1. لوحة التحكم (Active) -->
+      <div class="relative group flex items-center justify-center">
+        <a href="dashboard.html" class="nav-item active active-tab flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="لوحة التحكم">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        </a>
+        <div class="sidebar-tooltip">لوحة التحكم التنفيذية</div>
+      </div>
+
+      <!-- 2. الكتالوج والمخططات -->
+      <div class="relative group flex items-center justify-center">
+        <a href="catalog.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="الكتالوج والمخططات">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        </a>
+        <div class="sidebar-tooltip">إدارة الكتالوج والمخطط</div>
+      </div>
+
+      <!-- 3. مسح الرفوف بالذكاء الاصطناعي (AI) -->
+      <div class="relative group flex items-center justify-center">
+        <a href="ai-capture.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="مسح الرفوف بالذكاء">
+          <svg class="w-5 h-5 text-[#d6a950] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.01.01"/></svg>
+        </a>
+        <div class="sidebar-tooltip">مسح الرفوف بالذكاء الاصطناعي</div>
+      </div>
+
+      <!-- 4. مراجعة المسودات المستخرجة -->
+      <div class="relative group flex items-center justify-center">
+        <a href="review-drafts.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="مراجعة المسودات">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+        </a>
+        <div class="sidebar-tooltip">مراجعة واعتماد المسودات</div>
+      </div>
+
+      <!-- 5. المخزون وسجل التدقيق -->
+      <div class="relative group flex items-center justify-center">
+        <a href="inventory-audit.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="المخزون والتدقيق">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+        </a>
+        <div class="sidebar-tooltip">المخزون وسجل التدقيق</div>
+      </div>
+
+      <!-- 6. الطلبات والمبيعات -->
+      <div class="relative group flex items-center justify-center">
+        <a href="orders.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="الطلبات والمبيعات">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+        </a>
+        <div class="sidebar-tooltip">الطلبات والمبيعات</div>
+      </div>
+
+      <!-- 7. الممرات والرفوف -->
+      <div class="relative group flex items-center justify-center">
+        <a href="shelves.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="الممرات والرفوف">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+        </a>
+        <div class="sidebar-tooltip">مواقع الممرات والرفوف</div>
+      </div>
+
+      <!-- 8. فريق العمل والصلاحيات -->
+      <div class="relative group flex items-center justify-center">
+        <a href="store-staff.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="فريق العمل">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        </a>
+        <div class="sidebar-tooltip">فريق العمل والأدوار</div>
+      </div>
+
+      <!-- 9. تسجيل واعتماد المتجر -->
+      <div class="relative group flex items-center justify-center">
+        <a href="merchant-application.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="بيانات المتجر">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z"/></svg>
+        </a>
+        <div class="sidebar-tooltip">تسجيل واعتماد المتجر</div>
+      </div>
+
+      <!-- 10. الملف الشخصي والإعدادات -->
+      <div class="relative group flex items-center justify-center">
+        <a href="profile.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="الملف الشخصي">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        </a>
+        <div class="sidebar-tooltip">الملف الشخصي والإعدادات</div>
+      </div>
+    </nav>
+
+    <!-- BOTTOM: Logout Button -->
+    <div class="flex flex-col items-center w-full pt-2 pb-1 border-t border-white/10 px-1.5 shrink-0 overflow-visible">
+      <div class="relative group flex items-center justify-center">
+        <button id="logout-btn" data-action="logout" class="flex items-center justify-center w-11 h-11 rounded-xl text-rose-300 hover:text-white hover:bg-rose-500/20 transition-colors cursor-pointer active:scale-95" aria-label="تسجيل الخروج">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        </button>
+        <div class="sidebar-tooltip text-rose-200 border-rose-900/60">تسجيل الخروج</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Mobile Backdrop -->
+  <div id="sidebar-backdrop" class="backdrop-hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40"></div>
+
+  <!-- TOP HEADER -->
+  <header class="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-2xs transition-colors">
+    <div class="flex items-center gap-3">
+      <button id="sidebar-toggle-btn" class="sidebar-toggle-btn p-2 text-slate-600 dark:text-slate-300 hover:text-[#153f2d] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition flex items-center justify-center cursor-pointer active:scale-95 md:hidden" title="القائمة الجانبية (Ctrl+B)">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+      </button>
+      <div>
+        <div class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
+          <span>الرئيسية والعمليات</span>
+          <span class="text-slate-300 dark:text-slate-700">/</span>
+          <span class="text-[#1c5335] dark:text-emerald-400 font-bold">لوحة التحكم التنفيذية</span>
+        </div>
+        <div class="flex items-center gap-2 mt-0.5">
+          <h1 id="topbar-store-name" class="text-lg font-black text-slate-900 dark:text-white leading-tight">
+            سوبر ماركت <span data-store-name class="text-[#1c5335] dark:text-emerald-400">الفرع الرئيسي</span>
+          </h1>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            متجر مفعّل
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Header Controls: Date, Period Filter, Theme Toggle, Profile & Logout -->
+    <div class="flex flex-wrap items-center gap-2 self-end sm:self-auto">
+      <!-- Today's Date Pill -->
+      <div class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 text-xs text-slate-600 dark:text-slate-300 font-medium">
+        <svg class="w-4 h-4 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <span id="dashboard-date-display">...</span>
+      </div>
+
+      <!-- Period Filter Dropdown -->
+      <div class="relative">
+        <select id="dashboard-period-filter" aria-label="فترة التقرير" class="text-xs font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#1c5335] shadow-2xs cursor-pointer hover:border-slate-300 dark:hover:border-slate-600 transition">
+          <option value="today" selected>اليوم</option>
+          <option value="week">آخر 7 أيام</option>
+          <option value="month">هذا الشهر</option>
+        </select>
+      </div>
+
+      <!-- Quick Store Switcher Button -->
+      <button id="header-store-switch-btn" type="button" class="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition shadow-2xs cursor-pointer active:scale-95" title="تغيير المتجر">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+      </button>
+
+      <!-- Theme Toggle Button -->
+      <button id="theme-toggle-btn" type="button" aria-label="تبديل الوضع الليلي" class="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition shadow-2xs focus:outline-none cursor-pointer active:scale-95">
+        <!-- Moon Icon (Light Mode) -->
+        <svg id="theme-moon-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+        </svg>
+        <!-- Sun Icon (Dark Mode) -->
+        <svg id="theme-sun-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+        </svg>
+      </button>
+
+      <!-- Account Profile Link -->
+      <a href="profile.html" class="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-2 rounded-xl text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-50 dark:hover:bg-slate-700/80 transition shadow-2xs">
+        إعداداتي
+      </a>
+
+      <!-- Quick Logout Button -->
+      <button id="top-logout-btn" data-action="logout" type="button" class="text-xs bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 px-3.5 py-2 rounded-xl text-rose-700 dark:text-rose-300 font-bold hover:bg-rose-100 dark:hover:bg-rose-900/50 transition cursor-pointer active:scale-95 shadow-2xs">
+        خروج
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN DASHBOARD CONTENT -->
+  <main id="dashboard-main-container" class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 md:p-8 space-y-6 transition-opacity duration-300">
+
+    <!-- KPI METRICS GRID (4 Sleek Executive Cards) -->
+    <div id="kpi-metrics-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      
+      <!-- Card 1: إجمالي الكتالوج والمنتجات -->
+      <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs hover:shadow-md transition-all duration-200 group">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-bold text-slate-500 dark:text-slate-400">إجمالي الكتالوج والمنتجات</span>
+          <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-[#1c5335] dark:text-emerald-400 flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+          </div>
+        </div>
+        <div class="flex items-baseline gap-2 mb-2">
+          <span id="kpi-total-products" class="text-3xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight">--</span>
+          <span class="text-xs text-slate-400 font-medium">صنف مسجل</span>
+        </div>
+        <!-- Shelf Mapping Progress -->
+        <div class="space-y-1.5 pt-1">
+          <div class="flex items-center justify-between text-[11px] font-bold">
+            <span class="text-slate-500 dark:text-slate-400">الربط بالممرات والرفوف</span>
+            <span id="kpi-shelf-mapping-pct" class="text-emerald-700 dark:text-emerald-400 tabular-nums">--%</span>
+          </div>
+          <div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+            <div id="kpi-shelf-mapping-bar" class="bg-emerald-600 dark:bg-emerald-500 h-full rounded-full transition-all duration-700" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: عمليات الذكاء الاصطناعي (AI Shelf Jobs) -->
+      <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs hover:shadow-md transition-all duration-200 group">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-bold text-slate-500 dark:text-slate-400">عمليات الـ AI ومسح الرفوف</span>
+          <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-[#d6a950] flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+        </div>
+        <div class="flex items-baseline gap-2 mb-2">
+          <span id="kpi-ai-jobs-count" class="text-3xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight">--</span>
+          <span id="kpi-ai-jobs-badge" class="text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-lg border border-amber-200/50 dark:border-amber-800/50">
+            مكتمل ومفحوص
+          </span>
+        </div>
+        <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1">
+          <span>دقة التعرف البصري</span>
+          <span class="font-bold text-slate-700 dark:text-slate-200 tabular-nums">98.4% (Gemini Vision)</span>
+        </div>
+      </div>
+
+      <!-- Card 3: مبيعات وطلبات اليوم / الفترة -->
+      <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs hover:shadow-md transition-all duration-200 group">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-bold text-slate-500 dark:text-slate-400">إجمالي المبيعات والطلبات</span>
+          <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+        </div>
+        <div class="flex items-baseline gap-2 mb-2">
+          <span id="kpi-sales-total" class="text-3xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight">--</span>
+          <span id="kpi-orders-count-badge" class="text-xs font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-lg border border-blue-200/50 dark:border-blue-800/50 tabular-nums">
+            -- طلب
+          </span>
+        </div>
+        <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1">
+          <span>متوسط قيمة السلة</span>
+          <span id="kpi-avg-order-val" class="font-bold text-slate-700 dark:text-slate-200 tabular-nums">₪ 78.50</span>
+        </div>
+      </div>
+
+      <!-- Card 4: تنبيهات المخزون الحرج -->
+      <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs hover:shadow-md transition-all duration-200 group">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-bold text-slate-500 dark:text-slate-400">تنبيهات المخزون الحرج</span>
+          <div class="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          </div>
+        </div>
+        <div class="flex items-baseline gap-2 mb-2">
+          <span id="kpi-low-stock-count" class="text-3xl font-black text-rose-600 dark:text-rose-400 tabular-nums tracking-tight">--</span>
+          <span id="kpi-low-stock-badge" class="text-xs font-bold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 rounded-lg border border-rose-200/50 dark:border-rose-800/50">
+            تتطلب إعادة تعبئة
+          </span>
+        </div>
+        <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1">
+          <span>حد الأمان الأدنى</span>
+          <span class="font-bold text-slate-700 dark:text-slate-200 tabular-nums">5 قطع أو أقل</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- MIDDLE CHARTS GRID (2 Columns using Chart.js) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- Column A: حركة المبيعات والطلبات الأسبوعية (Area / Spline) -->
+      <div class="lg:col-span-7 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+        <div>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+            <div>
+              <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#1c5335] dark:bg-emerald-400"></span>
+                حركة المبيعات والطلبات الأسبوعية
+              </h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                تتبع منحنى الإيرادات التراكمي وتدفق الطلبات على مدار الأيام السبعة الأخيرة
+              </p>
+            </div>
+            <!-- Dynamic Mini Stat -->
+            <div class="self-start sm:self-auto flex items-center gap-2 bg-slate-50 dark:bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
+              <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">إجمالي الأسبوع:</span>
+              <span id="chart-sales-weekly-total" class="text-xs font-black text-[#1c5335] dark:text-emerald-400 tabular-nums">₪ 12,450</span>
+            </div>
+          </div>
+
+          <!-- Chart Canvas Container -->
+          <div class="relative h-72 w-full pt-2">
+            <canvas id="sales-orders-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart Legend / Bottom Info -->
+        <div class="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800/80 text-xs text-slate-500 dark:text-slate-400">
+          <div class="flex items-center gap-4">
+            <div class="flex items-center gap-1.5">
+              <span class="w-3 h-3 rounded-md bg-[#1c5335] dark:bg-emerald-500 inline-block"></span>
+              <span class="font-medium text-slate-700 dark:text-slate-300">الإيرادات (₪)</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="w-3 h-3 rounded-md bg-[#d6a950] inline-block"></span>
+              <span class="font-medium text-slate-700 dark:text-slate-300">الطلبات المكتملة</span>
+            </div>
+          </div>
+          <span class="text-[11px]">محدّث تلقائياً عبر API</span>
+        </div>
+      </div>
+
+      <!-- Column B: توزيع المنتجات حسب الأقسام والتصنيفات (Donut Chart) -->
+      <div class="lg:col-span-5 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-[#d6a950]"></span>
+              توزيع المنتجات حسب الأقسام
+            </h2>
+            <a href="catalog.html" class="text-xs font-bold text-[#1c5335] dark:text-emerald-400 hover:underline">
+              عرض الكتالوج ←
+            </a>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+            نسبة تغطية المخزون الفعلي مقسمة عبر الأقسام الرئيسية في المتجر
+          </p>
+
+          <!-- Donut Canvas Container -->
+          <div class="relative h-56 w-full flex items-center justify-center">
+            <canvas id="categories-donut-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Dynamic Category Legend Pills -->
+        <div id="categories-donut-legend" class="grid grid-cols-2 gap-2 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-xs">
+          <!-- Filled dynamically via JS -->
+          <div class="text-center py-2 text-slate-400 text-xs col-span-2">جاري تحليل الأقسام...</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- BOTTOM OPERATIONAL GRID (2 Columns) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- Column A: أحدث عمليات مسح الرفوف بالـ AI (Mini Live Table) -->
+      <div class="lg:col-span-7 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <svg class="w-5 h-5 text-[#d6a950]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                أحدث عمليات مسح الرفوف بالـ AI
+              </h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                عمليات استخراج المنتجات التلقائية الملتقطة بكاميرا المتجر مع إمكانية المراجعة الفورية
+              </p>
+            </div>
+            <a href="ai-capture.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1c5335] text-white text-xs font-bold hover:bg-[#153f2d] transition shadow-xs cursor-pointer active:scale-95 shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              مسح رف جديد
+            </a>
+          </div>
+
+          <!-- Mini Table Container -->
+          <div class="overflow-x-auto mt-4">
+            <table class="w-full text-right text-xs">
+              <thead>
+                <tr class="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-bold">
+                  <th class="pb-2.5 pr-2">الرف / الصورة</th>
+                  <th class="pb-2.5">الأصناف المكتشفة</th>
+                  <th class="pb-2.5">الحالة</th>
+                  <th class="pb-2.5">الوقت</th>
+                  <th class="pb-2.5 text-left pl-2">الإجراء</th>
+                </tr>
+              </thead>
+              <tbody id="recent-shelf-jobs-tbody" class="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+                <!-- Skeleton placeholder row -->
+                <tr>
+                  <td colspan="5" class="py-6 text-center text-slate-400">
+                    <div class="flex items-center justify-center gap-2">
+                      <svg class="animate-spin h-4 w-4 text-[#1c5335] dark:text-emerald-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                      <span>جارٍ تحميل سجل عمليات المسح...</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
+          <span class="text-slate-500 dark:text-slate-400">جميع العمليات يتم تدقيقها قبل إضافتها للكتالوج</span>
+          <a href="review-drafts.html" class="text-xs font-bold text-[#1c5335] dark:text-emerald-400 hover:underline">
+            عرض كافة المسودات المعلقة ←
+          </a>
+        </div>
+      </div>
+
+      <!-- Column B: أصناف تتطلب إعادة التعبئة (Low Stock List) -->
+      <div class="lg:col-span-5 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                أصناف تتطلب إعادة التعبئة
+              </h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                تنبيهات الأصناف ذات الرصيد الحرج مع إمكانية تحديث المخزون الفوري
+              </p>
+            </div>
+            <a href="inventory-audit.html" class="text-xs font-bold text-[#1c5335] dark:text-emerald-400 hover:underline shrink-0">
+              سجل الجرد ←
+            </a>
+          </div>
+
+          <!-- Low Stock Items Interactive Container -->
+          <div id="low-stock-items-container" class="space-y-2.5 mt-4 max-h-80 overflow-y-auto pr-0.5">
+            <!-- Skeleton placeholder -->
+            <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center text-xs text-slate-400">
+              جارٍ فحص أرصدة المخزون...
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+          <span>التحديث الفوري يزامن المخزون مع تطبيق المستهلك</span>
+          <button type="button" id="btn-refresh-dashboard" class="font-bold text-[#1c5335] dark:text-emerald-400 hover:underline cursor-pointer">
+            تحديث البيانات ⟳
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- QUICK STOCK UPDATE MODAL -->
+  <div id="stock-update-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full border border-slate-100 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div class="p-6 bg-gradient-to-r from-[#153f2d] to-[#1c5335] text-white">
+        <h3 class="text-lg font-bold">تحديث رصيد المخزون</h3>
+        <p id="modal-product-name" class="text-xs text-white/80 mt-1">تحديد الكمية المتوفرة على الرف حالياً</p>
+      </div>
+      <form id="stock-update-form" class="p-6 space-y-4">
+        <input type="hidden" id="modal-product-id">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">موقع الصنف على الرف:</label>
+          <div id="modal-product-location" class="text-xs font-semibold px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+            ممر غير محدد
+          </div>
+        </div>
+        <div>
+          <label for="modal-new-quantity" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">الكمية الجديدة المتوفرة (قطعة):</label>
+          <input type="number" id="modal-new-quantity" min="0" max="9999" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-base focus:ring-2 focus:ring-[#1c5335] focus:outline-none tabular-nums">
+        </div>
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button" id="btn-cancel-stock-modal" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer">
+            إلغاء
+          </button>
+          <button type="submit" id="btn-save-stock-modal" class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#1c5335] hover:bg-[#143e27] transition shadow-xs cursor-pointer active:scale-95">
+            حفظ وتحديث الرصيد
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- PLATFORM CLIENT SCRIPTS -->
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/main.js"></script>
+  <!-- Dedicated Executive Dashboard Script -->
+  <script src="js/dashboard.js"></script>
 </body>
-
 </html>

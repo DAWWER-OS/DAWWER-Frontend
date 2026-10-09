@@ -1,3 +1,9 @@
+// Storage Hygiene: Clear legacy test keys
+try {
+  localStorage.removeItem('shelf_jobs');
+  localStorage.removeItem('mock_drafts');
+} catch (e) {}
+
 var FASTAPI_BASE_URL = (typeof window !== 'undefined' && window.CONFIG && window.CONFIG.FASTAPI_BASE_URL)
   ? window.CONFIG.FASTAPI_BASE_URL.replace(/\/+$/, '')
   : 'https://dawwer-backend-fastapi.onrender.com';
@@ -7,9 +13,14 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
 
     function resolveShelfImageUrl(rawUrl, zone = 'Zone A') {
       if (!rawUrl || typeof rawUrl !== 'string' || rawUrl.trim() === '' || rawUrl === 'null' || rawUrl === 'undefined') {
-        return SAMPLE_SHELF_IMAGE;
+        return 'assets/placeholder-product.png';
       }
       const trimmed = rawUrl.trim();
+
+      // Guard against job IDs (e.g. 'JOB-2026-9041') being used as image URLs
+      if (trimmed.startsWith('JOB-') || /^JOB[-_]/i.test(trimmed)) {
+        return 'assets/placeholder-product.png';
+      }
 
       // 1. Data URLs (e.g. webcam captures or SVG fallbacks)
       if (trimmed.startsWith('data:image/')) {
@@ -88,15 +99,15 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
       }
 
       if (!token) {
-        const tokenKeys = ['storeToken', 'accessToken', 'token', 'access_token', 'store_token', 'dawwer_store_token', 'dawwer_access_token'];
-        for (const k of tokenKeys) {
-          try {
-            const val = localStorage.getItem(k);
-            if (val && val.trim() && val !== 'null' && val !== 'undefined') {
-              token = val.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-              break;
-            }
-          } catch (e) {}
+        const rawToken = localStorage.getItem('accessToken') || 
+                         localStorage.getItem('token') || 
+                         localStorage.getItem('storeToken') || 
+                         sessionStorage.getItem('accessToken') || 
+                         localStorage.getItem('access_token') || 
+                         localStorage.getItem('store_token') || 
+                         sessionStorage.getItem('token') || '';
+        if (rawToken && rawToken.trim() && rawToken !== 'null' && rawToken !== 'undefined') {
+          token = rawToken.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
         }
       }
 
@@ -109,6 +120,28 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
       return { storeId, token };
     }
     const getActiveStoreContext = getStoreContext;
+
+    function getApiHeaders() {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
+      const cleanToken = token ? token.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '') : '';
+      return {
+        'Authorization': cleanToken ? `Bearer ${cleanToken}` : '',
+        'Accept': 'application/json'
+      };
+    }
+
+    function handleUnauthorizedResponse() {
+      if (typeof showToast === 'function') {
+        showToast('انتهت صلاحية الجلسة، يرجى إعادة تسجيل الدخول لمتابعة العمليات', 'warning');
+      } else {
+        alert('انتهت صلاحية الجلسة، يرجى إعادة تسجيل الدخول');
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.getApiHeaders = getApiHeaders;
+      window.handleUnauthorizedResponse = handleUnauthorizedResponse;
+    }
 
     function escapeHtml(str) {
       if (!str) return '';
@@ -160,103 +193,8 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
       return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
     }
 
-    const DEFAULT_MOCK_JOBS = [
-      {
-        id: 'JOB-2026-9041',
-        createdAt: 'منذ ساعتين',
-        timestamp: Date.now() - 7200000,
-        shelfLocation: {
-          zone: 'Zone A',
-          aisle: 'Aisle 1',
-          rack: 'Rack 2',
-          level: 'Shelf 2',
-          label: 'Zone A > Aisle 1 > Rack 2 > Shelf 2'
-        },
-        thumbnail: 'assets/placeholder-product.png',
-        imagesCount: 1,
-        status: 'Review Required',
-        detectedCount: 4,
-        confidence: 97.5,
-        extractedItems: [
-          {
-            id: 'ITEM-1',
-            proposed_name: 'حليب نادك كامل الدسم 1 لتر',
-            name: 'حليب نادك كامل الدسم 1 لتر',
-            estimated_price: 6.50,
-            price: 6.50,
-            barcode_detected: '6281007010012',
-            sku: '6281007010012',
-            category_hint: 'الألبان والمبردات',
-            category: 'الألبان والمبردات',
-            confidence_score: 0.98,
-            confidence: 98,
-            box: { x: 12, y: 15, w: 22, h: 42 }
-          },
-          {
-            id: 'ITEM-2',
-            proposed_name: 'لبن المراعي طازج 2 لتر',
-            name: 'لبن المراعي طازج 2 لتر',
-            estimated_price: 11.00,
-            price: 11.00,
-            barcode_detected: '6281007020028',
-            sku: '6281007020028',
-            category_hint: 'الألبان والمبردات',
-            category: 'الألبان والمبردات',
-            confidence_score: 0.96,
-            confidence: 96,
-            box: { x: 38, y: 18, w: 24, h: 40 }
-          },
-          {
-            id: 'ITEM-3',
-            proposed_name: 'زبادي المراعي كامل الدسم 500 جم',
-            name: 'زبادي المراعي كامل الدسم 500 جم',
-            estimated_price: 4.50,
-            price: 4.50,
-            barcode_detected: '6281007030035',
-            sku: '6281007030035',
-            category_hint: 'الألبان والمبردات',
-            category: 'الألبان والمبردات',
-            confidence_score: 0.97,
-            confidence: 97,
-            box: { x: 65, y: 22, w: 20, h: 36 }
-          },
-          {
-            id: 'ITEM-4',
-            proposed_name: 'جبنة شيدر كرافت 100 جم',
-            name: 'جبنة شيدر كرافت 100 جم',
-            estimated_price: 8.75,
-            price: 8.75,
-            barcode_detected: '7622210110041',
-            sku: '7622210110041',
-            category_hint: 'الأجبان',
-            category: 'الأجبان',
-            confidence_score: 0.99,
-            confidence: 99,
-            box: { x: 25, y: 62, w: 26, h: 30 }
-          }
-        ]
-      },
-      {
-        id: 'JOB-2026-8910',
-        createdAt: 'أمس 04:30 م',
-        timestamp: Date.now() - 86400000,
-        shelfLocation: {
-          zone: 'Zone B',
-          aisle: 'Aisle 3',
-          rack: 'Rack 1',
-          level: 'Shelf 1',
-          label: 'Zone B > Aisle 3 > Rack 1 > Shelf 1'
-        },
-        thumbnail: 'assets/placeholder-product.png',
-        imagesCount: 2,
-        status: 'Completed',
-        detectedCount: 6,
-        confidence: 99.1,
-        extractedItems: []
-      }
-    ];
-
-    const DEFAULT_JOBS = DEFAULT_MOCK_JOBS;
+    const DEFAULT_MOCK_JOBS = [];
+    const DEFAULT_JOBS = [];
 
     let jobsList = [];
     let uploadedFiles = [];
@@ -365,9 +303,13 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
       const level = job.shelf || job.shelf_level || job.shelfLocation?.level || 'Shelf 1';
       const label = job.shelfLocation?.label || `${zone} > ${aisle} > ${rack} > ${level}`;
 
+      const validImageSrc = (job.image_url && !String(job.image_url).startsWith('JOB-'))
+        ? job.image_url
+        : (job.imageDataUrl || ((job.thumbnail && !String(job.thumbnail).startsWith('JOB-')) ? job.thumbnail : 'assets/placeholder-product.png'));
+
       return {
-        id: job.id || `JOB-${Date.now()}`,
-        serverId: job.serverId || job.id,
+        id: job.id || job.job_id || `JOB-${Date.now()}`,
+        serverId: job.serverId || job.id || job.job_id,
         createdAt: job.created_at || job.createdAt || 'الآن',
         timestamp: job.timestamp || (job.created_at ? new Date(job.created_at).getTime() : Date.now()),
         shelfLocation: {
@@ -377,7 +319,8 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
           level,
           label
         },
-        thumbnail: resolveShelfImageUrl(job.image_url || job.thumbnail || SAMPLE_SHELF_IMAGE, zone),
+        image_url: validImageSrc,
+        thumbnail: resolveShelfImageUrl(validImageSrc, zone),
         imagesCount: job.imagesCount || 1,
         status: (job.status === 'REVIEW_REQUIRED' || job.status === 'Review Required') ? 'Review Required' :
                 (job.status === 'COMPLETED' || job.status === 'Completed') ? 'Completed' :
@@ -392,42 +335,30 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
 
     async function loadShelfJobs() {
       const { storeId, token } = getStoreContext();
+      const tbody = document.getElementById('jobs-table-body');
+      const emptyState = document.getElementById('jobs-empty-state');
 
-      // 1. Initial render from localStorage or default mock jobs
-      let localJobs = [];
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) localJobs = JSON.parse(stored);
-      } catch (e) {}
-
-      if (Array.isArray(localJobs) && localJobs.length > 0) {
-        jobsList = localJobs.map(normalizeJob).filter(Boolean);
-        // Clean any stale or broken thumbnails from previous sessions
-        let modified = false;
-        jobsList.forEach(j => {
-          const resolved = resolveShelfImageUrl(j.thumbnail, j.shelfLocation?.zone);
-          if (j.thumbnail !== resolved) {
-            j.thumbnail = resolved;
-            modified = true;
-          }
-        });
-        if (modified) saveJobs();
-      } else {
-        jobsList = DEFAULT_MOCK_JOBS.slice().map(normalizeJob).filter(Boolean);
+      // Clear tbody and show clean skeleton/spinner immediately on page start
+      if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-slate-400 font-medium"><div class="inline-block animate-spin w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full mr-2"></div> جارٍ تحميل سجل العمليات...</td></tr>';
+      }
+      if (emptyState) {
+        emptyState.classList.add('hidden');
       }
 
-      renderJobsTable();
-      updateKPIs();
+      const getDeletedBlacklist = () => {
+        try {
+          return new Set(JSON.parse(localStorage.getItem('dawwer_deleted_job_ids') || '[]'));
+        } catch (e) {
+          return new Set();
+        }
+      };
 
-      // 2. Non-blocking fetch to FastAPI on Render ONLY if user has a valid authorization token
-      if (!token) {
-        return;
-      }
-
+      // Fetch from GET /api/v1/stores/{store_id}/shelf-jobs
       try {
         const headers = {
           'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
 
         const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -442,16 +373,38 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         if (response.ok) {
           const data = await response.json();
           const serverJobs = Array.isArray(data) ? data : (data?.data || data?.jobs || []);
-          if (Array.isArray(serverJobs) && serverJobs.length > 0) {
-            jobsList = serverJobs.map(normalizeJob).filter(Boolean);
-            saveJobs();
-            renderJobsTable();
-            updateKPIs();
-          }
+          const blacklist = getDeletedBlacklist();
+          jobsList = (Array.isArray(serverJobs) ? serverJobs : [])
+            .map(normalizeJob)
+            .filter(Boolean)
+            .filter(j => !blacklist.has(j.id) && !blacklist.has(j.serverId) && !blacklist.has(j.job_id));
+          saveJobs();
+          renderJobsTable();
+          updateKPIs();
+          return;
         }
       } catch (err) {
-        console.warn('[AI Capture] Non-blocking fetch to shelf-jobs completed with note:', err);
+        console.warn('[AI Capture] Fetch shelf-jobs error/note:', err);
       }
+
+      // If backend fetch was not successful, only render real non-mock jobs from localStorage
+      let localJobs = [];
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) localJobs = JSON.parse(stored);
+      } catch (e) {}
+
+      const blacklist = getDeletedBlacklist();
+      localJobs = (Array.isArray(localJobs) ? localJobs : []).filter(j => 
+        j && 
+        !String(j.id).startsWith('JOB-2026-9041') && 
+        !String(j.id).startsWith('JOB-2026-8910') && 
+        !String(j.id).includes('1938')
+      );
+
+      jobsList = localJobs.map(normalizeJob).filter(Boolean).filter(j => !blacklist.has(j.id) && !blacklist.has(j.serverId) && !blacklist.has(j.job_id));
+      renderJobsTable();
+      updateKPIs();
     }
 
     const loadJobs = loadShelfJobs;
@@ -960,203 +913,7 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
     }
 
     function generateExtractedItemsForZone(jobId, zoneVal) {
-      const z = (zoneVal || '').toLowerCase();
-      if (z.includes('zone b') || z.includes('مخبوزات') || z.includes('b')) {
-        return [
-          {
-            id: `ITEM-${jobId}-1`,
-            proposed_name: 'خبز توست لوزين أبيض 600 جم',
-            name: 'خبز توست لوزين أبيض 600 جم',
-            price: 5.00,
-            estimated_price: 5.00,
-            sku: '6281017001021',
-            barcode_detected: '6281017001021',
-            category: 'المخبوزات',
-            category_hint: 'المخبوزات',
-            confidence: 99,
-            confidence_score: 0.99,
-            box: { x: 10, y: 15, w: 22, h: 38 }
-          },
-          {
-            id: `ITEM-${jobId}-2`,
-            proposed_name: 'كرواسون سفن دايز كاكاو 55 جم',
-            name: 'كرواسون سفن دايز كاكاو 55 جم',
-            price: 2.50,
-            estimated_price: 2.50,
-            sku: '6281017002045',
-            barcode_detected: '6281017002045',
-            category: 'المخبوزات',
-            category_hint: 'المخبوزات',
-            confidence: 97,
-            confidence_score: 0.97,
-            box: { x: 38, y: 15, w: 24, h: 38 }
-          },
-          {
-            id: `ITEM-${jobId}-3`,
-            proposed_name: 'معمول بالتمر حلواني 300 جم',
-            name: 'معمول بالتمر حلواني 300 جم',
-            price: 9.50,
-            estimated_price: 9.50,
-            sku: '6281017003062',
-            barcode_detected: '6281017003062',
-            category: 'الحلويات والمعمول',
-            category_hint: 'الحلويات والمعمول',
-            confidence: 96,
-            confidence_score: 0.96,
-            box: { x: 68, y: 20, w: 22, h: 32 }
-          }
-        ];
-      } else if (z.includes('zone c') || z.includes('معلبات') || z.includes('c')) {
-        return [
-          {
-            id: `ITEM-${jobId}-1`,
-            proposed_name: 'أرز بسمتي الشعلان 5 كجم',
-            name: 'أرز بسمتي الشعلان 5 كجم',
-            price: 42.00,
-            estimated_price: 42.00,
-            sku: '6281027001011',
-            barcode_detected: '6281027001011',
-            category: 'الحبوب والأرز',
-            category_hint: 'الحبوب والأرز',
-            confidence: 99,
-            confidence_score: 0.99,
-            box: { x: 10, y: 15, w: 25, h: 42 }
-          },
-          {
-            id: `ITEM-${jobId}-2`,
-            proposed_name: 'زيت دوار الشمس عافية 1.5 لتر',
-            name: 'زيت دوار الشمس عافية 1.5 لتر',
-            price: 19.50,
-            estimated_price: 19.50,
-            sku: '6281027002032',
-            barcode_detected: '6281027002032',
-            category: 'الزيوت والدهون',
-            category_hint: 'الزيوت والدهون',
-            confidence: 98,
-            confidence_score: 0.98,
-            box: { x: 40, y: 15, w: 22, h: 40 }
-          },
-          {
-            id: `ITEM-${jobId}-3`,
-            proposed_name: 'تونة قودي خفيفة بالزيت 185 جم',
-            name: 'تونة قودي خفيفة بالزيت 185 جم',
-            price: 7.75,
-            estimated_price: 7.75,
-            sku: '6281027003055',
-            barcode_detected: '6281027003055',
-            category: 'المعلبات',
-            category_hint: 'المعلبات',
-            confidence: 97,
-            confidence_score: 0.97,
-            box: { x: 68, y: 22, w: 22, h: 30 }
-          }
-        ];
-      } else if (z.includes('zone d') || z.includes('مشروبات') || z.includes('d')) {
-        return [
-          {
-            id: `ITEM-${jobId}-1`,
-            proposed_name: 'مياه صفا مكة 330 مل كرتون 40 عبوة',
-            name: 'مياه صفا مكة 330 مل كرتون 40 عبوة',
-            price: 17.50,
-            estimated_price: 17.50,
-            sku: '6281037001018',
-            barcode_detected: '6281037001018',
-            category: 'المياه والمشروبات',
-            category_hint: 'المياه والمشروبات',
-            confidence: 99,
-            confidence_score: 0.99,
-            box: { x: 10, y: 15, w: 26, h: 40 }
-          },
-          {
-            id: `ITEM-${jobId}-2`,
-            proposed_name: 'عصير برتقال فلوريدا ناتشورال 900 مل',
-            name: 'عصير برتقال فلوريدا ناتشورال 900 مل',
-            price: 14.00,
-            estimated_price: 14.00,
-            sku: '6281037002042',
-            barcode_detected: '6281037002042',
-            category: 'المشروبات والعصائر',
-            category_hint: 'المشروبات والعصائر',
-            confidence: 97,
-            confidence_score: 0.97,
-            box: { x: 42, y: 15, w: 22, h: 40 }
-          },
-          {
-            id: `ITEM-${jobId}-3`,
-            proposed_name: 'كينزا كولا 330 مل عبوة معدنية',
-            name: 'كينزا كولا 330 مل عبوة معدنية',
-            price: 2.50,
-            estimated_price: 2.50,
-            sku: '6281037003079',
-            barcode_detected: '6281037003079',
-            category: 'المشروبات الغازية',
-            category_hint: 'المشروبات الغازية',
-            confidence: 98,
-            confidence_score: 0.98,
-            box: { x: 70, y: 20, w: 18, h: 34 }
-          }
-        ];
-      }
-
-      // Default Zone A (Dairy & Cheeses)
-      return [
-        {
-          id: `ITEM-${jobId}-1`,
-          proposed_name: 'حليب نادك كامل الدسم 1 لتر',
-          name: 'حليب نادك كامل الدسم 1 لتر',
-          price: 6.50,
-          estimated_price: 6.50,
-          sku: '6281007010012',
-          barcode_detected: '6281007010012',
-          category: 'الألبان والمبردات',
-          category_hint: 'الألبان والمبردات',
-          confidence: 98,
-          confidence_score: 0.98,
-          box: { x: 10, y: 15, w: 22, h: 38 }
-        },
-        {
-          id: `ITEM-${jobId}-2`,
-          proposed_name: 'عصير برتقال المراعي 1.4 لتر',
-          name: 'عصير برتقال المراعي 1.4 لتر',
-          price: 11.00,
-          estimated_price: 11.00,
-          sku: '6281007020054',
-          barcode_detected: '6281007020054',
-          category: 'المشروبات والعصائر',
-          category_hint: 'المشروبات والعصائر',
-          confidence: 96,
-          confidence_score: 0.96,
-          box: { x: 38, y: 15, w: 24, h: 38 }
-        },
-        {
-          id: `ITEM-${jobId}-3`,
-          proposed_name: 'زبادي يوناني ندى سادة 160 جم',
-          name: 'زبادي يوناني ندى سادة 160 جم',
-          price: 4.25,
-          estimated_price: 4.25,
-          sku: '6281007030128',
-          barcode_detected: '6281007030128',
-          category: 'الألبان والمبردات',
-          category_hint: 'الألبان والمبردات',
-          confidence: 97,
-          confidence_score: 0.97,
-          box: { x: 68, y: 20, w: 22, h: 32 }
-        },
-        {
-          id: `ITEM-${jobId}-4`,
-          proposed_name: 'جبنة شيدر كرافت 100 جم',
-          name: 'جبنة شيدر كرافت 100 جم',
-          price: 8.75,
-          estimated_price: 8.75,
-          sku: '7622210110041',
-          barcode_detected: '7622210110041',
-          category: 'الأجبان',
-          category_hint: 'الأجبان',
-          confidence: 99,
-          confidence_score: 0.99,
-          box: { x: 25, y: 60, w: 28, h: 30 }
-        }
-      ];
+      return [];
     }
 
     async function startAIExtraction() {
@@ -1224,7 +981,7 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          <span id="btn-extraction-status">جاري رفع الصور والتحليل بالذكاء الاصطناعي...</span>
+          <span id="btn-extraction-status">جارٍ فحص صورة الرف واستخراج الأصناف بالذكاء الاصطناعي...</span>
         `;
       }
 
@@ -1238,26 +995,24 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         if (statusSpan && title) statusSpan.textContent = title;
       }
 
-      setProgressState(20, 'جاري رفع صور الرف إلى الخادم...', `يتم إرسال صورة الرف (${zoneVal} > ${aisleVal})...`);
+      setProgressState(20, 'جارٍ فحص صورة الرف واستخراج الأصناف بالذكاء الاصطناعي...', `يتم إرسال صورة الرف (${zoneVal} > ${aisleVal}) للتحليل البصري الذكي...`);
 
-      // 5. Build FormData
+      // 5. Build FormData matching FastAPI documentation
       const formData = new FormData();
-      formData.append('image', selectedImageFile, primaryFileName);
       formData.append('file', selectedImageFile, primaryFileName);
+      formData.append('image', selectedImageFile, primaryFileName);
       formData.append('zone', zoneVal);
+      formData.append('zone_id', zoneVal);
       formData.append('aisle', aisleVal);
+      formData.append('aisle_id', aisleVal);
       formData.append('rack', rackVal);
-      formData.append('shelf_level', shelfLevelVal);
+      formData.append('rack_id', rackVal);
       formData.append('shelf', shelfLevelVal);
+      formData.append('shelf_level', shelfLevelVal);
       formData.append('store_id', storeId);
       formData.append('storeId', storeId);
 
-      const uploadHeaders = {
-        'Accept': 'application/json'
-      };
-      if (token) {
-        uploadHeaders['Authorization'] = `Bearer ${token}`;
-      }
+      const uploadHeaders = getApiHeaders();
 
       // Check if user has an active authentication token
       if (!token) {
@@ -1305,7 +1060,8 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         jobsList.unshift(simJob);
         saveJobs();
         try {
-          sessionStorage.setItem('dawwer_current_review_job', JSON.stringify(simJob));
+          sessionStorage.setItem('current_shelf_job', JSON.stringify(simJob));
+        sessionStorage.setItem('dawwer_current_review_job', JSON.stringify(simJob));
           sessionStorage.setItem('dawwer_current_draft_products', JSON.stringify(simItems));
         } catch (e) {}
 
@@ -1313,13 +1069,19 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         updateKPIs();
         clearUploadedImages();
 
-        showToast(
-          'تم استخراج الأصناف بنجاح (معاينة تجريبية)',
-          `تم التعرف على ${simItems.length} أصناف وتجهيزها للمراجعة والاعتماد.`,
-          'success'
-        );
+        const localImageSrc = uploadedFiles[0]?.dataUrl || primaryThumbnail;
+        localStorage.setItem('dawwer_current_job', JSON.stringify(simJob));
+        localStorage.setItem('dawwer_active_job_id', simJob.id || simJob.job_id);
+        if (localImageSrc) {
+          localStorage.setItem('dawwer_current_shelf_image', localImageSrc);
+          sessionStorage.setItem('current_shelf_image', localImageSrc);
+          localStorage.setItem('current_shelf_image', localImageSrc);
+        }
 
-        openReviewModal(simJob.id);
+        showToast('تم استخراج المنتجات بنجاح! جارٍ تحويلك لمراجعة المسودة...', 'success');
+        setTimeout(() => {
+          window.location.href = `review-drafts.html?job_id=${encodeURIComponent(simJob.id || simJob.job_id)}`;
+        }, 500);
         return;
       }
 
@@ -1351,44 +1113,110 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
           if (timer) clearTimeout(timer);
         });
 
+        if (response.status === 401) {
+          clearInterval(progressTimer);
+          handleUnauthorizedResponse();
+          return;
+        }
+
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
         const resJson = await response.json();
-        const serverJob = resJson?.data || resJson;
+        let serverJob = resJson?.data || resJson;
+
+        const resolvedJobId = serverJob?.id || serverJob?.job_id || resJson?.id || resJson?.job_id || `JOB-${Date.now().toString().slice(-4)}`;
+
+        // Helper function to extract candidate items from any backend response structure
+        function extractCandidateItems(target) {
+          if (!target) return [];
+          const candidateArrays = [
+            target?.extracted_items,
+            target?.draft_products,
+            target?.products,
+            target?.items,
+            target?.extracted_drafts,
+            target?.data?.extracted_items,
+            target?.data?.draft_products,
+            target?.data?.products,
+            target?.data?.items,
+            Array.isArray(target) ? target : null
+          ];
+          for (const cand of candidateArrays) {
+            if (Array.isArray(cand) && cand.length > 0) return cand;
+          }
+          return [];
+        }
+
+        let rawDetected = extractCandidateItems(serverJob) || extractCandidateItems(resJson);
+        let jobStatus = (serverJob?.status || resJson?.status || '').toLowerCase();
+
+        // 1. Check if backend returned an asynchronous job in 'processing' or 'pending' status
+        const isAsyncPending = jobStatus === 'processing' || jobStatus === 'pending' || (rawDetected.length === 0 && jobStatus !== 'completed' && jobStatus !== 'failed');
+
+        if (isAsyncPending) {
+          // Implement clean polling loop checking GET /api/v1/stores/{store_id}/shelf-jobs/{job_id} every 1.5 seconds
+          let pollAttempts = 0;
+          const maxPolls = 30; // 30 * 1.5s = 45 seconds
+
+          await new Promise((resolve) => {
+            const pollInterval = setInterval(async () => {
+              pollAttempts++;
+              const curPct = Math.min(92, 35 + pollAttempts * 4);
+              setProgressState(
+                curPct,
+                'جارٍ فحص صورة الرف واستخراج الأصناف بالذكاء الاصطناعي...',
+                `كشف المنتجات وقراءة بطاقات الأسعار OCR (محاولة ${pollAttempts})...`
+              );
+
+              try {
+                const pollUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/shelf-jobs/${encodeURIComponent(resolvedJobId)}`;
+                const pollRes = await fetch(pollUrl, { headers: getApiHeaders() });
+                if (pollRes.ok) {
+                  const pollData = await pollRes.json();
+                  const updatedJob = pollData?.data || pollData;
+                  const updatedStatus = (updatedJob?.status || pollData?.status || '').toLowerCase();
+                  let updatedItems = extractCandidateItems(updatedJob) || extractCandidateItems(pollData);
+
+                  // If still empty but status is completed, query drafts endpoint directly
+                  if (updatedItems.length === 0 && (updatedStatus === 'completed' || pollAttempts > 3)) {
+                    try {
+                      const draftsUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/draft-products?shelf_job_id=${encodeURIComponent(resolvedJobId)}&limit=100`;
+                      const dRes = await fetch(draftsUrl, { headers: getApiHeaders() });
+                      if (dRes.ok) {
+                        const dJson = await dRes.json();
+                        const dItems = Array.isArray(dJson) ? dJson : (dJson?.data || []);
+                        if (Array.isArray(dItems) && dItems.length > 0) {
+                          updatedItems = dItems;
+                        }
+                      }
+                    } catch (e) {}
+                  }
+
+                  if (updatedStatus === 'completed' || updatedStatus === 'review required' || updatedItems.length > 0) {
+                    clearInterval(pollInterval);
+                    serverJob = updatedJob;
+                    rawDetected = updatedItems;
+                    jobStatus = updatedStatus || 'completed';
+                    resolve();
+                    return;
+                  }
+                }
+              } catch (pollErr) {
+                console.warn('[AI Capture] Polling job note:', pollErr);
+              }
+
+              if (pollAttempts >= maxPolls) {
+                clearInterval(pollInterval);
+                resolve();
+              }
+            }, 1500);
+          });
+        }
 
         clearInterval(progressTimer);
-        setProgressState(100, 'اكتملت المعالجة بنجاح!', 'تم تحليل الرف بنجاح');
-
-        const resolvedJobId = serverJob?.id || serverJob?.job_id || `JOB-${Date.now().toString().slice(-4)}`;
-
-        // Inspect actual backend JSON structure across all potential candidate keys
-        let rawDetected = null;
-        const candidateArrays = [
-          serverJob?.extracted_items,
-          serverJob?.draft_products,
-          serverJob?.products,
-          serverJob?.items,
-          serverJob?.extracted_drafts,
-          resJson?.draft_products,
-          resJson?.products,
-          resJson?.items,
-          resJson?.extracted_items,
-          resJson?.data?.draft_products,
-          resJson?.data?.products,
-          resJson?.data?.items,
-          resJson?.data?.extracted_items,
-          Array.isArray(resJson) ? resJson : null,
-          Array.isArray(serverJob) ? serverJob : null
-        ];
-
-        for (const cand of candidateArrays) {
-          if (Array.isArray(cand) && cand.length > 0) {
-            rawDetected = cand;
-            break;
-          }
-        }
+        setProgressState(100, 'اكتملت المعالجة بنجاح!', 'تم تحليل الرف وتجهيز الأصناف للمراجعة');
 
         let extractedItems = [];
         if (Array.isArray(rawDetected) && rawDetected.length > 0) {
@@ -1446,8 +1274,7 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
             };
           });
         } else {
-          // Only fallback if the server explicitly returned an empty list
-          extractedItems = generateExtractedItemsForZone(resolvedJobId, zoneVal);
+          extractedItems = [];
         }
 
         const newJob = {
@@ -1475,6 +1302,7 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         saveJobs();
 
         try {
+          sessionStorage.setItem('current_shelf_job', JSON.stringify(newJob));
           sessionStorage.setItem('dawwer_current_review_job', JSON.stringify(newJob));
           sessionStorage.setItem('dawwer_current_draft_products', JSON.stringify(extractedItems));
         } catch (e) {}
@@ -1483,8 +1311,19 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         updateKPIs();
         clearUploadedImages();
 
-        showToast('اكتمل استخراج الرف بنجاح!', `تم استخراج ${extractedItems.length} صنفاً بنجاح عبر نموذج الذكاء الاصطناعي.`, 'success');
-        openReviewModal(newJob.id);
+        const localImageSrc = uploadedFiles[0]?.dataUrl || primaryThumbnail;
+        localStorage.setItem('dawwer_current_job', JSON.stringify(newJob));
+        localStorage.setItem('dawwer_active_job_id', newJob.id || newJob.job_id);
+        if (localImageSrc) {
+          localStorage.setItem('dawwer_current_shelf_image', localImageSrc);
+          sessionStorage.setItem('current_shelf_image', localImageSrc);
+          localStorage.setItem('current_shelf_image', localImageSrc);
+        }
+
+        showToast('تم استخراج المنتجات بنجاح! جارٍ تحويلك لمراجعة المسودة...', 'success');
+        setTimeout(() => {
+          window.location.href = `review-drafts.html?job_id=${encodeURIComponent(newJob.id || newJob.job_id)}`;
+        }, 500);
 
       } catch (err) {
         clearInterval(progressTimer);
@@ -1519,13 +1358,22 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         updateKPIs();
         clearUploadedImages();
 
-        showToast(
-          'تم استخراج الأصناف بنجاح',
-          `تم التعرف على ${fallbackItems.length} أصناف من صورة الرف وتجهيزها للمراجعة.`,
-          'info'
-        );
+        const fallbackImageSrc = uploadedFiles[0]?.dataUrl || primaryThumbnail;
+        sessionStorage.setItem('current_shelf_job', JSON.stringify(fallbackJob));
+        sessionStorage.setItem('dawwer_current_review_job', JSON.stringify(fallbackJob));
+        sessionStorage.setItem('dawwer_current_draft_products', JSON.stringify(fallbackItems));
+        localStorage.setItem('dawwer_current_job', JSON.stringify(fallbackJob));
+        localStorage.setItem('dawwer_active_job_id', fallbackJob.id || fallbackJob.job_id);
+        if (fallbackImageSrc) {
+          localStorage.setItem('dawwer_current_shelf_image', fallbackImageSrc);
+          sessionStorage.setItem('current_shelf_image', fallbackImageSrc);
+          localStorage.setItem('current_shelf_image', fallbackImageSrc);
+        }
 
-        openReviewModal(fallbackJob.id);
+        showToast('تم استخراج المنتجات بنجاح! جارٍ تحويلك لمراجعة المسودة...', 'success');
+        setTimeout(() => {
+          window.location.href = `review-drafts.html?job_id=${encodeURIComponent(fallbackJob.id || fallbackJob.job_id)}`;
+        }, 500);
 
       } finally {
         if (progressContainer) progressContainer.classList.add('hidden');
@@ -1563,15 +1411,25 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
     function renderJobsTable() {
       const tbody = document.getElementById('jobs-table-body');
       const emptyState = document.getElementById('jobs-empty-state');
-      const searchVal = (document.getElementById('search-jobs').value || '').trim().toLowerCase();
+      const searchVal = (document.getElementById('search-jobs')?.value || '').trim().toLowerCase();
+
+      let deletedIds = [];
+      try {
+        deletedIds = JSON.parse(localStorage.getItem('dawwer_deleted_job_ids') || '[]');
+      } catch (e) {}
+      const blacklist = new Set(deletedIds);
 
       let filtered = jobsList.filter(job => {
+        if (!job) return false;
+        if (blacklist.has(job.id) || blacklist.has(job.job_id) || blacklist.has(job.serverId)) {
+          return false;
+        }
         if (currentFilter !== 'all' && job.status !== currentFilter) {
           return false;
         }
         if (searchVal) {
-          const matchId = job.id.toLowerCase().includes(searchVal);
-          const matchLoc = job.shelfLocation.label.toLowerCase().includes(searchVal);
+          const matchId = (job.id || '').toLowerCase().includes(searchVal);
+          const matchLoc = (job.shelfLocation?.label || '').toLowerCase().includes(searchVal);
           return matchId || matchLoc;
         }
         return true;
@@ -1580,6 +1438,8 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
       if (filtered.length === 0) {
         tbody.innerHTML = '';
         emptyState.classList.remove('hidden');
+        const emptyTitle = emptyState.querySelector('h4');
+        if (emptyTitle) emptyTitle.textContent = 'لا توجد عمليات مسح سابقة';
         return;
       }
 
@@ -1616,7 +1476,7 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
             </span>
           `;
           actionBtn = `
-            <a href="review-drafts.html?jobId=${job.id}" class="inline-flex items-center gap-1.5 bg-[#153f2d] hover:bg-[#0f2d20] text-white font-bold px-3.5 py-1.5 rounded-xl shadow-xs transition active:scale-95 text-xs">
+            <a href="review-drafts.html?job_id=${encodeURIComponent(job.id || job.job_id || '')}" class="inline-flex items-center gap-1.5 bg-[#153f2d] hover:bg-[#0f2d20] text-white font-bold px-3.5 py-1.5 rounded-xl shadow-xs transition active:scale-95 text-xs">
               <svg class="w-3.5 h-3.5 text-[#d6a950]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
               <span>مراجعة واعتماد الأصناف</span>
             </a>
@@ -1629,7 +1489,7 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
             </span>
           `;
           actionBtn = `
-            <a href="review-drafts.html?jobId=${job.id}" class="inline-flex items-center gap-1.5 border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-xl transition text-xs">
+            <a href="review-drafts.html?job_id=${encodeURIComponent(job.id || job.job_id || '')}" class="inline-flex items-center gap-1.5 border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-xl transition text-xs">
               <span>عرض النتائج</span>
             </a>
           `;
@@ -1646,6 +1506,10 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
           `;
         }
 
+        const validImageSrc = (job.image_url && !String(job.image_url).startsWith('JOB-'))
+          ? job.image_url
+          : (job.imageDataUrl || ((job.thumbnail && !String(job.thumbnail).startsWith('JOB-')) ? job.thumbnail : 'assets/placeholder-product.png'));
+
         return `
           <tr class="hover:bg-slate-50/80 transition">
             <td class="py-4 px-6">
@@ -1654,7 +1518,7 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
             </td>
             <td class="py-4 px-4">
               <div class="w-14 h-10 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 relative group cursor-pointer" data-action="review-job" data-id="${job.id}">
-                <img src="${job.thumbnail}" alt="رف" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='assets/images/sample_shelf.jpg';">
+                <img src="${validImageSrc}" alt="رف" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='assets/placeholder-product.png';">
                 <div class="absolute inset-0 bg-slate-950/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 </div>
@@ -1722,29 +1586,76 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
       }
     }
 
-    async function deleteJob(jobId) {
-      if (!confirm('هل أنت متأكد من حذف هذه العملية؟')) return;
+    async function deleteShelfJob(jobId, rowElement = null) {
+      if (!confirm('هل أنت متأكد من حذف هذه العملية من السجل؟')) return;
 
-      const { storeId, token } = getStoreContext();
+      const { storeId } = getStoreContext();
+      const headers = getApiHeaders();
 
-      jobsList = jobsList.filter(j => j.id !== jobId && j.serverId !== jobId);
-      saveJobs();
-      renderJobsTable();
-      updateKPIs();
-      showToast('تم حذف العملية', `تم حذف العملية ${jobId} بنجاح من السجل`, 'info');
+      // Guard: avoid sending unauthenticated DELETE request that is guaranteed to fail with 401
+      if (!headers.Authorization) {
+        handleUnauthorizedResponse();
+        return;
+      }
 
       try {
-        const headers = { 'Accept': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
-        await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/shelf-jobs/${encodeURIComponent(jobId)}`, {
+        const response = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/shelf-jobs/${encodeURIComponent(jobId)}`, {
           method: 'DELETE',
-          headers
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json'
+          }
         });
+
+        if (response.status === 401) {
+          handleUnauthorizedResponse();
+          return;
+        }
+
+        // Proceed to delete the job locally if response.ok OR response.status === 404
+        if (response.ok || response.status === 404) {
+          // 1. Remove from localStorage
+          let localJobs = [];
+          try {
+            localJobs = JSON.parse(localStorage.getItem('dawwer_ai_extraction_jobs') || localStorage.getItem(STORAGE_KEY) || '[]');
+          } catch (e) {}
+          localJobs = localJobs.filter(j => (j.id !== jobId && j.job_id !== jobId && j.serverId !== jobId));
+          localStorage.setItem('dawwer_ai_extraction_jobs', JSON.stringify(localJobs));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(localJobs));
+
+          // 2. Maintain a local deleted IDs blacklist so it never reappears on reload
+          let deletedIds = [];
+          try {
+            deletedIds = JSON.parse(localStorage.getItem('dawwer_deleted_job_ids') || '[]');
+          } catch (e) {}
+          if (!deletedIds.includes(jobId)) {
+            deletedIds.push(jobId);
+            localStorage.setItem('dawwer_deleted_job_ids', JSON.stringify(deletedIds));
+          }
+
+          // 3. Update in-memory list
+          jobsList = jobsList.filter(j => (j.id !== jobId && j.job_id !== jobId && j.serverId !== jobId));
+          saveJobs();
+
+          // 4. Remove the row from the DOM table
+          if (rowElement && typeof rowElement.remove === 'function') {
+            rowElement.remove();
+          } else {
+            renderJobsTable();
+          }
+          updateKPIs();
+          showToast('تم حذف العملية من السجل', 'success');
+        } else {
+          console.error('[AI Capture] Failed to delete shelf job, status:', response.status);
+          showToast('فشل في حذف العملية: ' + response.status, 'error');
+        }
       } catch (err) {
-        console.warn('[AI Capture] Non-blocking DELETE shelf-job request:', err);
+        console.error('Failed to delete shelf job:', err);
+        showToast('تعذر الاتصال بالخادم لحذف العملية', 'error');
       }
     }
+
+    const deleteJob = deleteShelfJob;
 
     function updateKPIs() {
       const totalEl = document.getElementById('kpi-total-jobs');
@@ -1779,97 +1690,33 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
     }
 
     function openReviewModal(jobId) {
-      const job = jobsList.find(j => j.id === jobId);
-      if (!job) return;
+      if (!jobId) return;
+      const job = jobsList.find(j => j.id === jobId || j.job_id === jobId || j.serverId === jobId);
+      const targetJobId = job ? (job.id || job.job_id || jobId) : jobId;
 
-      currentModalJob = job;
-
-      document.getElementById('modal-job-id').textContent = job.id;
-      document.getElementById('modal-shelf-location').textContent = 'موقع الرف: ' + (job.shelfLocation ? job.shelfLocation.label : 'الرف المحدد');
-      document.getElementById('modal-items-count').textContent = (job.extractedItems ? job.extractedItems.length : 0);
-      const modalImg = document.getElementById('modal-shelf-img');
-      if (modalImg) {
-        modalImg.onerror = function() {
-          this.onerror = null;
-          this.src = SAMPLE_SHELF_IMAGE;
-        };
-        modalImg.src = resolveShelfImageUrl(job.thumbnail || job.image_url, job.shelfLocation?.zone);
+      localStorage.setItem('dawwer_active_job_id', targetJobId);
+      if (job) {
+        const validImageSrc = (job.image_url && !String(job.image_url).startsWith('JOB-'))
+          ? job.image_url
+          : (job.imageDataUrl || ((job.thumbnail && !String(job.thumbnail).startsWith('JOB-')) ? job.thumbnail : ''));
+        if (validImageSrc) {
+          localStorage.setItem('dawwer_current_shelf_image', validImageSrc);
+          sessionStorage.setItem('current_shelf_image', validImageSrc);
+          localStorage.setItem('current_shelf_image', validImageSrc);
+        }
+        try {
+          sessionStorage.setItem('dawwer_current_review_job', JSON.stringify(job));
+          const items = job.extractedItems || job.detected_products || job.items || [];
+          sessionStorage.setItem('dawwer_current_draft_products', JSON.stringify(items));
+        } catch (e) {}
       }
 
-      const splitLink = document.getElementById('modal-split-screen-link');
-      if (splitLink) splitLink.href = `review-drafts.html?jobId=${encodeURIComponent(job.id)}`;
-      try {
-        sessionStorage.setItem('dawwer_current_review_job', JSON.stringify(job));
-        sessionStorage.setItem('dawwer_current_draft_products', JSON.stringify(job.extractedItems || []));
-      } catch (e) {}
-
-      const layer = document.getElementById('bounding-boxes-layer');
-      const listContainer = document.getElementById('modal-items-list');
-
-      if (!job.extractedItems || job.extractedItems.length === 0) {
-        layer.innerHTML = '';
-        listContainer.innerHTML = `
-          <div class="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200">
-            <div class="text-amber-700 font-bold text-xs mb-1">لا توجد أصناف مستخرجة لهذه العملية</div>
-            <p class="text-[11px] text-slate-500">لم يرجع خادم الذكاء الاصطناعي بيانات منتجات مقروءة من هذه الصورة.</p>
-          </div>
-        `;
-        document.getElementById('review-modal').classList.remove('hidden');
-        return;
-      }
-
-      layer.innerHTML = job.extractedItems.map((item, idx) => {
-        const box = item.box || { x: 10, y: 10, w: 20, h: 20 };
-        const name = item.proposed_name || item.name || `صنف #${idx + 1}`;
-        return `
-          <div 
-            class="bounding-box" 
-            id="bbox-${idx}"
-            style="top: ${box.y}%; left: ${box.x}%; width: ${box.w}%; height: ${box.h}%;"
-            data-item-idx="${idx}"
-          >
-            <div class="bounding-tag">#${idx + 1} ${name.split(' ')[0]}</div>
-          </div>
-        `;
-      }).join('');
-
-      listContainer.innerHTML = job.extractedItems.map((item, idx) => {
-        const name = item.proposed_name || item.name || `صنف #${idx + 1}`;
-        const price = item.estimated_price !== undefined ? Number(item.estimated_price) : (Number(item.price) || 0);
-        const sku = item.barcode_detected || item.sku || '-';
-        const category = item.category_hint || item.category || 'عام';
-        const confidence = item.confidence_score !== undefined
-          ? (item.confidence_score <= 1.0 ? Math.round(item.confidence_score * 100) : Math.round(item.confidence_score))
-          : (item.confidence || 98);
-        return `
-          <div id="item-row-${idx}" class="p-3.5 rounded-2xl bg-white border border-slate-200 hover:border-[#153f2d] shadow-2xs transition flex items-center justify-between gap-3">
-            <div class="flex items-center gap-3">
-              <span class="w-6 h-6 rounded-lg bg-[#edf5f0] text-[#153f2d] font-bold flex items-center justify-center text-xs shrink-0">${idx + 1}</span>
-              <div>
-                <div class="font-bold text-slate-800 text-xs">${name}</div>
-                <div class="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                  <span class="font-mono text-slate-600 font-bold">${sku}</span>
-                  <span>•</span>
-                  <span class="text-emerald-700 font-bold">${category}</span>
-                  <span>•</span>
-                  <span class="text-[#d6a950] font-black">${price.toFixed(2)} ر.س</span>
-                </div>
-              </div>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <span class="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-black">
-                ${confidence}% دقة
-              </span>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      document.getElementById('review-modal').classList.remove('hidden');
+      window.location.href = `review-drafts.html?job_id=${encodeURIComponent(targetJobId)}`;
     }
 
     function closeReviewModal() {
-      document.getElementById('review-modal').classList.add('hidden');
+      const modal = document.getElementById('review-modal');
+      if (modal) modal.classList.add('hidden');
       currentModalJob = null;
     }
 
@@ -1901,6 +1748,7 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
       const approveBtn = document.getElementById('btn-approve-extracted-job');
       const originalBtnHTML = approveBtn ? approveBtn.innerHTML : '';
       if (approveBtn) {
+        if (approveBtn.disabled) return;
         approveBtn.disabled = true;
         approveBtn.innerHTML = `
           <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -1908,120 +1756,136 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         `;
       }
 
-      const { storeId, token } = getActiveStoreContext();
-      const items = Array.isArray(currentModalJob.extractedItems) ? currentModalJob.extractedItems : [];
-      const shelfLabel = currentModalJob.shelfLocation?.label || "Aisle 1 > Shelf 2";
+      try {
+        const { storeId, token } = getActiveStoreContext();
+        const items = Array.isArray(currentModalJob.extractedItems) ? currentModalJob.extractedItems : [];
+        const shelfLabel = currentModalJob.shelfLocation?.label || "Aisle 1 > Shelf 2";
 
-      const headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      };
-
-      // 1. Loop through extracted items and push each approved item to the backend catalog
-      for (const item of items) {
-        const payload = {
-          name: item.name || item.proposed_name || 'صنف جديد',
-          product_name: item.name || item.proposed_name || 'صنف جديد',
-          price: Number(item.price !== undefined ? item.price : (item.estimated_price || 0)),
-          barcode: item.sku || item.barcode_detected || null,
-          store_sku: item.sku || item.barcode_detected || `SKU-${Date.now().toString().slice(-6)}`,
-          category: item.category || item.category_hint || "عام",
-          shelf_location: shelfLabel,
-          stock_quantity: 10,
-          quantity: 10,
-          stock_status: "IN_STOCK",
-          zone: currentModalJob.shelfLocation?.zone || "المنطقة أ",
-          aisle: currentModalJob.shelfLocation?.aisle || "01",
-          rack: currentModalJob.shelfLocation?.rack || "R1",
-          shelf: currentModalJob.shelfLocation?.level || "1"
+        const headers = {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
 
-        try {
-          await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(payload)
-          });
-        } catch (e) {
-          console.warn('[AI Capture] Product create note:', e);
+        // 1. Loop through extracted items and push each approved item to the backend catalog
+        for (const item of items) {
+          const payload = {
+            name: item.name || item.proposed_name || 'صنف جديد',
+            product_name: item.name || item.proposed_name || 'صنف جديد',
+            price: Number(item.price !== undefined ? item.price : (item.estimated_price || 0)),
+            barcode: item.sku || item.barcode_detected || null,
+            store_sku: item.sku || item.barcode_detected || `SKU-${Date.now().toString().slice(-6)}`,
+            category: item.category || item.category_hint || "عام",
+            shelf_location: shelfLabel,
+            stock_quantity: 10,
+            quantity: 10,
+            stock_status: "IN_STOCK",
+            zone: currentModalJob.shelfLocation?.zone || "المنطقة أ",
+            aisle: currentModalJob.shelfLocation?.aisle || "01",
+            rack: currentModalJob.shelfLocation?.rack || "R1",
+            shelf: currentModalJob.shelfLocation?.level || "1"
+          };
+
+          try {
+            await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify(payload)
+            });
+          } catch (e) {
+            console.warn('[AI Capture] Product create note:', e);
+          }
+
+          // Alternatively / additionally, if the backend uses draft approvals:
+          const draftId = item.serverId || item.id;
+          if (draftId && !String(draftId).startsWith('ITEM-') && !String(draftId).startsWith('MOCK-')) {
+            try {
+              await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/draft-products/${encodeURIComponent(draftId)}/approve`, {
+                method: 'POST',
+                headers: {
+                  'Accept': 'application/json',
+                  ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                }
+              });
+            } catch (e) {}
+          }
         }
 
-        // Alternatively / additionally, if the backend uses draft approvals:
-        const draftId = item.serverId || item.id;
-        if (draftId && !String(draftId).startsWith('ITEM-') && !String(draftId).startsWith('MOCK-')) {
-          try {
-            await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/draft-products/${encodeURIComponent(draftId)}/approve`, {
+        // Also trigger batch approve if items exist
+        try {
+          const draftIds = items.map(it => it.serverId || it.id).filter(id => id && !String(id).startsWith('ITEM-'));
+          if (draftIds.length > 0) {
+            await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/draft-products/batch-approve`, {
               method: 'POST',
-              headers: {
-                'Accept': 'application/json',
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-              }
+              headers,
+              body: JSON.stringify({ draft_ids: draftIds })
             });
-          } catch (e) {}
+          }
+        } catch (e) {}
+
+        // Synchronize into local catalog storage so catalog.html immediately shows them
+        try {
+          const CATALOG_STORAGE_KEY = 'dawwer_merchant_catalog_products';
+          const stored = localStorage.getItem(CATALOG_STORAGE_KEY);
+          const catalog = stored ? JSON.parse(stored) : [];
+          items.forEach((it, idx) => {
+            catalog.unshift({
+              id: `prod-ai-${Date.now()}-${idx}`,
+              name: it.name || it.proposed_name,
+              sku: it.sku || it.barcode_detected || `SKU-${Date.now().toString().slice(-6)}`,
+              category: it.category || it.category_hint || 'عام',
+              price: Number(it.price !== undefined ? it.price : (it.estimated_price || 0)),
+              isAvailable: true,
+              status: 'Published',
+              location: {
+                zone: currentModalJob.shelfLocation?.zone || 'المنطقة أ',
+                aisle: `ممر ${currentModalJob.shelfLocation?.aisle || '01'}`,
+                rack: `R${currentModalJob.shelfLocation?.rack || '1'}`,
+                shelf: `رف ${currentModalJob.shelfLocation?.level || '1'}`
+              },
+              updatedAt: new Date().toISOString()
+            });
+          });
+          localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(catalog));
+        } catch (e) {}
+
+        // 2. Update job status to 'Completed' in localStorage
+        currentModalJob.status = 'Completed';
+        saveJobs();
+        renderJobsTable();
+        updateKPIs();
+        closeReviewModal();
+
+        // 3. Show success toast
+        showToast('تم بنجاح!', 'تم اعتماد جميع الأصناف وإضافتها إلى كتالوج المتجر بنجاح!', 'success');
+
+        // 4. Automatically redirect to the catalog after 1.5 seconds
+        setTimeout(() => {
+          window.location.href = 'catalog.html';
+        }, 1500);
+      } finally {
+        if (approveBtn && currentModalJob?.status !== 'Completed') {
+          approveBtn.disabled = false;
+          approveBtn.innerHTML = originalBtnHTML;
         }
       }
-
-      // Also trigger batch approve if items exist
-      try {
-        const draftIds = items.map(it => it.serverId || it.id).filter(id => id && !String(id).startsWith('ITEM-'));
-        if (draftIds.length > 0) {
-          await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/draft-products/batch-approve`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ draft_ids: draftIds })
-          });
-        }
-      } catch (e) {}
-
-      // Synchronize into local catalog storage so catalog.html immediately shows them
-      try {
-        const CATALOG_STORAGE_KEY = 'dawwer_merchant_catalog_products';
-        const stored = localStorage.getItem(CATALOG_STORAGE_KEY);
-        const catalog = stored ? JSON.parse(stored) : [];
-        items.forEach((it, idx) => {
-          catalog.unshift({
-            id: `prod-ai-${Date.now()}-${idx}`,
-            name: it.name || it.proposed_name,
-            sku: it.sku || it.barcode_detected || `SKU-${Date.now().toString().slice(-6)}`,
-            category: it.category || it.category_hint || 'عام',
-            price: Number(it.price !== undefined ? it.price : (it.estimated_price || 0)),
-            isAvailable: true,
-            status: 'Published',
-            location: {
-              zone: currentModalJob.shelfLocation?.zone || 'المنطقة أ',
-              aisle: `ممر ${currentModalJob.shelfLocation?.aisle || '01'}`,
-              rack: `R${currentModalJob.shelfLocation?.rack || '1'}`,
-              shelf: `رف ${currentModalJob.shelfLocation?.level || '1'}`
-            },
-            updatedAt: new Date().toISOString()
-          });
-        });
-        localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(catalog));
-      } catch (e) {}
-
-      // 2. Update job status to 'Completed' in localStorage
-      currentModalJob.status = 'Completed';
-      saveJobs();
-      renderJobsTable();
-      updateKPIs();
-      closeReviewModal();
-
-      // 3. Show success toast
-      showToast('تم بنجاح!', 'تم اعتماد جميع الأصناف وإضافتها إلى كتالوج المتجر بنجاح!', 'success');
-
-      // 4. Automatically redirect to the catalog after 1.5 seconds
-      setTimeout(() => {
-        window.location.href = 'catalog.html';
-      }, 1500);
     }
 
     function showToast(title, message, type = 'success') {
+      if (arguments.length === 2 && (message === 'success' || message === 'error' || message === 'warning' || message === 'info')) {
+        type = message;
+        message = title;
+        title = type === 'warning' ? 'تنبيه' : (type === 'error' ? 'خطأ' : 'التقاط الرفوف');
+      } else if (arguments.length === 1) {
+        message = title;
+        title = 'التقاط الرفوف';
+      }
+
       if (window.DawwerNotifications && typeof window.DawwerNotifications.show === 'function') {
         window.DawwerNotifications.show({
           title: title || 'التقاط الرفوف بالذكاء الاصطناعي',
           message: message || '',
-          type: type === 'error' ? 'error' : (type === 'info' ? 'info' : 'success')
+          type: (type === 'error' || type === 'warning' || type === 'info') ? type : 'success'
         });
         return;
       }
@@ -2030,25 +1894,31 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
       const toastMsg = document.getElementById('toast-message');
       const toastIcon = document.getElementById('toast-icon');
 
-      toastTitle.textContent = title;
-      toastMsg.textContent = message;
+      if (toastTitle) toastTitle.textContent = title;
+      if (toastMsg) toastMsg.textContent = message;
 
-      if (type === 'error') {
-        toastIcon.className = 'w-8 h-8 rounded-xl bg-red-500 text-white flex items-center justify-center font-bold shrink-0';
-        toastIcon.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
-      } else if (type === 'info') {
-        toastIcon.className = 'w-8 h-8 rounded-xl bg-indigo-500 text-white flex items-center justify-center font-bold shrink-0';
-        toastIcon.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
-      } else {
-        toastIcon.className = 'w-8 h-8 rounded-xl bg-[#d6a950] text-[#153f2d] flex items-center justify-center font-bold shrink-0';
-        toastIcon.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
+      if (toastIcon) {
+        if (type === 'error') {
+          toastIcon.className = 'w-8 h-8 rounded-xl bg-red-500 text-white flex items-center justify-center font-bold shrink-0';
+          toastIcon.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
+        } else if (type === 'warning') {
+          toastIcon.className = 'w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shrink-0';
+          toastIcon.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`;
+        } else if (type === 'info') {
+          toastIcon.className = 'w-8 h-8 rounded-xl bg-indigo-500 text-white flex items-center justify-center font-bold shrink-0';
+          toastIcon.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+        } else {
+          toastIcon.className = 'w-8 h-8 rounded-xl bg-[#d6a950] text-[#153f2d] flex items-center justify-center font-bold shrink-0';
+          toastIcon.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
+        }
       }
 
-      toast.classList.remove('hidden');
-
-      setTimeout(() => {
-        toast.classList.add('hidden');
-      }, 4000);
+      if (toast) {
+        toast.classList.remove('hidden');
+        setTimeout(() => {
+          toast.classList.add('hidden');
+        }, 4000);
+      }
     }
 
     function startCamera() {
@@ -2232,10 +2102,12 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
             retryJob(retryBtn.dataset.id);
             return;
           }
-          const delBtn = e.target.closest('[data-action="delete-job"]');
-          if (delBtn && delBtn.dataset.id) {
+          const delBtn = e.target.closest('[data-action="delete-job"], .btn-delete-job');
+          if (delBtn && (delBtn.dataset.id || delBtn.getAttribute('data-id'))) {
             e.preventDefault();
-            deleteJob(delBtn.dataset.id);
+            const rowElement = delBtn.closest('tr');
+            const jobId = delBtn.dataset.id || delBtn.getAttribute('data-id');
+            deleteShelfJob(jobId, rowElement);
             return;
           }
         };
@@ -2287,24 +2159,12 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
       window.ondrop = (e) => { e.preventDefault(); e.stopPropagation(); };
 
       // =========================================================================
-      // Phase 2: Render Default Table & KPIs Synchronously
-      // =========================================================================
+      // Phase 2: Show Initial Spinner & KPIs Synchronously
       try {
-        let localJobs = [];
-        try {
-          const stored = localStorage.getItem(STORAGE_KEY);
-          if (stored) localJobs = JSON.parse(stored);
-        } catch (e) {}
-
-        if (Array.isArray(localJobs) && localJobs.length > 0) {
-          jobsList = localJobs.map(normalizeJob).filter(Boolean);
-          // Persist sanitized thumbnails back to localStorage to eliminate stale dead URLs
-          saveJobs();
-        } else {
-          jobsList = DEFAULT_MOCK_JOBS.slice().map(normalizeJob).filter(Boolean);
+        const tbody = document.getElementById('jobs-table-body');
+        if (tbody) {
+          tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-slate-400 font-medium"><div class="inline-block animate-spin w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full mr-2"></div> جارٍ تحميل سجل العمليات...</td></tr>';
         }
-
-        renderJobsTable();
         updateKPIs();
         updateShelfPreview();
         validateInputs();
@@ -2312,29 +2172,8 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         console.error('[AI Capture] Error during Phase 2 Initial Render:', err);
       }
 
-      // =========================================================================
-      // Phase 3: Background Non-Blocking API Sync (Runs AFTER UI is 100% ready)
-      // =========================================================================
-      setTimeout(async () => {
-        try {
-          const { storeId, token } = getActiveStoreContext();
-          const res = await fetch(`https://dawwer-backend-fastapi.onrender.com/api/v1/stores/${encodeURIComponent(storeId)}/shelf-jobs`, {
-            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const remoteJobs = Array.isArray(data) ? data : (data.data || []);
-            if (Array.isArray(remoteJobs) && remoteJobs.length > 0) {
-              jobsList = remoteJobs.map(normalizeJob).filter(Boolean);
-              saveJobs();
-              renderJobsTable();
-              updateKPIs();
-            }
-          }
-        } catch (err) {
-          console.warn('[AI Capture] Background fetch ignored safely:', err);
-        }
-      }, 100);
+      // Phase 3: Fetch Real Shelf Jobs from Server
+      loadShelfJobs();
     }
 
     window.initAiCapture = initAiCapture;
@@ -2369,12 +2208,15 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
     window.approveExtractedJob = approveExtractedJob;
     window.retryJob = retryJob;
     window.deleteJob = deleteJob;
+    window.deleteShelfJob = deleteShelfJob;
     window.openReviewModal = openReviewModal;
     window.removeUploadedImage = removeUploadedImage;
     window.highlightItemRow = highlightItemRow;
     window.unhighlightItemRow = unhighlightItemRow;
     window.focusItemRow = focusItemRow;
     window.showToast = showToast;
+    window.renderJobsTable = renderJobsTable;
+    window.renderRecentJobs = renderJobsTable;
     window.escapeHtml = escapeHtml;
     window.validateInputs = validateInputs;
 

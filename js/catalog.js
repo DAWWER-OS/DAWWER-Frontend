@@ -1264,48 +1264,76 @@
           }
         }
 
-        const count = state.wizard.validRows.length;
-        if (state.wizard.currentFile) {
-          try {
-            // Construct normalized CSV content so backend parser receives clean standard columns
-            const normalizedCsvLines = [
-              'Product Name,Product SKU,Unit Price,Category,Store Zone,Aisle Name',
-              ...state.wizard.validRows.map(p =>
-                `"${(p.name || '').replace(/"/g, '""')}","${(p.sku || '').replace(/"/g, '""')}",${p.price},"${(p.category || '').replace(/"/g, '""')}","${(p.location?.zone || '').replace(/"/g, '""')}","${(p.location?.aisle || '').replace(/"/g, '""')}"`
-              )
-            ];
-            const normalizedBlob = new Blob(["\uFEFF" + normalizedCsvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-            const uploadFileName = (state.wizard.currentFile.name || 'catalog_import.csv').replace(/\.[^/.]+$/, "") + "_mapped.csv";
-            const uploadFile = new File([normalizedBlob], uploadFileName, { type: 'text/csv' });
-
-            const formData = new FormData();
-            formData.append('file', uploadFile);
-
-            const uploadToken = getAuthToken();
-            fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/catalog/bulk-import`, {
-              method: 'POST',
-              headers: {
-                ...(uploadToken ? { 'Authorization': `Bearer ${uploadToken}` } : {})
-              },
-              body: formData
-            }).then(res => {
-              if (res.ok) {
-                console.info('[Catalog] Bulk import synced to FastAPI backend.');
-              }
-            }).catch(e => {
-              console.warn('[Catalog] Bulk import backend sync note:', e);
-            });
-          } catch (e) {
-            console.warn('[Catalog] Bulk import dispatch error:', e);
-          }
+        const commitBtn = DOM.btnWizardCommit;
+        let originalCommitHtml = '';
+        if (commitBtn) {
+          if (commitBtn.disabled) return;
+          commitBtn.disabled = true;
+          originalCommitHtml = commitBtn.innerHTML;
+          commitBtn.classList.add('opacity-75', 'cursor-not-allowed');
+          commitBtn.innerHTML = `
+            <span class="inline-flex items-center gap-2">
+              <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+              <span>جاري استيراد الأصناف...</span>
+            </span>
+          `;
         }
 
-        state.products.unshift(...state.wizard.validRows);
-        saveCatalogProducts();
-        recordAuditLog('Excel Bulk Import', 'استيراد كتالوج ملف', 'CSV-BATCH', `إدراج ${count} صنف جديد بالكتالوج`, 'تمت معالجة ومطابقة أعمدة الملف بنجاح');
-        closeImportWizard();
-        renderCatalog();
-        showToast(`تم استيراد ${count} منتج بنجاح إلى كتالوج المتجر!`);
+        try {
+          const count = state.wizard.validRows.length;
+          if (state.wizard.currentFile) {
+            try {
+              // Construct normalized CSV content so backend parser receives clean standard columns
+              const normalizedCsvLines = [
+                'Product Name,Product SKU,Unit Price,Category,Store Zone,Aisle Name',
+                ...state.wizard.validRows.map(p =>
+                  `"${(p.name || '').replace(/"/g, '""')}","${(p.sku || '').replace(/"/g, '""')}",${p.price},"${(p.category || '').replace(/"/g, '""')}","${(p.location?.zone || '').replace(/"/g, '""')}","${(p.location?.aisle || '').replace(/"/g, '""')}"`
+                )
+              ];
+              const normalizedBlob = new Blob(["\uFEFF" + normalizedCsvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+              const uploadFileName = (state.wizard.currentFile.name || 'catalog_import.csv').replace(/\.[^/.]+$/, "") + "_mapped.csv";
+              const uploadFile = new File([normalizedBlob], uploadFileName, { type: 'text/csv' });
+
+              const formData = new FormData();
+              formData.append('file', uploadFile);
+
+              const uploadToken = getAuthToken();
+              fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/catalog/bulk-import`, {
+                method: 'POST',
+                headers: {
+                  ...(uploadToken ? { 'Authorization': `Bearer ${uploadToken}` } : {})
+                },
+                body: formData
+              }).then(res => {
+                if (res.ok) {
+                  console.info('[Catalog] Bulk import synced to FastAPI backend.');
+                }
+              }).catch(e => {
+                console.warn('[Catalog] Bulk import backend sync note:', e);
+              });
+            } catch (e) {
+              console.warn('[Catalog] Bulk import dispatch error:', e);
+            }
+          }
+
+          state.products.unshift(...state.wizard.validRows);
+          saveCatalogProducts();
+          recordAuditLog('Excel Bulk Import', 'استيراد كتالوج ملف', 'CSV-BATCH', `إدراج ${count} صنف جديد بالكتالوج`, 'تمت معالجة ومطابقة أعمدة الملف بنجاح');
+          closeImportWizard();
+          renderCatalog();
+          showToast(`تم استيراد ${count} منتج بنجاح إلى كتالوج المتجر!`);
+        } finally {
+          if (commitBtn) {
+            commitBtn.disabled = false;
+            commitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+            if (originalCommitHtml) {
+              commitBtn.innerHTML = originalCommitHtml;
+            }
+          }
+        }
       }
 
       function renderFloorPlan() {
@@ -1742,8 +1770,16 @@
           DOM.selectAllCheckbox.checked = allDisplayedSelected;
         }
 
-        const cats = Array.from(new Set(state.products.map(p => p.category))).sort();
-        DOM.categoryFilter.innerHTML = '<option value="ALL">جميع التصنيفات</option>' + cats.map(c => `<option value="${c}" ${c === state.filters.category ? 'selected' : ''}>${c}</option>`).join('');
+        if (DOM.categoryFilter && DOM.categoryFilter.options.length <= 1) {
+          const rawCats = state.products.map(p => translateCategory(p.category)).filter(Boolean);
+          const cats = [...new Set(rawCats)].sort();
+          cats.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            DOM.categoryFilter.appendChild(opt);
+          });
+        }
 
         DOM.bulkActionsBar.classList.toggle('hidden', state.selectedIds.size === 0);
         DOM.bulkSelectedCount.textContent = state.selectedIds.size;
@@ -1751,6 +1787,7 @@
 
       function openModal(mode = 'create', productId = null) {
         state.modal.isOpen = true;
+        loadCategories();
         DOM.productForm.reset();
         initShelfZones();
 
@@ -2206,180 +2243,264 @@
 
         DOM.productForm.addEventListener('submit', async (e) => {
           e.preventDefault();
+
+          const submitBtn = DOM.productForm.querySelector('button[type="submit"]') || document.getElementById('btn-save-product');
+          if (submitBtn && submitBtn.disabled) return;
+
           const name = DOM.formName.value.trim();
-          const sku = DOM.formSku.value.trim();
-          if (!name || !sku) return showToast('يرجى تعبئة الحقول الإلزامية (اسم المنتج والرمز SKU)', 'error');
+          const barcodeVal = DOM.formSku ? DOM.formSku.value.trim() : '';
+          if (!name) return showToast('يرجى تعبئة اسم المنتج', 'error');
 
           const priceVal = parseFloat(DOM.formPrice.value);
           if (isNaN(priceVal) || priceVal <= 0) {
             return showToast('يرجى إدخال سعر صحيح أكبر من الصفر', 'error');
           }
 
-          const rawQty = DOM.formQuantity ? parseInt(DOM.formQuantity.value, 10) : 10;
-          const quantityVal = isNaN(rawQty) ? 10 : Math.max(0, rawQty);
-          const isAvail = DOM.formAvailable.checked && quantityVal > 0;
+          // Debounce button: disable immediately and show loading spinner
+          let originalBtnHtml = '';
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            originalBtnHtml = submitBtn.innerHTML;
+            submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
+            submitBtn.innerHTML = `
+              <span class="inline-flex items-center gap-2">
+                <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                <span>جاري الحفظ...</span>
+              </span>
+            `;
+          }
 
-          const payload = {
-            name,
-            sku: sku.toUpperCase(),
-            category: DOM.formCategory.value || 'عام',
-            price: priceVal,
-            quantity: quantityVal,
-            status: DOM.formStatus.value,
-            isAvailable: isAvail,
-            location: { zone: DOM.locZone.value || 'المنطقة أ', aisle: DOM.locAisle.value || 'ممر 01', rack: DOM.locRack.value || 'R1', shelf: DOM.locShelf.value || 'رف 1' },
-            updatedAt: new Date().toISOString().slice(0, 16)
-          };
+          try {
+            const rawQty = DOM.formQuantity ? parseInt(DOM.formQuantity.value, 10) : 10;
+            const quantityVal = isNaN(rawQty) ? 10 : Math.max(0, rawQty);
+            const isAvail = DOM.formAvailable.checked && quantityVal > 0;
 
-          const id = DOM.formProductId.value;
-          const storeId = getStoreId();
-          const token = getAuthToken();
+            const chosenCategory = translateCategory(DOM.formCategory.value || 'عام');
 
-          const cleanZone = payload.location.zone || "المنطقة أ";
-          const cleanAisle = payload.location.aisle.replace(/[^0-9]/g, '') || "01";
-          const cleanRack = payload.location.rack.replace(/[^0-9]/g, '') || "1";
-          const cleanShelf = payload.location.shelf.replace(/[^0-9]/g, '') || "1";
-          const mapTarget = `${cleanZone} - ممر ${cleanAisle} - رف ${cleanShelf}`;
+            const payload = {
+              name,
+              sku: barcodeVal ? barcodeVal.toUpperCase() : `SKU-${Date.now().toString().slice(-6)}`,
+              barcode: barcodeVal ? barcodeVal.trim() : null,
+              category: chosenCategory,
+              price: priceVal,
+              quantity: quantityVal,
+              status: DOM.formStatus.value,
+              isAvailable: isAvail,
+              location: { zone: DOM.locZone.value || 'المنطقة أ', aisle: DOM.locAisle.value || 'ممر 01', rack: DOM.locRack.value || 'R1', shelf: DOM.locShelf.value || 'رف 1' },
+              updatedAt: new Date().toISOString().slice(0, 16)
+            };
 
-          const livePayload = {
-            store_sku: payload.sku,
-            product_name: payload.name,
-            category: payload.category,
-            price: payload.price,
-            quantity: quantityVal,
-            stock_status: isAvail ? "IN_STOCK" : "OUT_OF_STOCK",
-            zone: cleanZone,
-            aisle: cleanAisle,
-            rack: cleanRack,
-            shelf: cleanShelf,
-            map_target: mapTarget
-          };
+            const id = DOM.formProductId.value;
+            const storeId = getStoreId();
+            const token = getAuthToken();
 
-          const reqHeaders = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-          };
+            const cleanZone = payload.location.zone || "المنطقة أ";
+            const cleanAisle = payload.location.aisle.replace(/[^0-9]/g, '') || "01";
+            const cleanRack = payload.location.rack.replace(/[^0-9]/g, '') || "1";
+            const cleanShelf = payload.location.shelf.replace(/[^0-9]/g, '') || "1";
+            const mapTarget = `${cleanZone} - ممر ${cleanAisle} - رف ${cleanShelf}`;
 
-          if (id) {
-            try {
-              fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products/${encodeURIComponent(id)}`, {
-                method: 'PUT',
-                headers: reqHeaders,
-                body: JSON.stringify(livePayload)
-              }).catch(err => {
-                console.warn('[Catalog Edit Note - Backend Sync]:', err);
-              });
+            const livePayload = {
+              barcode: barcodeVal ? barcodeVal.trim() : null,
+              store_sku: barcodeVal ? barcodeVal.trim().toUpperCase() : null,
+              product_name: payload.name,
+              category: payload.category,
+              price: payload.price,
+              quantity: quantityVal,
+              stock_status: isAvail ? "IN_STOCK" : "OUT_OF_STOCK",
+              zone: cleanZone,
+              aisle: cleanAisle,
+              rack: cleanRack,
+              shelf: cleanShelf,
+              map_target: mapTarget
+            };
 
-              const idx = state.products.findIndex(p => String(p.id) === String(id));
-              if (idx !== -1) {
-                const oldPrice = state.products[idx].price;
-                state.products[idx] = { ...state.products[idx], ...payload };
-                recordAuditLog('Price/Stock Update', payload.name, payload.sku, `تعديل السعر: ${oldPrice} ➔ ${payload.price} ر.س | المخزون: ${quantityVal}`, 'تحديث بيانات المنتج وموقعه الهندسي بالسيرفر الحي');
-              }
-              saveCatalogProducts();
-              closeModal();
-              renderCatalog();
-              showToast(`تم حفظ وتحديث "${payload.name}" بنجاح!`);
-            } catch (err) {
-              console.error('[Catalog Edit Error]', err);
-              closeModal();
-              renderCatalog();
-              showToast(`تم حفظ التعديل محلياً`, 'warning');
-            }
-          } else {
-            try {
-              let newId = `prod-${Date.now()}`;
+            const reqHeaders = {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            };
+
+            if (id) {
               try {
-                const res = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products`, {
-                  method: 'POST',
+                fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products/${encodeURIComponent(id)}`, {
+                  method: 'PUT',
                   headers: reqHeaders,
                   body: JSON.stringify(livePayload)
+                }).catch(err => {
+                  console.warn('[Catalog Edit Note - Backend Sync]:', err);
                 });
-                if (res.ok) {
-                  const created = await res.json().catch(() => null);
-                  if (created && (created.id || created.data?.id)) {
-                    newId = created.id || created.data.id;
-                  }
-                }
-              } catch (createErr) {
-                console.warn('[Catalog Create Note - Backend Sync]:', createErr);
-              }
 
-              state.products.unshift({ id: newId, ...payload });
-              recordAuditLog('Manual Creation', payload.name, payload.sku, `إضافة منتج يدوي جديد بالسعر: ${payload.price} ر.س (المخزون: ${quantityVal})`, 'إنشاء الصنف يدوياً بالسيرفر والكتالوج');
-              saveCatalogProducts();
-              closeModal();
-              renderCatalog();
-              showToast(`تمت إضافة "${payload.name}" بنجاح إلى الكتالوج!`);
-            } catch (err) {
-              console.error('[Catalog Create Error]', err);
-              closeModal();
-              renderCatalog();
-              showToast(`تمت الإضافة بنجاح`, 'success');
+                const idx = state.products.findIndex(p => String(p.id) === String(id));
+                if (idx !== -1) {
+                  const oldPrice = state.products[idx].price;
+                  state.products[idx] = { ...state.products[idx], ...payload };
+                  recordAuditLog('Price/Stock Update', payload.name, payload.sku, `تعديل السعر: ${oldPrice} ➔ ${payload.price} ر.س | المخزون: ${quantityVal}`, 'تحديث بيانات المنتج وموقعه الهندسي بالسيرفر الحي');
+                }
+                saveCatalogProducts();
+                closeModal();
+                renderCatalog();
+                showToast(`تم حفظ وتحديث "${payload.name}" بنجاح!`);
+              } catch (err) {
+                console.error('[Catalog Edit Error]', err);
+                closeModal();
+                renderCatalog();
+                showToast(`تم حفظ التعديل محلياً`, 'warning');
+              }
+            } else {
+              try {
+                let newId = `prod-${Date.now()}`;
+                try {
+                  const res = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products`, {
+                    method: 'POST',
+                    headers: reqHeaders,
+                    body: JSON.stringify(livePayload)
+                  });
+                  if (res.ok) {
+                    const created = await res.json().catch(() => null);
+                    if (created && (created.id || created.data?.id)) {
+                      newId = created.id || created.data.id;
+                    }
+                  }
+                } catch (createErr) {
+                  console.warn('[Catalog Create Note - Backend Sync]:', createErr);
+                }
+
+                state.products.unshift({ id: newId, ...payload });
+                recordAuditLog('Manual Creation', payload.name, payload.sku, `إضافة منتج يدوي جديد بالسعر: ${payload.price} ر.س (المخزون: ${quantityVal})`, 'إنشاء الصنف يدوياً بالسيرفر والكتالوج');
+                saveCatalogProducts();
+                closeModal();
+                renderCatalog();
+                showToast(`تمت إضافة "${payload.name}" بنجاح إلى الكتالوج!`);
+              } catch (err) {
+                console.error('[Catalog Create Error]', err);
+                closeModal();
+                renderCatalog();
+                showToast(`تمت الإضافة بنجاح`, 'success');
+              }
+            }
+          } finally {
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+              if (originalBtnHtml) {
+                submitBtn.innerHTML = originalBtnHtml;
+              }
             }
           }
         });
       }
 
-      async function loadServerCategories() {
+      const CATEGORY_TRANSLATIONS = {
+        'food & beverage': 'الأغذية والمشروبات',
+        'food and beverage': 'الأغذية والمشروبات',
+        'food & beverages': 'الأغذية والمشروبات',
+        'food and beverages': 'الأغذية والمشروبات',
+        'food': 'الأغذية والمشروبات',
+        'beverage': 'الأغذية والمشروبات',
+        'beverages': 'الأغذية والمشروبات',
+        'groceries': 'الأغذية والمشروبات',
+        'grocery': 'الأغذية والمشروبات',
+        'fresh produce': 'الأغذية والمشروبات',
+        'produce': 'الأغذية والمشروبات',
+        'dairy': 'الأغذية والمشروبات',
+        'dairy & eggs': 'الأغذية والمشروبات',
+        'bakery': 'الأغذية والمشروبات',
+        'electronics': 'الإلكترونيات',
+        'electronic': 'الإلكترونيات',
+        'fashion': 'الأزياء والملابس',
+        'fashion & clothing': 'الأزياء والملابس',
+        'fashion & apparel': 'الأزياء والملابس',
+        'clothing': 'الأزياء والملابس',
+        'apparel': 'الأزياء والملابس',
+        'health & beauty': 'الصحة والجمال',
+        'health and beauty': 'الصحة والجمال',
+        'beauty': 'الصحة والجمال',
+        'health': 'الصحة والجمال',
+        'home & kitchen': 'المنزل والمطبخ',
+        'home and kitchen': 'المنزل والمطبخ',
+        'home': 'المنزل والمطبخ',
+        'kitchen': 'المنزل والمطبخ',
+        'general': 'عام',
+        'other': 'عام',
+        'others': 'عام',
+        'snacks': 'الأغذية والمشروبات'
+      };
+
+      const CLEAN_ARABIC_CATEGORIES = [
+        'الأغذية والمشروبات',
+        'الإلكترونيات',
+        'الأزياء والملابس',
+        'الصحة والجمال',
+        'المنزل والمطبخ',
+        'عام'
+      ];
+
+      function translateCategory(raw) {
+        if (!raw || typeof raw !== 'string') return 'عام';
+        const trimmed = raw.trim();
+        const lower = trimmed.toLowerCase();
+        return CATEGORY_TRANSLATIONS[lower] || trimmed;
+      }
+
+      async function loadCategories() {
+        const categorySelects = document.querySelectorAll('select[name="category"], #product-category, #edit-product-category, #filter-category, #category-filter, #form-category');
+        if (!categorySelects.length) return;
+
+        const storeId = localStorage.getItem('activeStoreId') || localStorage.getItem('storeId') || '';
+        const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
+        const FASTAPI_BASE_URL = (window.CONFIG && window.CONFIG.FASTAPI_BASE_URL)
+          ? window.CONFIG.FASTAPI_BASE_URL.replace(/\/+$/, '')
+          : 'https://dawwer-backend-fastapi.onrender.com';
+
         try {
-          const apiBase = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL)
-            ? CONFIG.API_BASE_URL.replace(/\/+$/, '')
-            : 'https://dawwer.runasp.net/api';
-
-          let list = [];
-          if (typeof ApiClient !== 'undefined' && ApiClient.categories && ApiClient.categories.list) {
-            const res = await ApiClient.categories.list();
-            list = Array.isArray(res) ? res : (res?.data || []);
-          } else if (typeof ApiClient !== 'undefined' && ApiClient.core) {
-            const res = await ApiClient.core('/categories/tree', { method: 'GET' }).catch(() => null);
-            list = Array.isArray(res) ? res : (res?.data || []);
-          } else {
-            const res = await fetch(`${apiBase}/categories/tree`).then(r => r.json()).catch(() => null);
-            list = Array.isArray(res) ? res : (res?.data || []);
-          }
-
-          if (!Array.isArray(list) || list.length === 0) {
-            try {
-              const flatRes = (typeof ApiClient !== 'undefined' && ApiClient.core)
-                ? await ApiClient.core('/categories', { method: 'GET' })
-                : await fetch(`${apiBase}/categories`).then(r => r.json());
-              list = Array.isArray(flatRes) ? flatRes : (flatRes?.data || []);
-            } catch (e) {}
-          }
-
-          const extractNames = (items) => {
-            let names = [];
-            if (!Array.isArray(items)) return names;
-            items.forEach(item => {
-              if (item && item.name) names.push(item.name);
-              if (item && item.children && Array.isArray(item.children)) {
-                names.push(...extractNames(item.children));
-              }
-            });
-            return names;
-          };
-
-          if (Array.isArray(list) && list.length > 0) {
-            const catNames = [...new Set(extractNames(list))].filter(Boolean);
-            if (catNames.length > 0) {
-              if (DOM.categoryFilter) {
-                const currentFilter = state.filters.category;
-                DOM.categoryFilter.innerHTML = '<option value="ALL">جميع التصنيفات</option>' +
-                  catNames.map(name => `<option value="${escapeHtml(name)}" ${name === currentFilter ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('');
-              }
-              if (DOM.formCategory) {
-                const currentFormVal = DOM.formCategory.value;
-                DOM.formCategory.innerHTML = '<option value="">اختر التصنيف</option>' +
-                  catNames.map(name => `<option value="${escapeHtml(name)}" ${name === currentFormVal ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('');
-              }
+          // Attempt to fetch from store categories or global categories endpoint
+          const res = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${storeId}/categories`, {
+            headers: {
+              'Authorization': token ? `Bearer ${token}` : '',
+              'Accept': 'application/json'
             }
+          });
+
+          let categories = [];
+          if (res.ok) {
+            categories = await res.json();
+          } else {
+            // Fallback endpoint if store-specific route fails
+            const fallbackRes = await fetch(`${FASTAPI_BASE_URL}/api/v1/categories`);
+            if (fallbackRes.ok) categories = await fallbackRes.json();
           }
-        } catch (e) {
-          console.warn('[Catalog Categories Fetch Note]: Gracefully falling back to default categories.', e);
+
+          // Normalize categories response (array of strings OR array of objects {id, name, name_ar})
+          if (Array.isArray(categories) && categories.length > 0) {
+            categorySelects.forEach(select => {
+              const currentVal = select.value;
+              // Preserve first option (اختر التصنيف...)
+              select.innerHTML = '<option value="">اختر التصنيف...</option>';
+
+              categories.forEach(cat => {
+                const catId = typeof cat === 'object' ? (cat.id || cat.name) : cat;
+                const catName = typeof cat === 'object' ? (cat.name_ar || cat.name || cat.label) : cat;
+
+                const opt = document.createElement('option');
+                opt.value = catId;
+                opt.textContent = catName;
+                if (currentVal && (opt.value === currentVal || opt.textContent === currentVal)) {
+                  opt.selected = true;
+                }
+                select.appendChild(opt);
+              });
+            });
+          }
+        } catch (err) {
+          console.warn('[Catalog] Failed to fetch categories from database, keeping standard list:', err);
         }
       }
+
+      const loadServerCategories = loadCategories;
 
       async function fetchLiveProducts() {
         const storeId = getStoreId();
@@ -2470,9 +2591,11 @@
         }
         renderCatalog();
         renderFloorPlan();
-        await loadServerCategories();
+        await loadCategories();
         await fetchLiveProducts();
       }
+
+      window.loadCategories = loadCategories;
 
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
