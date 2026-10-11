@@ -1363,6 +1363,8 @@ const ApiClient = {
                                  cleanLower.startsWith('/auth/forgot-password') ||
                                  cleanLower.startsWith('/auth/reset-password') ||
                                  cleanLower.startsWith('/auth/verify-code') ||
+                                 cleanLower.startsWith('/auth/resend-code') ||
+                                 cleanLower.startsWith('/auth/resend-verification-code') ||
                                  cleanLower.startsWith('/auth/refresh-token') ||
                                  cleanLower.includes('/health');
 
