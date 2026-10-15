@@ -498,21 +498,10 @@ function updateSubmitButtonState() {
   if (!submitBtn) return;
   submitBtn.classList.remove('hidden');
 
-  if (appId && hasDocuments) {
-    submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-    submitBtn.removeAttribute('disabled');
-    submitBtn.removeAttribute('data-disabled');
-    submitBtn.title = "إرسال الطلب للاعتماد الرسمي من إدارة دوّر";
-  } else if (!appId) {
-    submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    submitBtn.setAttribute('data-disabled', 'true');
-    submitBtn.title = "يرجى حفظ البيانات أولاً كمسودة بالضغط على 'حفظ كمسودة'";
-  } else {
-    // Has appId, but no documents uploaded yet
-    submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    submitBtn.setAttribute('data-disabled', 'true');
-    submitBtn.title = "يرجى رفع وثيقة رسمية واحدة على الأقل (السجل التجاري، رخصة المحل، أو البطاقة الضريبية) قبل إرسال الطلب للاعتماد";
-  }
+  submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+  submitBtn.removeAttribute('disabled');
+  submitBtn.removeAttribute('data-disabled');
+  submitBtn.title = "إرسال الطلب للاعتماد الرسمي من إدارة دوّر";
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -552,9 +541,41 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const storeNameInput = document.getElementById('store-name');
-  if (storeNameInput && !storeNameInput.value.trim()) {
-    const prefill = getPreFilledStoreName();
-    if (prefill) storeNameInput.value = prefill;
+  if (storeNameInput) {
+    if (!storeNameInput.value.trim()) {
+      const prefill = getPreFilledStoreName() || sessionStorage.getItem('storeName') || sessionStorage.getItem('dawwer_store_name');
+      if (prefill) storeNameInput.value = prefill;
+    }
+    storeNameInput.addEventListener('input', () => {
+      const val = storeNameInput.value.trim();
+      if (val) {
+        localStorage.setItem('storeName', val);
+        localStorage.setItem('store_name', val);
+        localStorage.setItem('dawwer_store_name', val);
+        sessionStorage.setItem('storeName', val);
+      }
+    });
+  }
+
+  // Pre-fill phone if available from registration / user profile
+  const storePhoneInput = document.getElementById('store-phone');
+  if (storePhoneInput && !storePhoneInput.value.trim()) {
+    const storedPhone = localStorage.getItem('storePhone') || localStorage.getItem('store_phone') || sessionStorage.getItem('storePhone');
+    if (storedPhone) {
+      storePhoneInput.value = storedPhone;
+    } else if (typeof Auth !== 'undefined' && typeof Auth.getUser === 'function') {
+      const u = Auth.getUser();
+      if (u && u.phoneNumber) storePhoneInput.value = u.phoneNumber;
+    }
+  }
+
+  // Pre-fill email if available from registration / user profile
+  const storeEmailInput = document.getElementById('store-email');
+  if (storeEmailInput && !storeEmailInput.value.trim()) {
+    if (typeof Auth !== 'undefined' && typeof Auth.getUser === 'function') {
+      const u = Auth.getUser();
+      if (u && u.email) storeEmailInput.value = u.email;
+    }
   }
 
   // 1. Check Store Status on Load:
@@ -829,6 +850,13 @@ async function handleSaveStore(event) {
       }
     }
 
+    if (payload.name) {
+      localStorage.setItem('storeName', payload.name);
+      localStorage.setItem('store_name', payload.name);
+      localStorage.setItem('dawwer_store_name', payload.name);
+      sessionStorage.setItem('storeName', payload.name);
+    }
+
     if (resData && typeof resData === 'object') {
       currentStore = { ...currentStore, ...resData };
       if (returnedId) currentStore.id = returnedId;
@@ -883,51 +911,44 @@ async function handleSaveStore(event) {
 async function submitApplication() {
   if (!ensureValidMerchantSession()) return;
 
-  const appId = getApplicationId();
+  let appId = getApplicationId();
   if (!appId) {
-    const warningMsg = 'يرجى حفظ بيانات المتجر أولاً بالضغط على "حفظ كمسودة" لاستخراج معرّف الطلب قبل الإرسال للاعتماد.';
-    showAlert(warningMsg, 'warning');
-    if (window.showToast) {
-      window.showToast({
-        title: 'حفظ المسودة مطلوب أولاً',
-        message: warningMsg,
-        type: 'warning'
-      });
+    const storeNameEl = document.getElementById('store-name');
+    if (!storeNameEl || !storeNameEl.value.trim()) {
+      const warningMsg = 'يرجى إدخال اسم المتجر أولاً للمتابعة.';
+      showAlert(warningMsg, 'warning');
+      if (window.showToast) {
+        window.showToast({
+          title: 'اسم المتجر مطلوب',
+          message: warningMsg,
+          type: 'warning'
+        });
+      }
+      if (storeNameEl) storeNameEl.focus();
+      return;
     }
 
-    const saveDraftBtn = document.getElementById('save-draft-btn');
-    if (saveDraftBtn) {
-      saveDraftBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      saveDraftBtn.classList.add('ring-2', 'ring-emerald-600', 'ring-offset-2');
-      setTimeout(() => {
-        saveDraftBtn.classList.remove('ring-2', 'ring-emerald-600', 'ring-offset-2');
-      }, 2500);
-    }
-    return;
-  }
-
-  // Guard: Inspect the uploaded documents array before triggering POST /api/merchant/stores/{applicationId}/submit
-  const docs = getUploadedDocuments();
-  if (!docs || docs.length === 0) {
-    const docWarningMsg = "يرجى رفع وثيقة رسمية واحدة على الأقل (السجل التجاري، رخصة المحل، أو البطاقة الضريبية) قبل إرسال الطلب للاعتماد";
-    showAlert(docWarningMsg, 'warning');
-    if (window.showToast) {
-      window.showToast({
-        title: 'مستندات الاعتماد مطلوبة',
-        message: docWarningMsg,
-        type: 'warning'
-      });
+    // Auto-save draft first so application ID exists before submitting
+    const submitBtn = document.getElementById("submit-app-btn");
+    if (submitBtn) {
+      submitBtn.innerText = "جاري حفظ بيانات المتجر...";
+      submitBtn.disabled = true;
     }
 
-    const docsSection = document.getElementById('docs-section') || document.getElementById('doc-file');
-    if (docsSection) {
-      docsSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      docsSection.classList.add('ring-2', 'ring-amber-500', 'ring-offset-2');
-      setTimeout(() => {
-        docsSection.classList.remove('ring-2', 'ring-amber-500', 'ring-offset-2');
-      }, 3000);
+    try {
+      await handleSaveStore();
+      appId = getApplicationId();
+    } catch (saveErr) {
+      console.warn('Auto-save draft before submit failed:', saveErr);
     }
-    return;
+
+    if (!appId) {
+      if (submitBtn) {
+        submitBtn.innerText = "إرسال الطلب للاعتماد الرسمي ➔";
+        submitBtn.disabled = false;
+      }
+      return;
+    }
   }
 
   const confirmFn = (typeof window !== 'undefined' && window.confirm) ? window.confirm : (typeof confirm !== 'undefined' ? confirm : null);

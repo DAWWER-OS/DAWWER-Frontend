@@ -84,6 +84,25 @@ async function handleRegister(event) {
     sessionStorage.setItem('email', email);
     sessionStorage.setItem('dawwer_registered_email', email);
 
+    if (storeName) {
+      localStorage.setItem('storeName', storeName);
+      localStorage.setItem('store_name', storeName);
+      localStorage.setItem('dawwer_store_name', storeName);
+      sessionStorage.setItem('storeName', storeName);
+      sessionStorage.setItem('dawwer_store_name', storeName);
+    }
+
+    if (phoneNumber) {
+      localStorage.setItem('storePhone', phoneNumber);
+      localStorage.setItem('store_phone', phoneNumber);
+      sessionStorage.setItem('storePhone', phoneNumber);
+    }
+
+    if (ownerName) {
+      localStorage.setItem('ownerName', ownerName);
+      sessionStorage.setItem('ownerName', ownerName);
+    }
+
     if (data && data.userId) {
       localStorage.setItem('userId', data.userId);
     }

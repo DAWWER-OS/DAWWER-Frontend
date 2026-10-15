@@ -122,12 +122,19 @@ async function handleVerifyCode(event) {
     sessionStorage.removeItem('dawwer_registered_email');
     sessionStorage.removeItem('email');
 
-    const accessToken = data?.accessToken || data?.token;
-    const refreshToken = data?.refreshToken;
+    const authData = data?.authData || data?.data?.authData || (data?.accessToken ? data : null) || {};
+    const accessToken = authData?.accessToken || authData?.token || data?.accessToken || data?.token;
+    const refreshToken = authData?.refreshToken || data?.refreshToken;
+    const userId = authData?.userId || data?.userId;
+    const fullName = authData?.fullName || data?.fullName;
+    const email = authData?.email || currentEmail;
+    const phoneNumber = authData?.phoneNumber || data?.phoneNumber;
+    const role = authData?.role || data?.role || 2;
 
     if (accessToken) {
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('token', accessToken);
+      localStorage.setItem('access_token', accessToken);
       localStorage.setItem('dawwer_access_token', accessToken);
       if (typeof CONFIG !== 'undefined' && CONFIG.TOKEN_KEY) {
         localStorage.setItem(CONFIG.TOKEN_KEY, accessToken);
@@ -140,8 +147,31 @@ async function handleVerifyCode(event) {
         localStorage.setItem(CONFIG.REFRESH_TOKEN_KEY, refreshToken);
       }
     }
-    if (data?.userId) {
-      localStorage.setItem('userId', data.userId);
+    if (userId) {
+      localStorage.setItem('userId', userId);
+    }
+
+    if (typeof Auth !== 'undefined' && typeof Auth.saveSession === 'function') {
+      try {
+        Auth.saveSession({
+          accessToken,
+          refreshToken,
+          userId,
+          fullName,
+          email,
+          phoneNumber,
+          role,
+          user: {
+            userId,
+            fullName,
+            email,
+            phoneNumber,
+            role
+          }
+        });
+      } catch (authSaveErr) {
+        console.warn('Auth.saveSession error in verify-account:', authSaveErr);
+      }
     }
 
     const successMsg = 'تم تفعيل الحساب بنجاح! جاري تحويلك...';
@@ -154,7 +184,13 @@ async function handleVerifyCode(event) {
     }
 
     setTimeout(() => {
-      window.location.href = 'index.html';
+      // If user has no active store, send to merchant-application.html or select-store.html
+      const activeStoreId = localStorage.getItem('activeStoreId') || localStorage.getItem('storeId');
+      if (!activeStoreId || activeStoreId === 'null') {
+        window.location.href = 'merchant-application.html';
+      } else {
+        window.location.href = 'index.html';
+      }
     }, 1000);
   } catch (err) {
     const errorMsg = (err && (err.message || (Array.isArray(err.errors) ? err.errors.join(' | ') : null))) || 'رمز التحقق غير صحيح أو منتهي الصلاحية.';
