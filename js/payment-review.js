@@ -685,7 +685,14 @@
     const imgCanvas = document.getElementById('receipt-img-canvas');
     const simDiv    = document.getElementById('receipt-sim-receipt');
     if (payment.receiptUrl && imgCanvas) {
-      imgCanvas.src = payment.receiptUrl;
+      const resolvedReceipt = (typeof resolveImageUrl === 'function')
+        ? resolveImageUrl(payment.receiptUrl)
+        : (window.CONFIG && window.CONFIG.resolveImageUrl ? window.CONFIG.resolveImageUrl(payment.receiptUrl) : payment.receiptUrl);
+      imgCanvas.src = resolvedReceipt;
+      imgCanvas.onerror = function() {
+        this.classList.add('hidden');
+        if (simDiv) simDiv.classList.remove('hidden');
+      };
       imgCanvas.classList.remove('hidden');
       simDiv && simDiv.classList.add('hidden');
     } else {

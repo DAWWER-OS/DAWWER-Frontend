@@ -60,7 +60,7 @@ const AUDIT_STORAGE_KEY = 'dawwer_merchant_audit_log';
         target: 'زيت زيتون بكر ممتاز يوناني (750 مل)',
         targetSku: 'GRO-PAN-881',
         performedBy: 'سارة العتيبي (مسؤول المخزون)',
-        changeDelta: 'السعر: 12.50 ➔ 11.20 ر.س (-1.30 ر.س)',
+        changeDelta: 'السعر: 12.50 ➔ 11.20 ₪ (-1.30 ₪)',
         details: 'تحديث العرض الترويجي للزيوت والمؤونة'
       },
       {
@@ -315,11 +315,30 @@ const AUDIT_STORAGE_KEY = 'dawwer_merchant_audit_log';
 
         const locationLabel = p.location ? `${p.location.zone} › ${p.location.aisle}` : 'الرف الرئيسي';
 
+        const rawProdImg = p.image_url || p.imageUrl || p.image || '';
+        const resolvedImg = (typeof resolveImageUrl === 'function')
+          ? resolveImageUrl(rawProdImg)
+          : (window.CONFIG && window.CONFIG.resolveImageUrl ? window.CONFIG.resolveImageUrl(rawProdImg) : rawProdImg);
+
         return `
           <tr class="hover:bg-slate-50/90 transition ${qty <= threshold ? 'bg-amber-50/30' : ''}">
             <td class="py-4 px-6">
-              <div class="font-extrabold text-slate-900 text-xs">${p.name}</div>
-              <div class="text-[11px] font-mono text-slate-400 mt-0.5" dir="ltr">${p.sku}</div>
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 relative flex items-center justify-center">
+                  ${resolvedImg ? `
+                    <img src="${resolvedImg}" alt="${p.name || 'منتج'}" class="w-full h-full object-cover" onerror="window.handleImageError ? window.handleImageError(this, 'لم يتم الاستخراج') : (this.style.display='none');">
+                  ` : `
+                    <div class="img-fallback-placeholder flex flex-col items-center justify-center text-center p-1 w-full h-full text-slate-400 select-none">
+                      <svg class="w-4 h-4 text-slate-400 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                      <span class="text-[9px] font-medium leading-tight">لم يتم الاستخراج</span>
+                    </div>
+                  `}
+                </div>
+                <div>
+                  <div class="font-extrabold text-slate-900 text-xs">${p.name}</div>
+                  <div class="text-[11px] font-mono text-slate-400 mt-0.5" dir="ltr">${p.sku}</div>
+                </div>
+              </div>
             </td>
             <td class="py-4 px-4">
               <span class="px-2.5 py-1 rounded-lg bg-[#edf5f0] text-[#153f2d] font-bold text-[11px]">
@@ -327,7 +346,7 @@ const AUDIT_STORAGE_KEY = 'dawwer_merchant_audit_log';
               </span>
             </td>
             <td class="py-4 px-4 font-bold text-slate-900">
-              ${Number(p.price).toFixed(2)} ر.س
+              ${Number(p.price).toFixed(2)} ₪
             </td>
             <td class="py-4 px-4 text-slate-600 text-xs">
               <div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 font-bold">

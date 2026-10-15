@@ -135,15 +135,25 @@
    * Update Store Name in Top Bar
    */
   function updateStoreHeaderName() {
-    const cachedName = localStorage.getItem('storeName') ||
-                       localStorage.getItem('store_name') ||
-                       localStorage.getItem('dawwer_store_name');
-    if (cachedName && cachedName.trim()) {
-      state.storeName = cachedName.trim();
-      document.querySelectorAll('[data-store-name]').forEach(el => {
-        el.textContent = cachedName.trim();
-      });
+    let name = '';
+    if (typeof DawwerLayout !== 'undefined' && typeof DawwerLayout.getStoredStoreName === 'function') {
+      name = DawwerLayout.getStoredStoreName();
     }
+    if (!name) {
+      const cached = localStorage.getItem('storeName') ||
+                     localStorage.getItem('store_name') ||
+                     localStorage.getItem('dawwer_store_name');
+      if (typeof DawwerLayout !== 'undefined' && typeof DawwerLayout.cleanStoreName === 'function') {
+        name = DawwerLayout.cleanStoreName(cached);
+      } else if (cached && cached.trim()) {
+        name = cached.trim();
+      }
+    }
+    const finalName = (name && name !== 'null' && name !== 'undefined') ? name : 'سوبر ماركت الأمل';
+    state.storeName = finalName;
+    document.querySelectorAll('[data-store-name]').forEach(el => {
+      el.textContent = finalName;
+    });
   }
 
   /**
@@ -300,7 +310,10 @@
       if (storeRes.status === 'fulfilled' && storeRes.value.ok) {
         const storeData = await storeRes.value.json().catch(() => null);
         if (storeData && (storeData.name || storeData.store_name)) {
-          const sName = storeData.name || storeData.store_name;
+          let sName = storeData.name || storeData.store_name;
+          if (typeof DawwerLayout !== 'undefined' && typeof DawwerLayout.cleanStoreName === 'function') {
+            sName = DawwerLayout.cleanStoreName(sName);
+          }
           state.storeName = sName;
           localStorage.setItem('storeName', sName);
           localStorage.setItem('store_name', sName);

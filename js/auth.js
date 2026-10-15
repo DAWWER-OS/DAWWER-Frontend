@@ -263,12 +263,16 @@ const Auth = {
 
         localStorage.setItem('dawwer_active_store', JSON.stringify(activeData));
 
+        const activeName = (res.data.storeName && typeof DawwerLayout !== 'undefined' && typeof DawwerLayout.cleanStoreName === 'function')
+          ? DawwerLayout.cleanStoreName(res.data.storeName)
+          : (res.data.storeName || 'سوبر ماركت الأمل');
+
         document.querySelectorAll('#current-store-name, [data-store-name], #store-name-text').forEach(el => {
-          el.textContent = res.data.storeName || 'المتجر الحالي';
+          el.textContent = activeName;
         });
 
         if (typeof DawwerLayout !== 'undefined' && DawwerLayout.updateStoreIdentity) {
-          DawwerLayout.updateStoreIdentity(res.data.storeName, res.data.roleName);
+          DawwerLayout.updateStoreIdentity(activeName, res.data.roleName);
         }
 
         return res.data;
@@ -303,9 +307,15 @@ const Auth = {
                          localStorage.getItem('dawwer_store_token') ||
                          activeObj?.storeToken;
 
-      const storeName = localStorage.getItem('storeName') ||
-                        localStorage.getItem('store_name') ||
-                        activeObj?.storeName || activeObj?.name || 'المتجر الحالي';
+      let storeName = localStorage.getItem('storeName') ||
+                      localStorage.getItem('store_name') ||
+                      activeObj?.storeName || activeObj?.name;
+      if (typeof DawwerLayout !== 'undefined' && typeof DawwerLayout.cleanStoreName === 'function') {
+        storeName = DawwerLayout.cleanStoreName(storeName);
+      }
+      if (!storeName || storeName === 'null' || storeName === 'undefined') {
+        storeName = 'سوبر ماركت الأمل';
+      }
 
       if (activeStoreId && activeStoreId !== 'null' && activeStoreId !== 'undefined') {
         return {
@@ -471,7 +481,7 @@ const Auth = {
     if (this._authChecked) return true;
     this._authChecked = true;
 
-    const currentPath = (window.location.pathname.split("/").pop() || 'index.html').toLowerCase();
+    const currentPath = (window.location.pathname.split("/").pop() || 'login.html').toLowerCase();
     const loginTarget = 'login.html';
 
     if (!this.isAuthenticated()) {
@@ -487,7 +497,8 @@ const Auth = {
           } catch (e) {}
           window.location.replace(`${loginTarget}?unauthorized=true`);
         } else {
-          const redirectParam = (currentPath !== 'index.html' && currentPath !== '') ? `?redirect=${encodeURIComponent(currentPath)}` : '';
+          const isLandingOrLogin = ['index.html', 'landing.html', 'login.html', ''].includes(currentPath);
+          const redirectParam = !isLandingOrLogin ? `?redirect=${encodeURIComponent(currentPath)}` : '';
           window.location.replace(`${loginTarget}${redirectParam}`);
         }
       }

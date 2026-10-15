@@ -154,7 +154,7 @@ async function handleVerifyCode(event) {
     }
 
     setTimeout(() => {
-      window.location.href = 'index.html';
+      window.location.href = 'login.html?verified=true';
     }, 1000);
   } catch (err) {
     const errorMsg = (err && (err.message || (Array.isArray(err.errors) ? err.errors.join(' | ') : null))) || 'رمز التحقق غير صحيح أو منتهي الصلاحية.';

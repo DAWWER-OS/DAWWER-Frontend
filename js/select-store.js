@@ -273,9 +273,11 @@ async function handleSelectStore(storeId, storeName, cardElement) {
       resData = json?.data !== undefined ? json.data : json;
     }
 
-    // Extract storeToken and permissions
     const selectedStoreId = resData?.storeId || storeId;
-    const selectedStoreName = resData?.storeName || storeName;
+    let selectedStoreName = resData?.storeName || storeName;
+    if (typeof DawwerLayout !== 'undefined' && typeof DawwerLayout.cleanStoreName === 'function') {
+      selectedStoreName = DawwerLayout.cleanStoreName(selectedStoreName);
+    }
     const storeToken = resData?.storeToken || resData?.accessToken || resData?.token;
     const permissions = resData?.permissions || [];
 
@@ -331,9 +333,9 @@ async function handleSelectStore(storeId, storeName, cardElement) {
       showToast({ title: 'تم اختيار المتجر', message: `تم تفعيل ${selectedStoreName} بنجاح`, type: 'success' });
     }
 
-    // Redirect to index.html
+    // Redirect to dashboard.html
     setTimeout(() => {
-      window.location.replace('index.html');
+      window.location.replace('dashboard.html');
     }, 350);
 
   } catch (err) {

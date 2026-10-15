@@ -13,13 +13,13 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
 
     function resolveShelfImageUrl(rawUrl, zone = 'Zone A') {
       if (!rawUrl || typeof rawUrl !== 'string' || rawUrl.trim() === '' || rawUrl === 'null' || rawUrl === 'undefined') {
-        return 'assets/placeholder-product.png';
+        return '';
       }
       const trimmed = rawUrl.trim();
 
       // Guard against job IDs (e.g. 'JOB-2026-9041') being used as image URLs
       if (trimmed.startsWith('JOB-') || /^JOB[-_]/i.test(trimmed)) {
-        return 'assets/placeholder-product.png';
+        return '';
       }
 
       // 1. Data URLs (e.g. webcam captures or SVG fallbacks)
@@ -29,41 +29,69 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
 
       // 2. Local valid asset paths
       if (trimmed.startsWith('assets/') || trimmed.startsWith('./assets/') || trimmed.startsWith('/assets/')) {
-        return trimmed.startsWith('/') ? trimmed.slice(1) : trimmed;
+        return trimmed.startsWith('./') ? trimmed.slice(2) : (trimmed.startsWith('/') ? trimmed.slice(1) : trimmed);
       }
       if (trimmed === 'sample_shelf.jpg' || trimmed.endsWith('/sample_shelf.jpg')) {
         return SAMPLE_SHELF_IMAGE;
       }
 
-      // 3. Gemini vision generated image filenames or upload artifacts (e.g., 8f89e366_Gemini_Generated_Image...jpg)
-      // These are dynamic files that do not exist statically on the frontend or on Render ephemeral storage
-      if (/gemini/i.test(trimmed)) {
-        return SAMPLE_SHELF_IMAGE;
-      }
-
-      // 4. Dead blob URLs from previous browser sessions
+      // 3. Dead blob URLs from previous browser sessions
       if (trimmed.startsWith('blob:')) {
-        return SAMPLE_SHELF_IMAGE;
+        return '';
       }
 
-      // 5. Render backend ephemeral upload URLs or local dev URLs
-      // Render free tier instances wipe the filesystem on sleep/restart, causing /uploads/ to 404
-      if (trimmed.includes('onrender.com') || trimmed.includes('localhost:') || trimmed.includes('127.0.0.1:')) {
-        return SAMPLE_SHELF_IMAGE;
+      // 4. External or backend full URLs
+      if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+        return trimmed;
       }
 
-      // 6. Backend relative paths without domain
-      if (trimmed.startsWith('uploads/') || trimmed.startsWith('/uploads/') || trimmed.startsWith('static/') || trimmed.startsWith('/static/')) {
-        return SAMPLE_SHELF_IMAGE;
-      }
+      // 5. Backend upload paths: resolve against backend host origin (CONFIG.API_BASE_URL / BACKEND_BASE_URL)
+      const backendHost = (typeof CONFIG !== 'undefined' && typeof CONFIG.getBackendBaseUrl === 'function')
+        ? CONFIG.getBackendBaseUrl()
+        : ((typeof CONFIG !== 'undefined' && (CONFIG.BACKEND_BASE_URL || CONFIG.API_BASE_URL))
+          ? (CONFIG.BACKEND_BASE_URL || CONFIG.API_BASE_URL).replace(/\/api\/?$/i, '').replace(/\/+$/, '')
+          : (window.BACKEND_BASE_URL || 'https://dawwer.runasp.net'));
 
-      // 7. Bare relative filenames without protocol (e.g. "8f89e366_...jpg") that live server will 404 on
-      if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
-        return SAMPLE_SHELF_IMAGE;
+      const cleanPath = trimmed.replace(/^\/+/, '');
+      if (cleanPath.startsWith('uploads/') || cleanPath.startsWith('static/') || cleanPath.startsWith('media/')) {
+        return `${backendHost}/${cleanPath}`;
       }
+      return `${backendHost}/uploads/${cleanPath}`;
+    }
 
-      // 8. Legitimate external URLs
-      return trimmed;
+    /**
+     * Fallback handler for missing or failed product/shelf images
+     */
+    function handleImageError(imgEl, caption = 'لم يتم الاستخراج') {
+      if (typeof window !== 'undefined' && window.handleImageError && window.handleImageError !== handleImageError) {
+        return window.handleImageError(imgEl, caption);
+      }
+      if (!imgEl) return;
+      imgEl.onerror = null;
+      imgEl.style.display = 'none';
+
+      const parent = imgEl.parentElement;
+      if (!parent) return;
+
+      let placeholder = parent.querySelector('.img-fallback-placeholder');
+      if (!placeholder) {
+        placeholder = document.createElement('div');
+        placeholder.className = 'img-fallback-placeholder flex flex-col items-center justify-center text-center p-1 w-full h-full text-slate-400 select-none';
+        placeholder.innerHTML = `
+          <svg class="w-4 h-4 text-slate-400 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          <span class="text-[9px] font-medium leading-tight">${caption}</span>
+        `;
+        parent.appendChild(placeholder);
+      } else {
+        placeholder.style.display = 'flex';
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.handleImageError = window.handleImageError || handleImageError;
+      window.resolveShelfImageUrl = resolveShelfImageUrl;
     }
 
     function getStoreContext() {
@@ -864,7 +892,7 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         grid.innerHTML = uploadedFiles.map((f, idx) => `
           <div class="relative group bg-white border border-slate-200 rounded-2xl p-2.5 shadow-sm">
             <div class="aspect-square bg-slate-100 rounded-xl overflow-hidden mb-2 flex items-center justify-center relative">
-              <img src="${f.dataUrl}" alt="${f.name}" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='assets/images/sample_shelf.jpg';">
+              <img src="${f.dataUrl}" alt="${f.name}" class="w-full h-full object-cover" onerror="window.handleImageError ? window.handleImageError(this, 'لم يتم الاستخراج') : (this.style.display='none');">
               <button type="button" onclick="removeUploadedImage(${idx})" class="absolute top-2 left-2 w-7 h-7 rounded-full bg-red-600 text-white flex items-center justify-center shadow-md hover:bg-red-700 transition cursor-pointer z-10" title="حذف الصورة">
                 ✕
               </button>
@@ -1099,64 +1127,108 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         }
       }, 750);
 
-      try {
-        const endpointUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/shelf-jobs`;
+      // Helper function to extract candidate items from any backend response structure
+      function extractCandidateItems(target) {
+        if (!target) return [];
+        const candidateArrays = [
+          target?.extracted_items,
+          target?.draft_products,
+          target?.products,
+          target?.items,
+          target?.extracted_drafts,
+          target?.data?.extracted_items,
+          target?.data?.draft_products,
+          target?.data?.products,
+          target?.data?.items,
+          Array.isArray(target) ? target : null
+        ];
+        for (const cand of candidateArrays) {
+          if (Array.isArray(cand) && cand.length > 0) return cand;
+        }
+        return [];
+      }
+
+      /**
+       * 1. Image Upload / Processing:
+       * Dispatches image payload to create/start the extraction job via POST /shelf-jobs (or /api/v1/stores/{storeId}/shelf-jobs).
+       */
+      async function uploadShelfCaptureJob(fData, sId, headers) {
+        if (typeof ApiClient !== 'undefined' && ApiClient.shelfJobs && typeof ApiClient.shelfJobs.create === 'function') {
+          try {
+            const clientRes = await ApiClient.shelfJobs.create(sId, fData, { headers });
+            if (clientRes) return clientRes;
+          } catch (e) {
+            if (e && e.status === 401) throw e;
+            console.warn('[AI Capture] ApiClient.shelfJobs.create fallback:', e);
+          }
+        }
+
+        const endpointUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(sId)}/shelf-jobs`;
         const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
         const timer = controller ? setTimeout(() => controller.abort(), 45000) : null;
 
-        const response = await fetch(endpointUrl, {
-          method: 'POST',
-          headers: uploadHeaders,
-          body: formData,
-          signal: controller ? controller.signal : undefined
-        }).finally(() => {
+        try {
+          const res = await fetch(endpointUrl, {
+            method: 'POST',
+            headers,
+            body: fData,
+            signal: controller ? controller.signal : undefined
+          });
+          if (res.status === 401) {
+            handleUnauthorizedResponse();
+            const err = new Error('Unauthorized');
+            err.status = 401;
+            throw err;
+          }
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+          }
+          return await res.json();
+        } finally {
           if (timer) clearTimeout(timer);
-        });
+        }
+      }
 
-        if (response.status === 401) {
-          clearInterval(progressTimer);
-          handleUnauthorizedResponse();
-          return;
+      /**
+       * 2. Fetching Job Status / Extracted Items:
+       * Calls GET /shelf-jobs/{jobId} to poll or retrieve extracted items & detection coordinates.
+       * Does NOT reuse the upload endpoint logic.
+       */
+      async function fetchShelfJobStatusAndItems(jobId, sId) {
+        if (!jobId) return null;
+
+        if (typeof ApiClient !== 'undefined' && ApiClient.shelfJobs && typeof ApiClient.shelfJobs.get === 'function') {
+          try {
+            const clientRes = await ApiClient.shelfJobs.get(sId, jobId, { headers: getApiHeaders() });
+            if (clientRes) return clientRes?.data || clientRes;
+          } catch (e) {
+            console.warn('[AI Capture] ApiClient.shelfJobs.get fallback:', e);
+          }
         }
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const pollUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(sId)}/shelf-jobs/${encodeURIComponent(jobId)}`;
+        const pollRes = await fetch(pollUrl, { headers: getApiHeaders() });
+        if (pollRes.ok) {
+          const pollData = await pollRes.json();
+          return pollData?.data || pollData;
         }
+        return null;
+      }
 
-        const resJson = await response.json();
+      try {
+        // Step 1: Upload Shelf Image & Start Job (POST /shelf-jobs)
+        const resJson = await uploadShelfCaptureJob(formData, storeId, uploadHeaders);
         let serverJob = resJson?.data || resJson;
 
         const resolvedJobId = serverJob?.id || serverJob?.job_id || resJson?.id || resJson?.job_id || `JOB-${Date.now().toString().slice(-4)}`;
 
-        // Helper function to extract candidate items from any backend response structure
-        function extractCandidateItems(target) {
-          if (!target) return [];
-          const candidateArrays = [
-            target?.extracted_items,
-            target?.draft_products,
-            target?.products,
-            target?.items,
-            target?.extracted_drafts,
-            target?.data?.extracted_items,
-            target?.data?.draft_products,
-            target?.data?.products,
-            target?.data?.items,
-            Array.isArray(target) ? target : null
-          ];
-          for (const cand of candidateArrays) {
-            if (Array.isArray(cand) && cand.length > 0) return cand;
-          }
-          return [];
-        }
-
         let rawDetected = extractCandidateItems(serverJob) || extractCandidateItems(resJson);
         let jobStatus = (serverJob?.status || resJson?.status || '').toLowerCase();
 
-        // 1. Check if backend returned an asynchronous job in 'processing' or 'pending' status
+        // Step 2: Separate Fetching / Polling via GET /shelf-jobs/{jobId}
         const isAsyncPending = jobStatus === 'processing' || jobStatus === 'pending' || (rawDetected.length === 0 && jobStatus !== 'completed' && jobStatus !== 'failed');
 
         if (isAsyncPending) {
-          // Implement clean polling loop checking GET /api/v1/stores/{store_id}/shelf-jobs/{job_id} every 1.5 seconds
           let pollAttempts = 0;
           const maxPolls = 30; // 30 * 1.5s = 45 seconds
 
@@ -1171,13 +1243,11 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
               );
 
               try {
-                const pollUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/shelf-jobs/${encodeURIComponent(resolvedJobId)}`;
-                const pollRes = await fetch(pollUrl, { headers: getApiHeaders() });
-                if (pollRes.ok) {
-                  const pollData = await pollRes.json();
-                  const updatedJob = pollData?.data || pollData;
-                  const updatedStatus = (updatedJob?.status || pollData?.status || '').toLowerCase();
-                  let updatedItems = extractCandidateItems(updatedJob) || extractCandidateItems(pollData);
+                // Call separated GET /shelf-jobs/{jobId}
+                const updatedJob = await fetchShelfJobStatusAndItems(resolvedJobId, storeId);
+                if (updatedJob) {
+                  const updatedStatus = (updatedJob?.status || '').toLowerCase();
+                  let updatedItems = extractCandidateItems(updatedJob);
 
                   // If still empty but status is completed, query drafts endpoint directly
                   if (updatedItems.length === 0 && (updatedStatus === 'completed' || pollAttempts > 3)) {
@@ -1314,6 +1384,7 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         const localImageSrc = uploadedFiles[0]?.dataUrl || primaryThumbnail;
         localStorage.setItem('dawwer_current_job', JSON.stringify(newJob));
         localStorage.setItem('dawwer_active_job_id', newJob.id || newJob.job_id);
+        localStorage.setItem('dawwer_first_capture_done', 'true');
         if (localImageSrc) {
           localStorage.setItem('dawwer_current_shelf_image', localImageSrc);
           sessionStorage.setItem('current_shelf_image', localImageSrc);
@@ -1364,6 +1435,7 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         sessionStorage.setItem('dawwer_current_draft_products', JSON.stringify(fallbackItems));
         localStorage.setItem('dawwer_current_job', JSON.stringify(fallbackJob));
         localStorage.setItem('dawwer_active_job_id', fallbackJob.id || fallbackJob.job_id);
+        localStorage.setItem('dawwer_first_capture_done', 'true');
         if (fallbackImageSrc) {
           localStorage.setItem('dawwer_current_shelf_image', fallbackImageSrc);
           sessionStorage.setItem('current_shelf_image', fallbackImageSrc);
@@ -1506,9 +1578,10 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
           `;
         }
 
-        const validImageSrc = (job.image_url && !String(job.image_url).startsWith('JOB-'))
+        const rawJobImg = (job.image_url && !String(job.image_url).startsWith('JOB-'))
           ? job.image_url
-          : (job.imageDataUrl || ((job.thumbnail && !String(job.thumbnail).startsWith('JOB-')) ? job.thumbnail : 'assets/placeholder-product.png'));
+          : (job.imageDataUrl || ((job.thumbnail && !String(job.thumbnail).startsWith('JOB-')) ? job.thumbnail : ''));
+        const validImageSrc = resolveShelfImageUrl(rawJobImg);
 
         return `
           <tr class="hover:bg-slate-50/80 transition">
@@ -1517,8 +1590,15 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
               <div class="text-[11px] text-slate-400 mt-0.5">${job.createdAt}</div>
             </td>
             <td class="py-4 px-4">
-              <div class="w-14 h-10 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 relative group cursor-pointer" data-action="review-job" data-id="${job.id}">
-                <img src="${validImageSrc}" alt="رف" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='assets/placeholder-product.png';">
+              <div class="w-14 h-10 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 relative group cursor-pointer flex items-center justify-center" data-action="review-job" data-id="${job.id}">
+                ${validImageSrc ? `
+                  <img src="${validImageSrc}" alt="رف" class="w-full h-full object-cover" onerror="window.handleImageError ? window.handleImageError(this, 'لم يتم الاستخراج') : (this.style.display='none');">
+                ` : `
+                  <div class="img-fallback-placeholder flex flex-col items-center justify-center text-center p-1 w-full h-full text-slate-400 select-none">
+                    <svg class="w-4 h-4 text-slate-400 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <span class="text-[9px] font-medium leading-tight">لم يتم الاستخراج</span>
+                  </div>
+                `}
                 <div class="absolute inset-0 bg-slate-950/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 </div>

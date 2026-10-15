@@ -2354,6 +2354,26 @@
     if (btnReject) btnReject.setAttribute('data-order-id', order.id);
     if (btnCash) btnCash.setAttribute('data-order-id', order.id);
 
+    // Bind real receipt image if available
+    const imgCanvas = document.getElementById('receipt-img-canvas');
+    const simCard = document.getElementById('receipt-sim-card');
+    const rawReceipt = order.receiptUrl || order.paymentSlip?.imageUrl || order.paymentSlip?.receiptUrl || (order.paymentSlip?.fileUrl) || '';
+    if (rawReceipt && imgCanvas) {
+      const resolvedReceipt = (typeof resolveImageUrl === 'function')
+        ? resolveImageUrl(rawReceipt)
+        : (window.CONFIG && window.CONFIG.resolveImageUrl ? window.CONFIG.resolveImageUrl(rawReceipt) : rawReceipt);
+      imgCanvas.src = resolvedReceipt;
+      imgCanvas.onerror = function() {
+        this.classList.add('hidden');
+        if (simCard) simCard.classList.remove('hidden');
+      };
+      imgCanvas.classList.remove('hidden');
+      if (simCard) simCard.classList.add('hidden');
+    } else {
+      if (imgCanvas) imgCanvas.classList.add('hidden');
+      if (simCard) simCard.classList.remove('hidden');
+    }
+
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
   }

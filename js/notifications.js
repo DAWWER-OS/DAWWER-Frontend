@@ -125,6 +125,86 @@ const DawwerNotification = {
         toast.parentNode.removeChild(toast);
       }
     }, 300);
+  },
+
+  /**
+   * Handle coming-soon / in-development features
+   */
+  showComingSoon(featureName = '') {
+    const text = "هذه الميزة قيد التطوير وستكون متاحة في التحديث القادم 🚀";
+    this.show({
+      title: featureName || 'ميزة قيد التطوير',
+      message: text,
+      type: 'info',
+      duration: 4500
+    });
+    this.showComingSoonModal(featureName, text);
+  },
+
+  /**
+   * High-contrast, friendly coming-soon modal
+   */
+  showComingSoonModal(featureName = '', message = '') {
+    const text = message || "هذه الميزة قيد التطوير وستكون متاحة في التحديث القادم 🚀";
+    let modal = document.getElementById('dawwer-coming-soon-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'dawwer-coming-soon-modal';
+      modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[99999] flex items-center justify-center p-4 transition-opacity duration-200';
+      modal.setAttribute('dir', 'rtl');
+      modal.innerHTML = `
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 dark:border-slate-800 text-center transform transition-transform duration-200 scale-95 opacity-0" id="dawwer-coming-soon-dialog">
+          <div class="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-3xl flex items-center justify-center mx-auto mb-4 shadow-2xs border border-emerald-100 dark:border-emerald-800">
+            🚀
+          </div>
+          <h3 class="text-xl font-black text-slate-900 dark:text-white mb-2" id="dawwer-coming-soon-title">قريباً في التحديث القادم</h3>
+          <p class="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-6 leading-relaxed" id="dawwer-coming-soon-text">
+            ${text}
+          </p>
+          <button type="button" id="dawwer-coming-soon-close" class="w-full bg-[#163828] hover:bg-[#0e2c1f] text-white font-bold py-3.5 px-6 rounded-2xl text-sm transition active:scale-95 shadow-md cursor-pointer">
+            حسناً، فهمت
+          </button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal || e.target.id === 'dawwer-coming-soon-close') {
+          closeModal();
+        }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+          closeModal();
+        }
+      });
+    }
+
+    function closeModal() {
+      const dialog = document.getElementById('dawwer-coming-soon-dialog');
+      if (dialog) {
+        dialog.classList.remove('scale-100', 'opacity-100');
+        dialog.classList.add('scale-95', 'opacity-0');
+      }
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 200);
+    }
+
+    const titleEl = document.getElementById('dawwer-coming-soon-title');
+    const textEl = document.getElementById('dawwer-coming-soon-text');
+    if (titleEl) titleEl.textContent = featureName ? `ميزة "${featureName}"` : 'قريباً في التحديث القادم';
+    if (textEl) textEl.textContent = text;
+
+    modal.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      const dialog = document.getElementById('dawwer-coming-soon-dialog');
+      if (dialog) {
+        dialog.classList.remove('scale-95', 'opacity-0');
+        dialog.classList.add('scale-100', 'opacity-100');
+      }
+    });
   }
 };
 

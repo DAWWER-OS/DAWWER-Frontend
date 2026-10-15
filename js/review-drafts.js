@@ -97,27 +97,49 @@ async function loadAvailableCategories() {
   const headers = getApiHeaders();
 
   try {
-    let res = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/categories`, { headers }).catch(() => null);
-    if (!res || !res.ok) {
-      res = await fetch(`${FASTAPI_BASE_URL}/api/v1/categories`, { headers }).catch(() => null);
+    let list = [];
+    // 1. First attempt via ApiClient taxonomies
+    if (typeof ApiClient !== 'undefined' && ApiClient.categories && typeof ApiClient.categories.list === 'function') {
+      try {
+        const res = await ApiClient.categories.list();
+        const data = (res && res.data !== undefined) ? res.data : res;
+        list = Array.isArray(data) ? data : (data?.categories || data?.data || []);
+      } catch (e) {
+        console.warn('[review-drafts] ApiClient.categories.list note:', e);
+      }
     }
 
-    if (res && res.status === 401) {
-      handleUnauthorizedResponse();
-      return;
-    }
-
-    if (res && res.ok) {
-      const data = await res.json();
-      const list = Array.isArray(data) ? data : (data?.categories || data?.data || []);
-      if (Array.isArray(list) && list.length > 0) {
-        const names = list.map(c => typeof c === 'string' ? c : (c.name || c.category_name || c.title)).filter(Boolean);
-        if (names.length > 0) {
-          availableCategories = Array.from(new Set([...availableCategories, ...names]));
+    // 2. Fallback: Direct fetch to primary platform backend /api/categories
+    if (!list || list.length === 0) {
+      const apiBase = (typeof CONFIG !== 'undefined' && (CONFIG.API_BASE_URL || CONFIG.AUTH_BASE_URL))
+        ? (CONFIG.API_BASE_URL || CONFIG.AUTH_BASE_URL).replace(/\/+$/, '')
+        : 'https://dawwer.runasp.net/api';
+      const categoriesEndpoint = apiBase.endsWith('/api') ? `${apiBase}/categories` : `${apiBase}/api/categories`;
+      const res = await fetch(categoriesEndpoint, {
+        headers: {
+          ...headers,
+          'Accept': 'application/json'
         }
+      }).catch(() => null);
+
+      if (res && res.status === 401) {
+        handleUnauthorizedResponse();
+        return;
+      }
+
+      if (res && res.ok) {
+        const data = await res.json().catch(() => null);
+        list = Array.isArray(data) ? data : (data?.categories || data?.data || []);
+      }
+    }
+
+    if (Array.isArray(list) && list.length > 0) {
+      const names = list.map(c => typeof c === 'string' ? c : (c.name || c.category_name || c.name_ar || c.title)).filter(Boolean);
+      if (names.length > 0) {
+        availableCategories = Array.from(new Set([...availableCategories, ...names]));
       }
     } else {
-      // Fallback: extract unique categories from products
+      // Fallback: extract unique categories from products if available
       try {
         const pRes = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products?limit=100`, { headers }).catch(() => null);
         if (pRes && pRes.ok) {
@@ -173,15 +195,22 @@ function resolveShelfImageUrl(jobData) {
 
   if (!imgUrl) return '';
 
-  // 3. If it's a relative backend path (e.g. /uploads/...), prepend the API base URL
+  if (typeof resolveImageUrl === 'function') {
+    return resolveImageUrl(imgUrl);
+  }
+  if (typeof CONFIG !== 'undefined' && typeof CONFIG.resolveImageUrl === 'function') {
+    return CONFIG.resolveImageUrl(imgUrl);
+  }
+
+  // 3. Fallback: If it's a relative backend path (e.g. /uploads/...), prepend the backend host
   if (!imgUrl.startsWith('http') && !imgUrl.startsWith('data:') && !imgUrl.startsWith('blob:')) {
     if (imgUrl.startsWith('assets/') || imgUrl.startsWith('./assets/') || imgUrl === 'assets/images/placeholder-shelf.jpg') {
       return imgUrl.startsWith('./') ? imgUrl.slice(2) : imgUrl;
     }
-    const baseUrl = (typeof CONFIG !== 'undefined' && (CONFIG.API_BASE_URL || CONFIG.FASTAPI_BASE_URL)) 
-      ? (CONFIG.API_BASE_URL || CONFIG.FASTAPI_BASE_URL).replace(/\/+$/, '') 
-      : ((typeof FASTAPI_BASE_URL !== 'undefined' && FASTAPI_BASE_URL) ? FASTAPI_BASE_URL.replace(/\/+$/, '') : 'http://localhost:8000');
-    imgUrl = `${baseUrl}/${imgUrl.replace(/^\/+/, '')}`;
+    const backendHost = (typeof CONFIG !== 'undefined' && (CONFIG.BACKEND_BASE_URL || CONFIG.API_BASE_URL)) 
+      ? (CONFIG.BACKEND_BASE_URL || CONFIG.API_BASE_URL).replace(/\/api\/?$/i, '').replace(/\/+$/, '') 
+      : (window.BACKEND_BASE_URL || 'https://dawwer.runasp.net');
+    imgUrl = `${backendHost}/${imgUrl.replace(/^\/+/, '')}`;
   }
 
   return imgUrl;
@@ -285,6 +314,7 @@ function normalizeDraftProduct(item, index, jobContext) {
       label: itemLabel
     },
     box,
+    imageUrl: item.image_url || item.imageUrl || item.image || item.photo_url || item.thumbnail || '',
     status: isApproved ? 'Approved' : 'Draft',
     hasDuplicateMatch: !!item.has_duplicate_match || !!item.hasDuplicateMatch,
     duplicateMatch: item.duplicate_match || item.duplicateMatch || null
@@ -570,8 +600,20 @@ function setActiveJob(jobId, triggerBackendSync = false) {
                            localStorage.getItem('current_shelf_image');
       if (cachedBase64 && this.src !== cachedBase64) {
         this.src = cachedBase64;
+      } else if (!this._fallbackAttempted) {
+        this._fallbackAttempted = true;
+        this.src = 'assets/images/placeholder-shelf.jpg';
       } else {
-        this.src = 'assets/images/placeholder-shelf.jpg'; // safe fallback
+        if (imgPlaceholder) {
+          imgPlaceholder.innerHTML = `
+            <svg class="w-10 h-10 text-slate-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <span class="text-xs font-bold text-slate-400">صورة غير متوفرة / لم يتم الاستخراج</span>
+          `;
+          imgPlaceholder.classList.remove('hidden');
+        }
+        this.style.display = 'none';
       }
     };
     imgEl.onload = function() {
@@ -640,7 +682,7 @@ function updateDraftField(itemId, field, value) {
       const idx = draftItems.findIndex(d => d.id === itemId);
       const shortName = (item.name || '').split(' ')[0] || 'صنف';
       const formattedPrice = Number(item.price || 0).toFixed(2);
-      tag.textContent = `#${idx + 1} ${shortName} (${formattedPrice} ر.س)`;
+      tag.textContent = `#${idx + 1} ${shortName} (${formattedPrice} ₪)`;
     }
   }
 
@@ -941,6 +983,7 @@ async function approveAllDrafts() {
       localStorage.removeItem('dawwer_current_draft_products');
       sessionStorage.removeItem('dawwer_current_review_job');
       sessionStorage.removeItem('dawwer_current_draft_products');
+      localStorage.setItem('dawwer_first_capture_done', 'true');
     } catch (e) {}
 
     renderBoundingBoxes();
@@ -1193,7 +1236,7 @@ function renderBoundingBoxes() {
         data-box-id="${item.id}"
       >
         <div class="bounding-tag">
-          #${index + 1} ${(item.name || '').split(' ')[0]} (${Number(item.price || 0).toFixed(2)} ر.س)
+          #${index + 1} ${(item.name || '').split(' ')[0]} (${Number(item.price || 0).toFixed(2)} ₪)
         </div>
       </div>
     `;
@@ -1312,6 +1355,11 @@ function renderDraftCards() {
     const hasDup = item.hasDuplicateMatch && item.duplicateMatch;
     const isApproved = item.status === 'Approved';
 
+    const rawDraftImg = item.imageUrl || item.image_url || item.image || item.photo_url || item.thumbnail || '';
+    const draftImgSrc = (typeof resolveImageUrl === 'function')
+      ? resolveImageUrl(rawDraftImg)
+      : (window.CONFIG && window.CONFIG.resolveImageUrl ? window.CONFIG.resolveImageUrl(rawDraftImg) : rawDraftImg);
+
     return `
       <div 
         id="card-${item.id}"
@@ -1328,6 +1376,16 @@ function renderDraftCards() {
               data-action="toggle-draft-select" data-id="${item.id}"
               class="w-4 h-4 rounded text-[#153f2d] focus:ring-[#153f2d] accent-[#153f2d] cursor-pointer"
             >
+            <div class="w-12 h-12 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0 relative flex items-center justify-center">
+              ${draftImgSrc ? `
+                <img src="${draftImgSrc}" alt="${escapeHtml(item.name)}" class="w-full h-full object-cover" onerror="window.handleImageError ? window.handleImageError(this, 'لم يتم الاستخراج') : (this.style.display='none');">
+              ` : `
+                <div class="img-fallback-placeholder flex flex-col items-center justify-center text-center p-1 w-full h-full text-slate-400 select-none">
+                  <svg class="w-4 h-4 text-slate-400 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                  <span class="text-[8px] font-medium leading-tight">لم يتم الاستخراج</span>
+                </div>
+              `}
+            </div>
             <div class="flex items-center gap-2">
               <span class="w-6 h-6 rounded-lg ${isApproved ? 'bg-emerald-100 text-emerald-800' : 'bg-[#edf5f0] text-[#153f2d]'} font-black text-xs flex items-center justify-center">
                 #${index + 1}
@@ -1408,7 +1466,7 @@ function renderDraftCards() {
                 ${isApproved ? 'disabled' : ''}
                 class="w-full p-2 pl-12 rounded-xl border border-slate-200 ${isApproved ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-slate-50/70 text-[#153f2d] focus:bg-white focus:border-[#153f2d] focus:ring-1 focus:ring-[#153f2d]'} text-xs font-black outline-none"
               >
-              <span class="absolute left-2.5 top-2 text-[11px] font-bold text-[#d6a950]">ر.س</span>
+              <span class="absolute left-2.5 top-2 text-[11px] font-bold text-[#d6a950]">₪</span>
             </div>
           </div>
 

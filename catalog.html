@@ -59,7 +59,7 @@
       <!-- TOP: Minimal Brand Icon/Logo Only -->
       <div class="flex flex-col items-center w-full pt-1 px-1.5 shrink-0 overflow-visible">
         <div class="relative group flex items-center justify-center">
-          <a href="index.html" class="flex items-center justify-center w-11 h-11 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-colors shadow-xs dark:bg-slate-900 dark:border-slate-800" aria-label="دوّر - الرئيسية">
+          <a href="dashboard.html" class="sidebar-logo-badge flex items-center justify-center w-11 h-11 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 transition-colors shadow-xs" aria-label="دوّر - الرئيسية">
             <img src="assets/images/FrameLogo.png" alt="دوّر" class="h-6 w-auto object-contain">
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
@@ -72,18 +72,18 @@
       <nav class="flex flex-col items-center gap-2 my-auto w-full py-2 sidebar-nav overflow-visible">
         <!-- 1. لوحة التحكم -->
         <div class="relative group flex items-center justify-center">
-          <a href="index.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="لوحة التحكم">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          <a href="dashboard.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="لوحة التحكم">
+            <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
             لوحة التحكم الرئيسية
           </div>
         </div>
 
-        <!-- 2. الكتالوج والمخططات -->
+        <!-- 2. الكتالوج والمخططات (Active) -->
         <div class="relative group flex items-center justify-center">
-          <a href="catalog.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="الكتالوج والمخططات">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+          <a href="catalog.html" class="nav-item active active-tab flex items-center justify-center w-11 h-11 rounded-xl text-white bg-white/15 backdrop-blur-sm border border-emerald-400/30 transition-colors shrink-0 shadow-sm" aria-label="الكتالوج والمخططات">
+            <svg class="w-6 h-6 shrink-0 stroke-white text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
             إدارة الكتالوج والمخطط
@@ -92,8 +92,8 @@
 
         <!-- 3. مسح الرفوف بالذكاء الاصطناعي (AI) -->
         <div class="relative group flex items-center justify-center">
-          <a href="ai-capture.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="مسح الرفوف بالذكاء">
-            <svg class="w-5 h-5 text-[#d6a950] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.01.01"/></svg>
+          <a href="ai-capture.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="مسح الرفوف بالذكاء">
+            <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M19 7l-.01.01"/></svg>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
             مسح الرفوف بالذكاء الاصطناعي
@@ -102,8 +102,8 @@
 
         <!-- 4. مراجعة المسودات المستخرجة -->
         <div class="relative group flex items-center justify-center">
-          <a href="review-drafts.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="مراجعة المسودات">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          <a href="review-drafts.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="مراجعة المسودات">
+            <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
             مراجعة واعتماد المسودات
@@ -112,8 +112,8 @@
 
         <!-- 5. المخزون وسجل التدقيق -->
         <div class="relative group flex items-center justify-center">
-          <a href="inventory-audit.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="المخزون والتدقيق">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+          <a href="inventory-audit.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="المخزون والتدقيق">
+            <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
             المخزون وسجل التدقيق
@@ -122,8 +122,8 @@
 
         <!-- 6. الطلبات والمبيعات -->
         <div class="relative group flex items-center justify-center">
-          <a href="orders.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="الطلبات والمبيعات">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+          <a href="orders.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الطلبات والمبيعات">
+            <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
             الطلبات والمبيعات
@@ -132,8 +132,8 @@
 
         <!-- 7. الممرات والرفوف -->
         <div class="relative group flex items-center justify-center">
-          <a href="shelves.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="الممرات والرفوف">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+          <a href="shelves.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الممرات والرفوف">
+            <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
             مواقع الممرات والرفوف
@@ -142,8 +142,8 @@
 
         <!-- 8. فريق العمل والصلاحيات -->
         <div class="relative group flex items-center justify-center">
-          <a href="store-staff.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="فريق العمل">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+          <a href="store-staff.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="فريق العمل">
+            <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
             فريق العمل والأدوار
@@ -152,20 +152,20 @@
 
         <!-- 9. تسجيل واعتماد المتجر -->
         <div class="relative group flex items-center justify-center">
-          <a href="merchant-application.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="بيانات المتجر">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z"/></svg>
+          <a href="merchant-application.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="بيانات المتجر">
+            <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z"/></svg>
           </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
+          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
             تسجيل واعتماد المتجر
           </div>
         </div>
 
         <!-- 10. الملف الشخصي والإعدادات -->
         <div class="relative group flex items-center justify-center">
-          <a href="profile.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-emerald-400 dark:bg-slate-900" aria-label="الملف الشخصي">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          <a href="profile.html" class="nav-item flex items-center justify-center w-11 h-11 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الملف الشخصي">
+            <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
           </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
+          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
             الملف الشخصي والإعدادات
           </div>
         </div>
@@ -175,9 +175,9 @@
       <div class="flex flex-col items-center w-full pt-2 pb-1 border-t border-white/10 px-1.5 shrink-0 overflow-visible">
         <div class="relative group flex items-center justify-center">
           <button id="logout-btn" data-action="logout" class="flex items-center justify-center w-11 h-11 rounded-xl text-rose-300 hover:text-white hover:bg-rose-500/20 transition-colors cursor-pointer active:scale-95" aria-label="تسجيل الخروج">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
           </button>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 text-rose-200 border border-rose-900/60 text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
+          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 text-rose-200 border border-rose-900/60 text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
             تسجيل الخروج
           </div>
         </div>
@@ -187,7 +187,7 @@
     <div id="sidebar-backdrop" class="backdrop-hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40"></div>
 <div id="toast-container" class="fixed top-5 left-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-  <header class="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-2xs dark:border-slate-800">
+  <header class="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 shadow-2xs dark:border-slate-800">
     <div class="flex items-center gap-3">
       <button id="sidebar-toggle-btn" class="sidebar-toggle-btn p-2 text-slate-600 hover:text-[#153f2d] hover:bg-slate-100 rounded-xl transition flex items-center justify-center cursor-pointer active:scale-95 md:hidden" title="القائمة الجانبية (Ctrl+B)">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
@@ -195,7 +195,13 @@
       <div>
         <h1 class="text-xl md:text-2xl font-extrabold text-[#153f2d] flex flex-wrap items-center gap-2">
           <span>إدارة الكتالوج والمخطط الداخلي</span>
-          <span class="text-xs px-3 py-1 rounded-full bg-[#edf5f0] text-[#153f2d] font-bold border border-[#153f2d]/10">المتجر #104</span>
+          <span data-store-name class="text-xs px-3 py-1 rounded-full bg-[#edf5f0] text-[#153f2d] font-bold border border-[#153f2d]/10">سوبر ماركت الأمل</span>
+          <span class="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold border border-slate-200/70 dark:border-slate-700/70">
+            <svg class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+            <span>المالك:</span>
+            <span data-owner-name class="font-bold text-slate-900 dark:text-white">أحمد سليم</span>
+          </span>
         </h1>
         <p class="text-xs text-slate-500 mt-1">تحديد مواقع الرفوف، الفهرسة الشاملة، والاستيراد الجماعي للمنتجات</p>
       </div>
@@ -238,7 +244,7 @@
           <div class="flex items-center gap-2 flex-wrap">
             <h2 class="text-lg md:text-xl font-bold text-slate-900">قائمة أصناف المتجر والمخزون</h2>
             <span id="total-count-badge" class="px-2.5 py-0.5 text-xs font-bold bg-[#d6a950] text-white rounded-full" title="إجمالي الأصناف">0</span>
-            <span id="total-value-badge" class="px-2.5 py-0.5 text-xs font-bold bg-[#edf5f0] text-[#153f2d] border border-[#153f2d]/20 rounded-full">إجمالي القيمة: <strong id="total-catalog-value" class="font-extrabold text-[#153f2d]">0.00 ر.س</strong></span>
+            <span id="total-value-badge" class="px-2.5 py-0.5 text-xs font-bold bg-[#edf5f0] text-[#153f2d] border border-[#153f2d]/20 rounded-full">إجمالي القيمة: <strong id="total-catalog-value" class="font-extrabold text-[#153f2d]">0.00 ₪</strong></span>
           </div>
           <div class="catalog-toolbar relative z-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto">
             <button id="btn-ai-shelf-scan" type="button" class="relative z-10 pointer-events-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 rounded-2xl shadow-xs transition cursor-pointer active:scale-95">
@@ -248,7 +254,7 @@
               </svg>
               <span>مسح الرف بالذكاء الاصطناعي</span>
             </button>
-            <button id="btn-import-catalog" type="button" class="relative z-10 pointer-events-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-[#153f2d] bg-white hover:bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs transition cursor-pointer dark:bg-slate-900 dark:border-slate-800">
+            <button id="btn-import-catalog" type="button" data-feature="coming-soon" data-feature-name="استيراد الكتالوج CSV / Excel" class="relative z-10 pointer-events-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-[#153f2d] bg-white hover:bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs transition cursor-pointer dark:bg-slate-900 dark:border-slate-800">
               <svg class="w-4 h-4 text-[#153f2d] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
@@ -410,17 +416,90 @@
               <span>مخطط المتجر ونقاط التوجيه الذكية</span>
               <span id="total-pins-badge" class="px-3 py-0.5 text-xs font-bold bg-[#153f2d] text-white rounded-full">0 مناطق محددة</span>
             </h2>
-            <p class="text-xs text-slate-500 mt-1">قم برفع المخطط المعماري الداخلي للمتجر وتحديد مواقع الممرات والرفوف بدقة بالنقر المباشر.</p>
+            <p class="text-xs text-slate-500 mt-1">خصص أبعاد المتجر وموقع المدخل بشكل تفاعلي، أو ارفع مخططاً معمارياً مخصصاً لتحديد مواقع الممرات والرفوف بدقة.</p>
           </div>
-          <div class="flex items-center gap-2.5">
-            <button id="btn-load-sample-map" class="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-[#153f2d] bg-[#edf5f0] hover:bg-[#d8ebd0] border border-[#153f2d]/10 rounded-2xl transition">
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <button id="btn-load-sample-map" class="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-[#153f2d] bg-[#edf5f0] hover:bg-[#d8ebd0] border border-[#153f2d]/10 rounded-2xl transition cursor-pointer active:scale-95">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-              <span>تحميل المخطط الافتراضي</span>
+              <span>المخطط التفاعلي الديناميكي</span>
             </button>
-            <button id="btn-clear-all-pins" class="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-2xl transition">
+            <button id="btn-clear-all-pins" class="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-2xl transition cursor-pointer active:scale-95">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
               <span>مسح كافة النقاط</span>
             </button>
+          </div>
+        </div>
+
+        <!-- لوحة ضبط أبعاد المتجر والمدخل التفاعلية (Dynamic Store Dimensions & Entrance Panel) -->
+        <div id="store-map-customizer-panel" class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-xs space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 flex-wrap gap-2">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-[#153f2d] dark:text-emerald-400 flex items-center justify-center font-bold">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-sm font-black text-slate-900 dark:text-white">تخصيص أبعاد المتجر والمدخل الرئيسي</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">تحكم بمساحة الصالة الهندسية وموقع الباب الرئيسي لتوليد مخطط واقعي وديناميكي لمتجرك</p>
+              </div>
+            </div>
+            <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-[#153f2d] dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800">
+              توليد فوري ومباشر ⚡
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end text-xs">
+            <!-- عرض المتجر -->
+            <div>
+              <label for="store-map-width-input" class="block font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
+                <span>عرض المتجر (أفقي)</span>
+                <span id="store-map-width-val" class="font-mono text-[#153f2d] dark:text-emerald-400 font-black">30 م</span>
+              </label>
+              <div class="relative flex items-center">
+                <input type="range" id="store-map-width-input" min="15" max="60" step="5" value="30"
+                  class="w-full accent-[#153f2d] cursor-pointer">
+              </div>
+            </div>
+
+            <!-- عمق / طول المتجر -->
+            <div>
+              <label for="store-map-depth-input" class="block font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
+                <span>عمق المتجر (رأسي)</span>
+                <span id="store-map-depth-val" class="font-mono text-[#153f2d] dark:text-emerald-400 font-black">20 م</span>
+              </label>
+              <div class="relative flex items-center">
+                <input type="range" id="store-map-depth-input" min="10" max="45" step="5" value="20"
+                  class="w-full accent-[#153f2d] cursor-pointer">
+              </div>
+            </div>
+
+            <!-- موقع المدخل الرئيسي -->
+            <div>
+              <label for="store-map-door-select" class="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                موقع المدخل / الباب الرئيسي
+              </label>
+              <select id="store-map-door-select" class="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#153f2d] cursor-pointer">
+                <option value="bottom-center" selected>أسفل - المنتصف (افتراضي)</option>
+                <option value="bottom-right">أسفل - اليمين</option>
+                <option value="bottom-left">أسفل - اليسار</option>
+                <option value="top-center">أعلى - المنتصف</option>
+                <option value="right-center">الجانب الأيمن - المنتصف</option>
+                <option value="left-center">الجانب الأيسر - المنتصف</option>
+              </select>
+            </div>
+
+            <!-- عدد ممرات الكتالوج -->
+            <div>
+              <label for="store-map-aisles-select" class="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                توزيع الممرات النموذجية
+              </label>
+              <select id="store-map-aisles-select" class="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#153f2d] cursor-pointer">
+                <option value="3" selected>3 ممرات رئيسية (مخبوزات، ألبان، مشروبات)</option>
+                <option value="4">4 ممرات رئيسية (+ مجمدات ومؤن)</option>
+                <option value="5">5 ممرات متقدمة (+ قسم المنظفات)</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -742,7 +821,7 @@
           <div class="p-4 bg-[#edf5f0] rounded-2xl border border-[#153f2d]/10 max-w-md mx-auto text-right text-xs space-y-2 font-medium">
             <div class="flex justify-between text-slate-700">
               <span>المتجر المستهدف:</span>
-              <span class="font-bold text-[#153f2d]">سوبرماركت المدينة (#104)</span>
+              <span data-store-name class="font-bold text-[#153f2d]">سوبر ماركت الأمل</span>
             </div>
             <div class="flex justify-between text-slate-700">
               <span>حالة النشر الافتراضية:</span>
@@ -815,7 +894,7 @@
               </select>
             </div>
             <div>
-              <label for="form-price" class="block text-xs font-bold text-slate-700 mb-1.5">السعر (ر.س / د.أ) <span class="text-rose-500">*</span></label>
+              <label for="form-price" class="block text-xs font-bold text-slate-700 mb-1.5">السعر (₪) <span class="text-rose-500">*</span></label>
               <input type="number" step="0.01" min="0.01" id="form-price" placeholder="0.00" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:border-[#153f2d]">
             </div>
             <div>

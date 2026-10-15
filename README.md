@@ -76,7 +76,9 @@ dawwer/
 │       ├── auth.js               # Auth session management, RBAC checks, route guards & store selector
 │       ├── config.js             # Global environment config, API URLs, user roles & permission constants
 │       └── layout.js             # Shared layout controller, mobile sidebar drawer & dynamic badge renderer
-├── index.html                    # Merchant operations dashboard & store KPI overview
+├── login.html                    # Primary application entry point & merchant authentication
+├── index.html                    # Root redirector to login.html
+├── dashboard.html                # Merchant operations dashboard & store KPI overview
 ├── catalog.html                  # Unified Product Catalog, Inventory, AI Camera Shelf Scanner & Blueprint
 ├── merchant-application.html     # Store onboarding wizard & legal document verification submission
 ├── store-staff.html              # Multi-user staff directory, permission matrix & custom role creator

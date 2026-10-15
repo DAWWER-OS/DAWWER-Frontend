@@ -144,10 +144,18 @@ function renderTable(list) {
       statusBadge = `<span class='bg-amber-50 text-amber-700 text-xs px-3 py-1 rounded-full font-bold inline-block'>مخزون منخفض (${qty})</span>`;
     }
 
+    const rawProdImg = p.image_url || p.imageUrl || p.image || '';
+    const resolvedImg = (typeof resolveImageUrl === 'function')
+      ? resolveImageUrl(rawProdImg)
+      : (window.CONFIG && window.CONFIG.resolveImageUrl ? window.CONFIG.resolveImageUrl(rawProdImg) : rawProdImg);
+    const imgCol = resolvedImg
+      ? `<img src="${resolvedImg}" alt="${p.name}" class="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0" onerror="window.handleImageError ? window.handleImageError(this, 'لم يتم الاستخراج') : (this.style.display='none');">`
+      : `<div class="img-fallback-placeholder w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex flex-col items-center justify-center text-slate-400 p-0.5 shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>`;
+
     const row = document.createElement('tr');
     row.className = 'hover:bg-slate-50/80 transition';
     row.innerHTML =
-      `<td class='py-4 px-6 font-bold text-slate-900'>${p.name}</td>` +
+      `<td class='py-4 px-6 font-bold text-slate-900'><div class="flex items-center gap-2.5">${imgCol}<span>${p.name}</span></div></td>` +
       `<td class='py-4 px-6 text-slate-600'>${p.category || 'عام'}</td>` +
       `<td class='py-4 px-6 font-bold text-slate-900'>₪${Number(p.price || 0).toFixed(2)}</td>` +
       `<td class='py-4 px-6 text-slate-700 font-bold'>${qty}</td>` +
