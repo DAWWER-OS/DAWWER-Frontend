@@ -931,8 +931,13 @@ const ApiClient = {
     try {
       const parts = clean.split('.');
       if (parts.length !== 3) return false;
-      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-      if (!payload.exp) return false;
+      let payload;
+      try {
+        payload = JSON.parse(decodeURIComponent(escape(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))));
+      } catch (e) {
+        payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      }
+      if (!payload || !payload.exp) return false;
       // Expired if current time in seconds is at or past expiry (with 10s grace window)
       return (Date.now() / 1000) >= (payload.exp - 10);
     } catch (e) {
@@ -1045,7 +1050,7 @@ const ApiClient = {
           return null;
         }
 
-        const accessToken = this.getRawAccessToken() || '';
+        const accessToken = this.getRawAccessToken() || this.getToken() || '';
         const baseUrl = (typeof CONFIG !== 'undefined' && CONFIG.AUTH_BASE_URL)
           ? CONFIG.AUTH_BASE_URL
           : (this.AUTH_BASE_URL || 'https://dawwer.runasp.net/api');
@@ -1142,6 +1147,50 @@ const ApiClient = {
     })();
 
     return this._refreshPromise;
+  },
+
+  /**
+   * Proactive token refresh watcher:
+   * Periodically checks JWT expiry (every 60s) and automatically refreshes 5 minutes before expiry.
+   * Ensures active users are never logged out unexpectedly while working.
+   */
+  startTokenRefreshWatcher() {
+    if (this._watcherStarted) return;
+    this._watcherStarted = true;
+
+    if (typeof window === 'undefined') return;
+
+    setInterval(async () => {
+      try {
+        const token = this.getRawAccessToken() || this.getToken();
+        const refreshToken = this.getRefreshToken();
+        if (!token || !refreshToken) return;
+
+        const clean = String(token).trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
+        const parts = clean.split('.');
+        if (parts.length !== 3) return;
+
+        let payload;
+        try {
+          payload = JSON.parse(decodeURIComponent(escape(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))));
+        } catch (e) {
+          payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+        }
+
+        if (!payload || !payload.exp) return;
+
+        const nowSec = Math.floor(Date.now() / 1000);
+        const timeUntilExpiry = payload.exp - nowSec;
+
+        // If token expires in less than 5 minutes (300 seconds), renew it proactively in background!
+        if (timeUntilExpiry < 300) {
+          console.info(`[ApiClient.watcher] Token expires in ${timeUntilExpiry}s (<300s). Initiating proactive silent refresh...`);
+          await this.refreshAuthToken();
+        }
+      } catch (err) {
+        console.warn('[ApiClient.watcher] Proactive refresh check note:', err);
+      }
+    }, 60000);
   },
 
   _reauthPromptActive: false,
@@ -1561,9 +1610,11 @@ const ApiClient = {
       }
     }
 
-    // 4. Pre-flight check: If token is missing, attempt silent refresh or safe dev fallback
+    // 4. Pre-flight check: If token is missing or expired, attempt silent refresh before dispatching
     if (!isPublicAuthEndpoint) {
-      if ((!token || token === 'null' || token === 'undefined' || token.trim() === '') && typeof this.getRefreshToken === 'function' && this.getRefreshToken()) {
+      const isMissingOrExpired = !token || token === 'null' || token === 'undefined' || token.trim() === '' || this.isTokenExpired(token);
+      if (isMissingOrExpired && typeof this.getRefreshToken === 'function' && this.getRefreshToken()) {
+        console.info(`[ApiClient] Pre-flight token check: Token is ${token ? 'expired' : 'missing'}. Attempting proactive silent refresh for "${method} ${cleanEndpoint}"...`);
         const refreshedToken = typeof this.refreshAuthToken === 'function' ? await this.refreshAuthToken() : null;
         if (refreshedToken) {
           token = (typeof this.getUploadAuthToken === 'function' ? this.getUploadAuthToken() : null) || refreshedToken;
@@ -1788,6 +1839,17 @@ const ApiClient = {
       }
 
       // If refresh not available, refresh failed, or retried request still returned 401:
+      // CRITICAL: A 401 from secondary FastAPI/Render services must NEVER purge the user's primary session!
+      if (isFastApiTarget) {
+        console.warn(`[ApiClient] 401 on secondary FastAPI endpoint: "${method} ${cleanEndpoint}". Suppressing global session purge.`);
+        return {
+          success: false,
+          status: 401,
+          error: "Unauthorized",
+          message: "تعذر الاتصال بخدمة الذكاء الاصطناعي أو انتهت صلاحية المصادقة معها."
+        };
+      }
+
       const isMerchantReq = lower.startsWith('/merchant') || lower.startsWith('/api/merchant');
       const unauthMsg = isMerchantReq
         ? "يرجى تسجيل الدخول بحساب تاجر مفعل للمتابعة."
@@ -3510,6 +3572,11 @@ if (typeof window !== 'undefined') {
   window.escapeHtml = window.escapeHtml || escapeHtml;
   window.handleImageError = window.handleImageError || handleImageError;
   window.ApiClient = ApiClient;
+
+  // Start proactive background token refresh watcher automatically across all pages
+  try {
+    ApiClient.startTokenRefreshWatcher();
+  } catch (e) {}
 }
 
 ApiClient.escapeHtml = escapeHtml;

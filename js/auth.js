@@ -139,6 +139,22 @@ const Auth = {
       candidateKeys.push(CONFIG.STORE_TOKEN_KEY);
     }
 
+    // 1. Pass 1: Prioritize valid, UNEXPIRED candidate token
+    for (const key of candidateKeys) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw && typeof raw === 'string') {
+          const clean = raw.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
+          if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && clean !== '') {
+            if (!this.isTokenExpired(clean)) {
+              return clean;
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
+    // 2. Pass 2: Fall back to raw candidate token if unexpired check was unavailable
     for (const key of candidateKeys) {
       try {
         const raw = localStorage.getItem(key);
@@ -160,8 +176,13 @@ const Auth = {
     try {
       const parts = clean.split('.');
       if (parts.length !== 3) return false;
-      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-      if (!payload.exp) return false;
+      let payload;
+      try {
+        payload = JSON.parse(decodeURIComponent(escape(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))));
+      } catch (e) {
+        payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      }
+      if (!payload || !payload.exp) return false;
       // Expired if current time in seconds is at or past expiry (with 10s grace window)
       return (Date.now() / 1000) >= (payload.exp - 10);
     } catch (e) {
@@ -193,13 +214,36 @@ const Auth = {
 
   isAuthenticated() {
     const token = this.getToken();
-    if (!token) return false;
-    if (this.isTokenExpired(token)) {
-      console.warn('[Auth] Session token is expired. Purging stale credentials.');
-      this.clearLocalSession();
-      return false;
+    const refreshToken = (typeof ApiClient !== 'undefined' && typeof ApiClient.getRefreshToken === 'function')
+      ? ApiClient.getRefreshToken()
+      : (localStorage.getItem('refreshToken') ||
+         localStorage.getItem('refresh_token') ||
+         localStorage.getItem('dawwer_refresh_token') ||
+         (typeof CONFIG !== 'undefined' && CONFIG.REFRESH_TOKEN_KEY ? localStorage.getItem(CONFIG.REFRESH_TOKEN_KEY) : null));
+
+    // If no token and no refresh token, session is completely absent
+    if (!token && !refreshToken) return false;
+
+    // If candidate token is valid and unexpired, user is authenticated
+    if (token && !this.isTokenExpired(token)) {
+      return true;
     }
-    return true;
+
+    // If token is missing or expired, but we have a valid refreshToken:
+    // DO NOT purge the session! Preserve session and trigger silent refresh
+    if (refreshToken && typeof refreshToken === 'string' && refreshToken.trim() !== '' && refreshToken !== 'null' && refreshToken !== 'undefined') {
+      if (typeof ApiClient !== 'undefined' && typeof ApiClient.refreshAuthToken === 'function') {
+        ApiClient.refreshAuthToken().catch(err => {
+          console.warn('[Auth] Background silent token refresh attempt note:', err);
+        });
+      }
+      return true;
+    }
+
+    // Only purge when token is expired AND no refresh token exists
+    console.warn('[Auth] Session token is expired and no refreshToken found. Purging stale credentials.');
+    this.clearLocalSession();
+    return false;
   },
 
   async selectStore(storeId) {

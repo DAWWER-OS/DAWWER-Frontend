@@ -1360,7 +1360,7 @@ const DawwerLayout = {
       let profile = null;
 
       if (typeof ApiClient !== 'undefined' && ApiClient.stores && targetId) {
-        const res = await ApiClient.stores.getStore(targetId).catch(() => null);
+        const res = await ApiClient.stores.getStore(targetId, { suppressAuthPrompt: true }).catch(() => null);
         if (res && res.success !== false && res.data) {
           profile = res.data;
         }
