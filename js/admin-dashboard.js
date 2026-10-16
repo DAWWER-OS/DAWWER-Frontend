@@ -239,13 +239,17 @@
 
     // Update Slim Sidebar Buttons
     document.querySelectorAll('#main-sidebar [data-tab], #sidebar-box [data-tab]').forEach(b => {
-      b.classList.remove('active', 'active-tab', 'text-white', 'bg-white/20');
-      b.classList.add('text-white/70');
+      b.classList.remove('active', 'active-tab', 'text-white', 'bg-white/15', 'bg-white/20', 'border', 'border-emerald-400/30');
+      b.classList.add('text-emerald-100/60');
+      const svg = b.querySelector('svg');
+      if (svg) svg.classList.remove('stroke-white', 'text-white');
     });
     const sidebarBtn = document.getElementById(`tab-btn-${tab}`);
     if (sidebarBtn) {
-      sidebarBtn.classList.add('active', 'active-tab', 'text-white', 'bg-white/20');
-      sidebarBtn.classList.remove('text-white/70');
+      sidebarBtn.classList.add('active', 'active-tab', 'text-white', 'bg-white/15', 'border', 'border-emerald-400/30', 'shadow-sm');
+      sidebarBtn.classList.remove('text-emerald-100/60');
+      const svg = sidebarBtn.querySelector('svg');
+      if (svg) svg.classList.add('stroke-white', 'text-white');
     }
 
     // Update Header Pill Buttons

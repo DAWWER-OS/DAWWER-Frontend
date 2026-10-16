@@ -27,12 +27,16 @@ async function loadDashboard() {
   try {
     // 2. Persistent Store Context: read active_store_id and storeToken from localStorage directly
     const existingStoreId = localStorage.getItem('active_store_id') || localStorage.getItem('activeStoreId') || localStorage.getItem('storeId');
-    const existingStoreName = localStorage.getItem('storeName') || localStorage.getItem('store_name');
-    if (existingStoreName) {
-      document.querySelectorAll('[data-store-name], #store-name-text, #current-store-name').forEach(el => {
-        el.innerText = existingStoreName;
-      });
+    let existingStoreName = localStorage.getItem('storeName') || localStorage.getItem('store_name');
+    if (typeof DawwerLayout !== 'undefined' && typeof DawwerLayout.cleanStoreName === 'function') {
+      existingStoreName = DawwerLayout.cleanStoreName(existingStoreName);
     }
+    const finalStoreName = (existingStoreName && existingStoreName !== 'null' && existingStoreName !== 'undefined')
+      ? existingStoreName
+      : 'سوبر ماركت الأمل';
+    document.querySelectorAll('[data-store-name], #store-name-text, #current-store-name').forEach(el => {
+      el.innerText = finalStoreName;
+    });
 
     if (!window.ApiClient) return;
     const res = await ApiClient.get('/merchant/stores').catch(() => null);
@@ -51,10 +55,14 @@ async function loadDashboard() {
         // Store context is already persistent; refresh UI store name if updated on server
         const currentStore = res.data.find(s => String(s.id) === String(existingStoreId));
         if (currentStore && currentStore.name) {
-          localStorage.setItem('storeName', currentStore.name);
-          localStorage.setItem('store_name', currentStore.name);
+          let sName = currentStore.name;
+          if (typeof DawwerLayout !== 'undefined' && typeof DawwerLayout.cleanStoreName === 'function') {
+            sName = DawwerLayout.cleanStoreName(sName);
+          }
+          localStorage.setItem('storeName', sName);
+          localStorage.setItem('store_name', sName);
           document.querySelectorAll('[data-store-name], #store-name-text, #current-store-name').forEach(el => {
-            el.innerText = currentStore.name;
+            el.innerText = sName;
           });
         }
       }

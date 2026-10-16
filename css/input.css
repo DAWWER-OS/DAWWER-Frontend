@@ -24,27 +24,51 @@
   html.dark #main-sidebar,
   html.dark #sidebar-box,
   html.dark #sidebar-drawer {
-    background-color: #0f172a !important; /* slate-900 */
-    border-color: #1e293b !important; /* slate-800 */
+    background-color: #0e2c1f !important; /* forest-green consistent background */
+    border-color: rgba(255, 255, 255, 0.1) !important;
   }
   html.dark #main-sidebar .nav-item:not(.active),
   html.dark #sidebar-box .nav-item:not(.active),
   html.dark #sidebar-drawer .nav-item:not(.active) {
-    color: #cbd5e1 !important; /* slate-300 */
+    color: rgba(209, 250, 229, 0.65) !important; /* text-emerald-100/65 */
+  }
+  html.dark #main-sidebar .nav-item:not(.active) svg,
+  html.dark #sidebar-box .nav-item:not(.active) svg,
+  html.dark #sidebar-drawer .nav-item:not(.active) svg {
+    color: rgba(209, 250, 229, 0.65) !important;
+    stroke: currentColor !important;
   }
   html.dark #main-sidebar .nav-item:hover,
   html.dark #sidebar-box .nav-item:hover,
   html.dark #sidebar-drawer .nav-item:hover {
-    background-color: rgba(30, 41, 59, 0.6) !important; /* slate-800/60 */
-    color: #34d399 !important; /* emerald-400 */
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+  }
+  html.dark #main-sidebar .nav-item:hover svg,
+  html.dark #sidebar-box .nav-item:hover svg,
+  html.dark #sidebar-drawer .nav-item:hover svg {
+    color: #ffffff !important;
+    stroke: #ffffff !important;
   }
   html.dark #main-sidebar .nav-item.active,
   html.dark #main-sidebar .nav-item.active-tab,
   html.dark #sidebar-box .nav-item.active,
-  html.dark #sidebar-box .nav-item.active-tab {
-    background-color: rgba(30, 41, 59, 0.8) !important;
-    color: #34d399 !important;
-    border-right: 3px solid #34d399 !important;
+  html.dark #sidebar-box .nav-item.active-tab,
+  html.dark #sidebar-drawer .nav-item.active,
+  html.dark #sidebar-drawer .nav-item.active-tab {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    border: 1px solid rgba(52, 211, 153, 0.35) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+  }
+  html.dark #main-sidebar .nav-item.active svg,
+  html.dark #main-sidebar .nav-item.active-tab svg,
+  html.dark #sidebar-box .nav-item.active svg,
+  html.dark #sidebar-box .nav-item.active-tab svg,
+  html.dark #sidebar-drawer .nav-item.active svg,
+  html.dark #sidebar-drawer .nav-item.active-tab svg {
+    color: #ffffff !important;
+    stroke: #ffffff !important;
   }
 
   /* 2. Cards, Containers & Panels (Slate-900 / Slate-800, Never harsh black) */
@@ -52,7 +76,7 @@
   html.dark .card:not([class*="dark:bg-"]),
   html.dark .panel:not([class*="dark:bg-"]),
   html.dark .bg-card:not([class*="dark:bg-"]),
-  html.dark [class*="bg-white"]:not([class*="dark:bg-"]):not(#terms-modal-card) {
+  html.dark [class*="bg-white"]:not([class*="dark:bg-"]):not(#terms-modal-card):not(.nav-item):not(.sidebar-brand-badge):not(.sidebar-logo-badge) {
     background-color: #0f172a !important; /* slate-900 */
     border-color: #1e293b !important; /* slate-800 */
   }

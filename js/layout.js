@@ -16,6 +16,7 @@ const DawwerLayout = {
     this.setupSidebarControls();
     this.setupKeyboardShortcuts();
     this.ensureThemeToggle();
+    this.initInactiveButtonsHandling();
     this.applyInitialState();
 
     if (typeof Auth !== 'undefined' && typeof Auth.requireAuth === 'function') {
@@ -129,28 +130,80 @@ const DawwerLayout = {
         display: flex !important;
       }
 
-      /* Active & Hover Highlights */
+      /* Inactive & Hover Navigation Items */
       #main-sidebar .nav-item,
-      #sidebar-box .nav-item {
-        transition: all 0.2s ease-in-out !important;
+      #sidebar-box .nav-item,
+      #sidebar-drawer .nav-item {
+        color: rgba(209, 250, 229, 0.65) !important; /* text-emerald-100/60 */
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      }
+      #main-sidebar .nav-item svg,
+      #sidebar-box .nav-item svg,
+      #sidebar-drawer .nav-item svg {
+        color: rgba(209, 250, 229, 0.65) !important;
+        stroke: currentColor !important;
+        width: 1.5rem !important; /* w-6 */
+        height: 1.5rem !important; /* h-6 */
+        stroke-width: 1.85px !important;
+        transition: color 0.15s ease, stroke 0.15s ease !important;
       }
       #main-sidebar .nav-item:hover,
-      #sidebar-box .nav-item:hover {
+      #sidebar-box .nav-item:hover,
+      #sidebar-drawer .nav-item:hover {
         background-color: rgba(255, 255, 255, 0.1) !important;
+        color: #ffffff !important;
       }
+      #main-sidebar .nav-item:hover svg,
+      #sidebar-box .nav-item:hover svg,
+      #sidebar-drawer .nav-item:hover svg {
+        color: #ffffff !important;
+        stroke: #ffffff !important;
+      }
+
+      /* Active Navigation Item (High-contrast, crisp white icon, backdrop blur) */
       #main-sidebar .nav-item.active,
       #main-sidebar .nav-item.active-tab,
       #sidebar-box .nav-item.active,
-      #sidebar-box .nav-item.active-tab {
+      #sidebar-box .nav-item.active-tab,
+      #sidebar-drawer .nav-item.active,
+      #sidebar-drawer .nav-item.active-tab,
+      .nav-item.active,
+      .nav-item.active-tab {
         background-color: rgba(255, 255, 255, 0.15) !important;
+        backdrop-filter: blur(8px) !important;
+        -webkit-backdrop-filter: blur(8px) !important;
+        border: 1px solid rgba(52, 211, 153, 0.35) !important;
         color: #ffffff !important;
         font-weight: 600 !important;
-        border-right: 3px solid #10b981 !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
       }
+
+      /* Active Icon Color: MUST be bright crisp white */
+      #main-sidebar .nav-item.active svg,
+      #main-sidebar .nav-item.active-tab svg,
+      #sidebar-box .nav-item.active svg,
+      #sidebar-box .nav-item.active-tab svg,
+      #sidebar-drawer .nav-item.active svg,
+      #sidebar-drawer .nav-item.active-tab svg,
+      .nav-item.active svg,
+      .nav-item.active-tab svg {
+        color: #ffffff !important;
+        stroke: #ffffff !important;
+        stroke-width: 2px !important;
+        width: 1.5rem !important;
+        height: 1.5rem !important;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3)) !important;
+      }
+
+      /* Active Indicator Dot: Bright mint green */
       #main-sidebar .nav-item.active .active-indicator,
-      #sidebar-box .nav-item.active .active-indicator {
+      #sidebar-box .nav-item.active .active-indicator,
+      #sidebar-drawer .nav-item.active .active-indicator,
+      .nav-item.active .active-indicator {
         opacity: 1 !important;
         display: inline-block !important;
+        background-color: #10b981 !important;
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.7) !important;
       }
 
       .sidebar-nav {
@@ -320,16 +373,17 @@ const DawwerLayout = {
       /* Active Navigation Tab Highlighting */
       .nav-item.active,
       .nav-item.active-tab {
-        background-color: #d6a950 !important;
-        color: #153f2d !important;
-        box-shadow: 0 4px 14px rgba(214, 169, 80, 0.35) !important;
+        background-color: rgba(255, 255, 255, 0.15) !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(52, 211, 153, 0.35) !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
         font-weight: 700 !important;
       }
 
       .nav-item.active svg,
       .nav-item.active-tab svg {
-        stroke: #153f2d !important;
-        color: #153f2d !important;
+        stroke: #ffffff !important;
+        color: #ffffff !important;
       }
 
       .nav-item.active::before,
@@ -341,7 +395,7 @@ const DawwerLayout = {
         transform: translateY(-50%);
         width: 4px;
         height: 20px;
-        background-color: #d6a950;
+        background-color: #10b981 !important;
         border-radius: 4px 0 0 4px;
       }
 
@@ -427,31 +481,56 @@ const DawwerLayout = {
       html.dark #main-sidebar,
       html.dark #sidebar-box,
       html.dark #sidebar-drawer {
-        background-color: #0f172a !important; /* slate-900 */
-        border-color: #1e293b !important; /* slate-800 */
+        background-color: #0e2c1f !important; /* forest-green consistent background */
+        border-color: rgba(255, 255, 255, 0.1) !important;
       }
       html.dark #main-sidebar .nav-item:not(.active),
       html.dark #sidebar-box .nav-item:not(.active),
       html.dark #sidebar-drawer .nav-item:not(.active) {
-        color: #cbd5e1 !important; /* slate-300 */
+        color: rgba(209, 250, 229, 0.65) !important;
+      }
+      html.dark #main-sidebar .nav-item:not(.active) svg,
+      html.dark #sidebar-box .nav-item:not(.active) svg,
+      html.dark #sidebar-drawer .nav-item:not(.active) svg {
+        color: rgba(209, 250, 229, 0.65) !important;
+        stroke: currentColor !important;
       }
       html.dark #main-sidebar .nav-item:hover,
-      html.dark #sidebar-box .nav-item:hover {
-        background-color: rgba(30, 41, 59, 0.6) !important; /* slate-800/60 */
-        color: #34d399 !important; /* emerald-400 */
+      html.dark #sidebar-box .nav-item:hover,
+      html.dark #sidebar-drawer .nav-item:hover {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        color: #ffffff !important;
+      }
+      html.dark #main-sidebar .nav-item:hover svg,
+      html.dark #sidebar-box .nav-item:hover svg,
+      html.dark #sidebar-drawer .nav-item:hover svg {
+        color: #ffffff !important;
+        stroke: #ffffff !important;
       }
       html.dark #main-sidebar .nav-item.active,
       html.dark #main-sidebar .nav-item.active-tab,
       html.dark #sidebar-box .nav-item.active,
-      html.dark #sidebar-box .nav-item.active-tab {
-        background-color: rgba(30, 41, 59, 0.8) !important;
-        color: #34d399 !important;
-        border-right: 3px solid #34d399 !important;
+      html.dark #sidebar-box .nav-item.active-tab,
+      html.dark #sidebar-drawer .nav-item.active,
+      html.dark #sidebar-drawer .nav-item.active-tab {
+        background-color: rgba(255, 255, 255, 0.15) !important;
+        border: 1px solid rgba(52, 211, 153, 0.35) !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
       }
-      html.dark .bg-white,
+      html.dark #main-sidebar .nav-item.active svg,
+      html.dark #main-sidebar .nav-item.active-tab svg,
+      html.dark #sidebar-box .nav-item.active svg,
+      html.dark #sidebar-box .nav-item.active-tab svg,
+      html.dark #sidebar-drawer .nav-item.active svg,
+      html.dark #sidebar-drawer .nav-item.active-tab svg {
+        color: #ffffff !important;
+        stroke: #ffffff !important;
+      }
+      html.dark .bg-white:not(.nav-item):not(.sidebar-logo-badge):not(.sidebar-brand-badge),
       html.dark .card,
       html.dark .panel,
-      html.dark [class*="bg-white"] {
+      html.dark [class*="bg-white"]:not(.nav-item):not(.sidebar-logo-badge):not(.sidebar-brand-badge) {
         background-color: #0f172a !important; /* slate-900 */
         border-color: #1e293b !important; /* slate-800 */
       }
@@ -536,7 +615,7 @@ const DawwerLayout = {
       <!-- TOP: Brand Logo & Title with Subtle Collapse Button -->
       <div class="flex items-center justify-between w-full pt-1 px-3 shrink-0 overflow-visible">
         <div class="sidebar-brand-wrapper flex items-center gap-3 cursor-pointer py-1">
-          <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-white/10 dark:bg-slate-800 border border-white/10 dark:border-slate-700 shrink-0">
+          <div class="sidebar-logo-badge flex items-center justify-center w-10 h-10 rounded-xl bg-white/10 border border-white/15 backdrop-blur-xs shrink-0 shadow-xs">
             <img src="assets/images/FrameLogo.png" alt="دوّر" class="h-6 w-auto object-contain pointer-events-none">
           </div>
           <div class="sidebar-label nav-label hidden flex-col">
@@ -544,7 +623,7 @@ const DawwerLayout = {
             <span class="text-[10px] text-emerald-300 font-medium whitespace-nowrap">منظومة إدارة التجزئة</span>
           </div>
         </div>
-        <button id="sidebar-collapse-btn" type="button" aria-label="طي القائمة الجانبية" title="طي القائمة" class="sidebar-label nav-label hidden p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 dark:hover:bg-slate-800 transition-colors cursor-pointer active:scale-95 shrink-0">
+        <button id="sidebar-collapse-btn" type="button" aria-label="طي القائمة الجانبية" title="طي القائمة" class="sidebar-label nav-label hidden p-1.5 rounded-lg text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors cursor-pointer active:scale-95 shrink-0">
           <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
         </button>
         <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-4 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
@@ -557,14 +636,14 @@ const DawwerLayout = {
         ${(typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function' && Auth.isAdmin()) ? `
         <!-- 0. الإدارة المركزية (للمسؤولين) -->
         <div class="relative group/nav flex items-center w-full px-2">
-          <a href="admin-dashboard.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-amber-300 hover:text-white hover:bg-amber-500/20 dark:hover:bg-slate-800 dark:text-amber-300 dark:hover:text-amber-200 transition-all duration-200 shrink-0" aria-label="الإدارة المركزية">
-            <span class="nav-icon shrink-0 w-5 h-5 flex items-center justify-center">
-              <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          <a href="admin-dashboard.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-amber-300 hover:text-white hover:bg-amber-500/20 transition-all duration-200 shrink-0" aria-label="الإدارة المركزية">
+            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
+              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
             </span>
             <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
               لوحة الإدارة المركزية
             </span>
-            <span class="active-indicator mr-auto w-1.5 h-1.5 rounded-full bg-amber-400 hidden group-[.active]/item:inline-block"></span>
+            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-amber-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(251,191,36,0.7)]"></span>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
             لوحة الإدارة المركزية
@@ -573,14 +652,14 @@ const DawwerLayout = {
 
         <!-- 1. لوحة التحكم -->
         <div class="relative group/nav flex items-center w-full px-2">
-          <a href="index.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-white/70 hover:text-white hover:bg-white/10 dark:hover:bg-slate-800/60 dark:text-slate-300 dark:hover:text-emerald-400 transition-all duration-200 shrink-0" aria-label="لوحة التحكم">
-            <span class="nav-icon shrink-0 w-5 h-5 flex items-center justify-center">
-              <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          <a href="dashboard.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="لوحة التحكم">
+            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
+              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
             </span>
             <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
               لوحة التحكم الرئيسية
             </span>
-            <span class="active-indicator mr-auto w-1.5 h-1.5 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block"></span>
+            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
             لوحة التحكم الرئيسية
@@ -589,14 +668,14 @@ const DawwerLayout = {
 
         <!-- 2. الكتالوج والمخططات -->
         <div class="relative group/nav flex items-center w-full px-2">
-          <a href="catalog.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-white/70 hover:text-white hover:bg-white/10 dark:hover:bg-slate-800/60 dark:text-slate-300 dark:hover:text-emerald-400 transition-all duration-200 shrink-0" aria-label="الكتالوج والمخططات">
-            <span class="nav-icon shrink-0 w-5 h-5 flex items-center justify-center">
-              <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+          <a href="catalog.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الكتالوج والمخططات">
+            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
+              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
             </span>
             <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
               إدارة الكتالوج والمخطط
             </span>
-            <span class="active-indicator mr-auto w-1.5 h-1.5 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block"></span>
+            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
             إدارة الكتالوج والمخطط
@@ -605,14 +684,14 @@ const DawwerLayout = {
 
         <!-- 3. مسح الرفوف بالذكاء الاصطناعي (AI) -->
         <div class="relative group/nav flex items-center w-full px-2">
-          <a href="ai-capture.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-white/70 hover:text-white hover:bg-white/10 dark:hover:bg-slate-800/60 dark:text-slate-300 dark:hover:text-emerald-400 transition-all duration-200 shrink-0" aria-label="مسح الرفوف بالذكاء">
-            <span class="nav-icon shrink-0 w-5 h-5 flex items-center justify-center">
-              <svg class="w-5 h-5 text-[#d6a950] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.01.01"/></svg>
+          <a href="ai-capture.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="مسح الرفوف بالذكاء">
+            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
+              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M19 7l-.01.01"/></svg>
             </span>
             <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
               مسح الرفوف بالذكاء الاصطناعي
             </span>
-            <span class="active-indicator mr-auto w-1.5 h-1.5 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block"></span>
+            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
             مسح الرفوف بالذكاء الاصطناعي
@@ -621,14 +700,14 @@ const DawwerLayout = {
 
         <!-- 4. مراجعة المسودات المستخرجة -->
         <div class="relative group/nav flex items-center w-full px-2">
-          <a href="review-drafts.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-white/70 hover:text-white hover:bg-white/10 dark:hover:bg-slate-800/60 dark:text-slate-300 dark:hover:text-emerald-400 transition-all duration-200 shrink-0" aria-label="مراجعة المسودات">
-            <span class="nav-icon shrink-0 w-5 h-5 flex items-center justify-center">
-              <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          <a href="review-drafts.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="مراجعة المسودات">
+            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
+              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
             </span>
             <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
               مراجعة واعتماد المسودات
             </span>
-            <span class="active-indicator mr-auto w-1.5 h-1.5 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block"></span>
+            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
             مراجعة واعتماد المسودات
@@ -637,14 +716,14 @@ const DawwerLayout = {
 
         <!-- 5. المخزون وسجل التدقيق -->
         <div class="relative group/nav flex items-center w-full px-2">
-          <a href="inventory-audit.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-white/70 hover:text-white hover:bg-white/10 dark:hover:bg-slate-800/60 dark:text-slate-300 dark:hover:text-emerald-400 transition-all duration-200 shrink-0" aria-label="المخزون والتدقيق">
-            <span class="nav-icon shrink-0 w-5 h-5 flex items-center justify-center">
-              <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+          <a href="inventory-audit.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="المخزون والتدقيق">
+            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
+              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
             </span>
             <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
               المخزون وسجل التدقيق
             </span>
-            <span class="active-indicator mr-auto w-1.5 h-1.5 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block"></span>
+            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
             المخزون وسجل التدقيق
@@ -653,14 +732,14 @@ const DawwerLayout = {
 
         <!-- 6. الطلبات والمبيعات -->
         <div class="relative group/nav flex items-center w-full px-2">
-          <a href="orders.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-white/70 hover:text-white hover:bg-white/10 dark:hover:bg-slate-800/60 dark:text-slate-300 dark:hover:text-emerald-400 transition-all duration-200 shrink-0" aria-label="الطلبات والمبيعات">
-            <span class="nav-icon shrink-0 w-5 h-5 flex items-center justify-center">
-              <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+          <a href="orders.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الطلبات والمبيعات">
+            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
+              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
             </span>
             <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
               الطلبات والمبيعات
             </span>
-            <span class="active-indicator mr-auto w-1.5 h-1.5 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block"></span>
+            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
             الطلبات والمبيعات
@@ -669,14 +748,14 @@ const DawwerLayout = {
 
         <!-- 7. الممرات والرفوف -->
         <div class="relative group/nav flex items-center w-full px-2">
-          <a href="shelves.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-white/70 hover:text-white hover:bg-white/10 dark:hover:bg-slate-800/60 dark:text-slate-300 dark:hover:text-emerald-400 transition-all duration-200 shrink-0" aria-label="الممرات والرفوف">
-            <span class="nav-icon shrink-0 w-5 h-5 flex items-center justify-center">
-              <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+          <a href="shelves.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الممرات والرفوف">
+            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
+              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
             </span>
             <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
               مواقع الممرات والرفوف
             </span>
-            <span class="active-indicator mr-auto w-1.5 h-1.5 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block"></span>
+            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
             مواقع الممرات والرفوف
@@ -685,14 +764,14 @@ const DawwerLayout = {
 
         <!-- 8. فريق العمل والصلاحيات -->
         <div class="relative group/nav flex items-center w-full px-2">
-          <a href="store-staff.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-white/70 hover:text-white hover:bg-white/10 dark:hover:bg-slate-800/60 dark:text-slate-300 dark:hover:text-emerald-400 transition-all duration-200 shrink-0" aria-label="فريق العمل">
-            <span class="nav-icon shrink-0 w-5 h-5 flex items-center justify-center">
-              <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+          <a href="store-staff.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="فريق العمل">
+            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
+              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
             </span>
             <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
               فريق العمل والأدوار
             </span>
-            <span class="active-indicator mr-auto w-1.5 h-1.5 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block"></span>
+            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
             فريق العمل والأدوار
@@ -701,14 +780,14 @@ const DawwerLayout = {
 
         <!-- 9. تسجيل واعتماد المتجر -->
         <div class="relative group/nav flex items-center w-full px-2">
-          <a href="merchant-application.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-white/70 hover:text-white hover:bg-white/10 dark:hover:bg-slate-800/60 dark:text-slate-300 dark:hover:text-emerald-400 transition-all duration-200 shrink-0" aria-label="بيانات المتجر">
-            <span class="nav-icon shrink-0 w-5 h-5 flex items-center justify-center">
-              <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z"/></svg>
+          <a href="merchant-application.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="بيانات المتجر">
+            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
+              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z"/></svg>
             </span>
             <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
               تسجيل واعتماد المتجر
             </span>
-            <span class="active-indicator mr-auto w-1.5 h-1.5 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block"></span>
+            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
             تسجيل واعتماد المتجر
@@ -717,14 +796,14 @@ const DawwerLayout = {
 
         <!-- 10. الملف الشخصي والإعدادات -->
         <div class="relative group/nav flex items-center w-full px-2">
-          <a href="profile.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-white/70 hover:text-white hover:bg-white/10 dark:hover:bg-slate-800/60 dark:text-slate-300 dark:hover:text-emerald-400 transition-all duration-200 shrink-0" aria-label="الملف الشخصي">
-            <span class="nav-icon shrink-0 w-5 h-5 flex items-center justify-center">
-              <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          <a href="profile.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الملف الشخصي">
+            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
+              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
             </span>
             <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
               الملف الشخصي والإعدادات
             </span>
-            <span class="active-indicator mr-auto w-1.5 h-1.5 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block"></span>
+            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
           </a>
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
             الملف الشخصي والإعدادات
@@ -736,8 +815,8 @@ const DawwerLayout = {
       <div class="flex flex-col w-full pt-2 pb-1 border-t border-white/10 dark:border-slate-800 px-2 shrink-0 overflow-visible">
         <div class="relative group/nav flex items-center w-full">
           <button id="logout-btn" data-action="logout" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-rose-300 hover:text-white hover:bg-rose-500/20 dark:hover:bg-rose-950/40 dark:text-rose-400 transition-all duration-200 cursor-pointer active:scale-95 shrink-0" aria-label="تسجيل الخروج">
-            <span class="nav-icon shrink-0 w-5 h-5 flex items-center justify-center">
-              <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
+              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             </span>
             <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200 text-rose-300 group-hover/item:text-white">
               تسجيل الخروج
@@ -752,7 +831,8 @@ const DawwerLayout = {
   },
 
   ensureSidebar() {
-    const isSpecialPage = /login|register|verify-account|forgot-password|reset-password|admin-login|admin-dashboard|select-store/i.test(window.location.pathname);
+    if (document.body.classList.contains('landing-page') || document.body.classList.contains('auth-page')) return;
+    const isSpecialPage = /login|register|verify-account|forgot-password|reset-password|admin-login|admin-dashboard|select-store|landing/i.test(window.location.pathname);
     if (isSpecialPage) return;
 
     const lingeringDrawer = document.getElementById('sidebar-drawer');
@@ -1014,33 +1094,149 @@ const DawwerLayout = {
     });
   },
 
-  getStoredStoreName() {
-    // 1. Direct key 'storeName' or 'store_name' from localStorage
-    const direct = localStorage.getItem('storeName') || localStorage.getItem('store_name') || localStorage.getItem(this.STORAGE_KEY_STORE_NAME);
-    if (direct && direct.trim() && direct !== 'null' && direct !== 'undefined') {
-      return direct.trim();
+  setupUserInfo() {
+    let ownerName = 'أحمد سليم';
+    try {
+      const storedOwner = localStorage.getItem('ownerName') || localStorage.getItem('merchant_name') || localStorage.getItem('user_name');
+      if (storedOwner && storedOwner.trim()) {
+        ownerName = storedOwner.trim();
+      } else {
+        const uRaw = localStorage.getItem('dawwer_user_data') || localStorage.getItem('userData');
+        if (uRaw) {
+          const u = JSON.parse(uRaw);
+          if (u && (u.fullName || u.name || u.ownerName)) {
+            ownerName = (u.fullName || u.name || u.ownerName).trim();
+          }
+        }
+      }
+    } catch (e) {}
+
+    document.querySelectorAll('[data-owner-name], .owner-name-display').forEach(el => {
+      el.textContent = ownerName;
+    });
+  },
+
+  initInactiveButtonsHandling() {
+    if (this._inactivityHandlerAttached) return;
+    this._inactivityHandlerAttached = true;
+
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('a, button');
+      if (!btn) return;
+
+      // 1. Explicit coming soon indicators or known incomplete feature buttons
+      if (btn.matches('[data-feature="coming-soon"], [data-status="upcoming"], .coming-soon-btn, .feature-coming-soon, #btn-import-catalog, #btn-export-audit-csv')) {
+        e.preventDefault();
+        e.stopPropagation();
+        const featureName = btn.getAttribute('data-feature-name') || btn.textContent.trim().replace(/^[\+\s]+/, '') || 'الميزة';
+        if (typeof DawwerNotification !== 'undefined' && typeof DawwerNotification.showComingSoon === 'function') {
+          DawwerNotification.showComingSoon(featureName);
+        } else if (typeof showToast === 'function') {
+          showToast({ title: 'قريباً', message: 'هذه الميزة قيد التطوير وستكون متاحة في التحديث القادم 🚀', type: 'info' });
+        }
+        return;
+      }
+
+      // 2. Links to incomplete pages or dead navigation
+      const href = btn.getAttribute('href');
+      if (href && (
+        href === 'payment-review.html' || 
+        (href === '#' && !btn.getAttribute('data-close-modal') && !btn.getAttribute('data-action'))
+      )) {
+        e.preventDefault();
+        e.stopPropagation();
+        const featureName = btn.textContent.trim() || 'الصفحة';
+        if (typeof DawwerNotification !== 'undefined' && typeof DawwerNotification.showComingSoon === 'function') {
+          DawwerNotification.showComingSoon(featureName);
+        } else if (typeof showToast === 'function') {
+          showToast({ title: 'قريباً', message: 'هذه الميزة قيد التطوير وستكون متاحة في التحديث القادم 🚀', type: 'info' });
+        }
+      }
+    });
+  },
+
+  STORAGE_KEY_STORE_NAME: 'dawwer_store_name',
+  STORAGE_KEY_STORE_STATUS: 'dawwer_store_status',
+
+  cleanStoreName(name) {
+    if (!name || typeof name !== 'string') return '';
+    let cleaned = name.trim();
+    if (cleaned === 'null' || cleaned === 'undefined') return '';
+
+    // Remove duplicate consecutive "سوبر ماركت" or "سوبرماركت"
+    // e.g. "سوبر ماركت سوبرماركت النخبة" -> "سوبر ماركت النخبة"
+    while (/(سوبر\s*ماركت|سوبرماركت)[\s\-_/]+(سوبر\s*ماركت|سوبرماركت)\b/i.test(cleaned)) {
+      cleaned = cleaned.replace(/(سوبر\s*ماركت|سوبرماركت)[\s\-_/]+(سوبر\s*ماركت|سوبرماركت)\b/i, '$1');
     }
 
-    // 2. Active store object from localStorage
+    // Clean old hardcoded mock references to clean fallback
+    if (cleaned === 'سوبرماركت النخبة' || cleaned === 'سوبر ماركت النخبة' || cleaned === 'النخبة') {
+      return 'سوبر ماركت الأمل';
+    }
+
+    return cleaned;
+  },
+
+  getStoredStoreName() {
+    // 1. Check user profile object in localStorage (e.g. currentUser.store_name)
+    const userKeys = ['currentUser', 'dawwer_user_data', 'userData', 'user', 'dawwer_user'];
+    for (const uKey of userKeys) {
+      try {
+        const uRaw = localStorage.getItem(uKey) || (typeof CONFIG !== 'undefined' && CONFIG.USER_KEY ? localStorage.getItem(CONFIG.USER_KEY) : null);
+        if (uRaw) {
+          const u = typeof uRaw === 'string' ? JSON.parse(uRaw) : uRaw;
+          const candidate = u?.store_name || u?.storeName || u?.store?.name || u?.store?.storeName;
+          if (candidate && typeof candidate === 'string') {
+            const cleaned = this.cleanStoreName(candidate);
+            if (cleaned) return cleaned;
+          }
+        }
+      } catch (e) {}
+    }
+
+    // 2. Direct keys from localStorage
+    const directKeys = ['storeName', 'store_name', 'activeStoreName', 'dawwer_store_name', this.STORAGE_KEY_STORE_NAME];
+    for (const key of directKeys) {
+      if (!key) continue;
+      const val = localStorage.getItem(key);
+      if (val && val.trim() && val !== 'null' && val !== 'undefined') {
+        const cleaned = this.cleanStoreName(val);
+        if (cleaned) return cleaned;
+      }
+    }
+
+    // 3. Active store object from localStorage
     try {
       const activeStoreRaw = localStorage.getItem('dawwer_active_store') ||
                              (typeof CONFIG !== 'undefined' ? localStorage.getItem(CONFIG.ACTIVE_STORE_KEY) : null);
       if (activeStoreRaw) {
         const activeStore = JSON.parse(activeStoreRaw);
-        if (activeStore && (activeStore.storeName || activeStore.name)) {
-          return (activeStore.storeName || activeStore.name).trim();
+        const candidate = activeStore?.storeName || activeStore?.name || activeStore?.commercialName;
+        if (candidate && typeof candidate === 'string') {
+          const cleaned = this.cleanStoreName(candidate);
+          if (cleaned) return cleaned;
         }
       }
     } catch (e) {}
 
-    // 3. Current user data object from localStorage
+    // 4. Auth module helpers
     try {
-      const userDataRaw = localStorage.getItem('dawwer_user_data') ||
-                          (typeof CONFIG !== 'undefined' ? localStorage.getItem(CONFIG.USER_KEY) : null);
-      if (userDataRaw) {
-        const userData = JSON.parse(userDataRaw);
-        if (userData && (userData.storeName || userData.store_name)) {
-          return (userData.storeName || userData.store_name).trim();
+      if (typeof Auth !== 'undefined') {
+        if (typeof Auth.getActiveStore === 'function') {
+          const s = Auth.getActiveStore();
+          const candidate = s?.storeName || s?.name;
+          if (candidate && typeof candidate === 'string') {
+            const cleaned = this.cleanStoreName(candidate);
+            if (cleaned) return cleaned;
+          }
+        }
+        if (typeof Auth.getUser === 'function') {
+          const u = Auth.getUser();
+          const candidate = u?.store_name || u?.storeName;
+          if (candidate && typeof candidate === 'string') {
+            const cleaned = this.cleanStoreName(candidate);
+            if (cleaned) return cleaned;
+          }
         }
       }
     } catch (e) {}
@@ -1052,7 +1248,7 @@ const DawwerLayout = {
     const isSuperAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
       ? Auth.isAdmin()
       : (typeof Auth !== 'undefined' && Auth.getUser && Auth.getUser() && (Auth.getUser().role === 'Admin' || Auth.getUser().role === 4 || /admin|superadmin/i.test(String(Auth.getUser().role))));
-    const fallbackName = isSuperAdmin ? "الإدارة العامة لمنظومة دوّر" : "المتجر الحالي";
+    const fallbackName = isSuperAdmin ? "الإدارة العامة لمنظومة دوّر" : "سوبر ماركت الأمل";
 
     const currentStoreName = this.getStoredStoreName() || fallbackName;
 
@@ -1066,7 +1262,7 @@ const DawwerLayout = {
       this._listenersAttached = true;
 
       window.addEventListener('storage', (e) => {
-        if (e.key === 'storeName' || e.key === 'store_name' || e.key === this.STORAGE_KEY_STORE_NAME || e.key === 'dawwer_active_store') {
+        if (e.key === 'storeName' || e.key === 'store_name' || e.key === this.STORAGE_KEY_STORE_NAME || e.key === 'dawwer_active_store' || e.key === 'currentUser' || e.key === 'dawwer_user_data') {
           const name = this.getStoredStoreName() || fallbackName;
           this.updateStoreIdentity(name);
         }
@@ -1088,10 +1284,9 @@ const DawwerLayout = {
     const isSuperAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
       ? Auth.isAdmin()
       : (typeof Auth !== 'undefined' && Auth.getUser && Auth.getUser() && (Auth.getUser().role === 'Admin' || Auth.getUser().role === 4 || /admin|superadmin/i.test(String(Auth.getUser().role))));
-    const fallbackName = isSuperAdmin ? "الإدارة العامة لمنظومة دوّر" : "المتجر الحالي";
-    const finalName = (storeName && String(storeName).trim() && String(storeName).trim() !== 'null' && String(storeName).trim() !== 'undefined')
-      ? String(storeName).trim()
-      : fallbackName;
+    const fallbackName = isSuperAdmin ? "الإدارة العامة لمنظومة دوّر" : "سوبر ماركت الأمل";
+    const cleaned = this.cleanStoreName(storeName);
+    const finalName = cleaned || fallbackName;
 
     const nameEl = document.getElementById('current-store-name');
     if (nameEl) {
@@ -1102,9 +1297,12 @@ const DawwerLayout = {
       el.textContent = finalName;
     });
 
+    this.setupUserInfo();
+
     if (finalName && finalName !== fallbackName) {
       try {
         localStorage.setItem('store_name', finalName);
+        localStorage.setItem('storeName', finalName);
         localStorage.setItem(this.STORAGE_KEY_STORE_NAME, finalName);
       } catch (e) {}
     }
@@ -1307,11 +1505,11 @@ const DawwerLayout = {
         (cleanPath === 'dashboard.html' && (cleanHref === 'dashboard.html' || cleanHref === 'index.html'));
 
       if (isCurrent) {
-        link.classList.add('active', 'active-tab');
-        link.classList.remove('text-white/70');
+        link.classList.add('active', 'active-tab', 'text-white');
+        link.classList.remove('text-emerald-100/60', 'text-white/70');
       } else {
-        link.classList.remove('active', 'active-tab');
-        link.classList.add('text-white/70');
+        link.classList.remove('active', 'active-tab', 'text-white');
+        link.classList.add('text-emerald-100/60');
       }
     });
   },

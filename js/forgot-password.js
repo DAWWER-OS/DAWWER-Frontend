@@ -15,6 +15,20 @@ async function handleForgotPassword(event) {
   if (!emailInput) return;
 
   const email = emailInput.value.trim();
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!email || !emailRegex.test(email)) {
+    const errorMsg = 'يرجى إدخال بريد إلكتروني صحيح (مثال: example@dawwer.com).';
+    if (alertBox) {
+      alertBox.innerHTML = errorMsg;
+      alertBox.className = 'mb-4 p-3.5 rounded-xl text-sm font-bold bg-amber-50 border border-amber-200 text-amber-800 block';
+    }
+    if (typeof showToast === 'function') {
+      showToast({ title: 'تنبيه', message: errorMsg, type: 'warning' });
+    }
+    emailInput.focus();
+    return;
+  }
 
   if (alertBox) alertBox.classList.add('hidden');
   if (btn) {

@@ -184,12 +184,15 @@ async function handleVerifyCode(event) {
     }
 
     setTimeout(() => {
-      // If user has no active store, send to merchant-application.html or select-store.html
-      const activeStoreId = localStorage.getItem('activeStoreId') || localStorage.getItem('storeId');
-      if (!activeStoreId || activeStoreId === 'null') {
-        window.location.href = 'merchant-application.html';
+      if (accessToken) {
+        const activeStoreId = localStorage.getItem('activeStoreId') || localStorage.getItem('storeId');
+        if (!activeStoreId || activeStoreId === 'null') {
+          window.location.href = 'merchant-application.html';
+        } else {
+          window.location.href = 'index.html';
+        }
       } else {
-        window.location.href = 'index.html';
+        window.location.href = 'login.html?verified=true';
       }
     }, 1000);
   } catch (err) {

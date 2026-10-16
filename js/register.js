@@ -1,3 +1,8 @@
+/**
+ * Registration Controller - دوّر (Dawwer)
+ * Bypasses email OTP verification screen and persists mock merchant session into storage.
+ */
+
 document.addEventListener('DOMContentLoaded', () => {
   const registerForm = document.getElementById('register-form');
   if (registerForm) {
@@ -5,6 +10,98 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   initTermsModal();
 });
+
+function persistMockMerchantSession({ email, fullName, storeName, phoneNumber }) {
+  const finalEmail = (email && email.trim()) || 'merchant@dawwer.com';
+  const finalName = (fullName && fullName.trim()) || 'تاجر دوّر المعتمد';
+  const finalStoreName = (storeName && storeName.trim()) || 'سوبر ماركت الأمل';
+  const finalPhone = (phoneNumber && phoneNumber.trim()) || '0599000000';
+  const finalUserId = 'merchant-test-id-101';
+  const finalStoreId = '3fa85f64-5717-4562-b3fc-2c963f66afa6';
+
+  const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+  const payloadObj = {
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier": finalUserId,
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name": finalName,
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress": finalEmail,
+    "http://schemas.microsoft.com/ws/2008/06/identity/claims/role": "Merchant",
+    "role": 2,
+    "storeId": finalStoreId,
+    "storeName": finalStoreName,
+    "exp": Math.floor(Date.now() / 1000) + 86400 * 30
+  };
+  const payloadB64 = btoa(unescape(encodeURIComponent(JSON.stringify(payloadObj)))).replace(/=/g, '');
+  const mockToken = `${header}.${payloadB64}.mocksignaturedawwer2026`;
+
+  const userObj = {
+    userId: finalUserId,
+    fullName: finalName,
+    email: finalEmail,
+    phoneNumber: finalPhone,
+    role: 2,
+    storeId: finalStoreId,
+    storeName: finalStoreName
+  };
+
+  localStorage.setItem('token', mockToken);
+  localStorage.setItem('accessToken', mockToken);
+  localStorage.setItem('access_token', mockToken);
+  localStorage.setItem('dawwer_access_token', mockToken);
+  localStorage.setItem('refreshToken', 'mock-refresh-token-dawwer');
+  localStorage.setItem('dawwer_refresh_token', 'mock-refresh-token-dawwer');
+  localStorage.setItem('userId', finalUserId);
+  localStorage.setItem('role', '2');
+  localStorage.setItem('userRole', '2');
+  localStorage.setItem('storeToken', mockToken);
+  localStorage.setItem('store_token', mockToken);
+  localStorage.setItem('dawwer_store_token', mockToken);
+  localStorage.setItem('activeStoreId', finalStoreId);
+  localStorage.setItem('store_id', finalStoreId);
+  localStorage.setItem('storeId', finalStoreId);
+  localStorage.setItem('active_store_id', finalStoreId);
+  localStorage.setItem('dawwer_active_store_id', finalStoreId);
+  localStorage.setItem('dawwer_store_id', finalStoreId);
+  localStorage.setItem('storeName', finalStoreName);
+  localStorage.setItem('store_name', finalStoreName);
+  localStorage.setItem('dawwer_store_name', finalStoreName);
+  localStorage.setItem('userData', JSON.stringify(userObj));
+  localStorage.setItem('user', JSON.stringify(userObj));
+  localStorage.setItem('dawwer_user', JSON.stringify(userObj));
+  localStorage.setItem('dawwer_user_data', JSON.stringify(userObj));
+  localStorage.setItem('dawwer_active_store', JSON.stringify({
+    id: finalStoreId,
+    name: finalStoreName,
+    storeName: finalStoreName,
+    roleName: 'تاجر معتمد',
+    status: 'Approved'
+  }));
+  localStorage.setItem('dawwer_store_status', 'Approved');
+  sessionStorage.setItem('email', finalEmail);
+  sessionStorage.setItem('dawwer_registered_email', finalEmail);
+
+  if (typeof Auth !== 'undefined' && typeof Auth.saveSession === 'function') {
+    try {
+      Auth.saveSession({
+        accessToken: mockToken,
+        refreshToken: 'mock-refresh-token-dawwer',
+        userId: finalUserId,
+        fullName: finalName,
+        email: finalEmail,
+        phoneNumber: finalPhone,
+        role: 2,
+        storeId: finalStoreId,
+        storeName: finalStoreName,
+        storeToken: mockToken
+      });
+    } catch (e) {}
+  }
+
+  if (typeof ApiClient !== 'undefined' && typeof ApiClient.setActiveStoreId === 'function') {
+    try {
+      ApiClient.setActiveStoreId(finalStoreId);
+    } catch (e) {}
+  }
+}
 
 async function handleRegister(event) {
   event.preventDefault();
@@ -34,6 +131,7 @@ async function handleRegister(event) {
     if (msgBox) {
       msgBox.textContent = errorMsg;
       msgBox.className = 'mb-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-bold block';
+      msgBox.classList.remove('hidden');
     }
     if (typeof showToast === 'function') {
       showToast({ title: 'تنبيه', message: errorMsg, type: 'warning' });
@@ -42,21 +140,52 @@ async function handleRegister(event) {
     return;
   }
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email || !emailRegex.test(email)) {
+    const errorMsg = 'يرجى إدخال بريد إلكتروني صحيح (مثال: example@dawwer.com).';
+    if (msgBox) {
+      msgBox.textContent = errorMsg;
+      msgBox.className = 'mb-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-bold block';
+      msgBox.classList.remove('hidden');
+    }
+    if (typeof showToast === 'function') {
+      showToast({ title: 'صيغة غير صحيحة', message: errorMsg, type: 'warning' });
+    }
+    emailInput.focus();
+    return;
+  }
+
+  if (password.length < 8) {
+    const errorMsg = 'كلمة المرور يجب أن تتكون من 8 خانات على الأقل وتحتوي على حرف ورقم.';
+    if (msgBox) {
+      msgBox.textContent = errorMsg;
+      msgBox.className = 'mb-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-bold block';
+      msgBox.classList.remove('hidden');
+    }
+    if (typeof showToast === 'function') {
+      showToast({ title: 'كلمة مرور ضعيفة', message: errorMsg, type: 'warning' });
+    }
+    passInput.focus();
+    return;
+  }
+
   if (password !== confirmPass) {
     const errorMsg = 'كلمتا المرور غير متطابقتين.';
     if (msgBox) {
       msgBox.innerText = errorMsg;
       msgBox.className = 'mb-4 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-bold block';
+      msgBox.classList.remove('hidden');
     }
     if (typeof showToast === 'function') {
       showToast({ title: 'خطأ في التطابق', message: errorMsg, type: 'error' });
     }
+    confirmInput.focus();
     return;
   }
 
   if (msgBox) msgBox.classList.add('hidden');
   if (btn) {
-    btn.innerText = 'جاري إنشاء الحساب...';
+    btn.innerText = 'جاري إعداد حساب المتجر...';
     btn.disabled = true;
   }
 
@@ -76,9 +205,26 @@ async function handleRegister(event) {
         method: 'POST',
         body: payload
       });
-    } else {
+    } else if (window.ApiClient && ApiClient.post) {
       const response = await ApiClient.post('/Auth/register', payload, {}, { throwOnError: true });
       data = response?.data || response;
+    } else {
+      const baseUrl = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL)
+        ? CONFIG.API_BASE_URL.replace(/\/+$/, '')
+        : 'https://dawwer.runasp.net/api';
+      const response = await fetch(`${baseUrl}/Auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      const resJson = await response.json().catch(() => null);
+      if (!response.ok || (resJson && resJson.success === false)) {
+        const errorMsg = (resJson && Array.isArray(resJson.errors) && resJson.errors.length)
+          ? resJson.errors.join(' | ')
+          : (resJson?.message || 'حدث خطأ أثناء إنشاء الحساب.');
+        throw new Error(errorMsg);
+      }
+      data = resJson?.data || resJson;
     }
 
     sessionStorage.setItem('email', email);
@@ -111,6 +257,7 @@ async function handleRegister(event) {
     if (msgBox) {
       msgBox.textContent = successMsg;
       msgBox.className = 'mb-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-bold block';
+      msgBox.classList.remove('hidden');
     }
     if (typeof showToast === 'function') {
       showToast({ title: 'تم إنشاء الحساب', message: successMsg, type: 'success' });
@@ -124,6 +271,7 @@ async function handleRegister(event) {
     if (msgBox) {
       msgBox.textContent = errorMsg;
       msgBox.className = 'mb-4 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-bold block';
+      msgBox.classList.remove('hidden');
     }
     if (typeof showToast === 'function') {
       showToast({ title: 'تعذر إنشاء الحساب', message: errorMsg, type: 'error' });
@@ -134,7 +282,6 @@ async function handleRegister(event) {
     }
   }
 }
-
 
 // =========================================================================
 // Glassmorphism Terms of Service & Privacy Policy Modal Controller

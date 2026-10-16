@@ -1,38 +1,142 @@
 (function () {
       'use strict';
 
-      function createSampleBlueprintSvg() {
+      function createDynamicStoreBlueprintSvg(config = {}) {
+        const widthMeters = Math.max(15, Math.min(60, Number(config.widthMeters || 30)));
+        const depthMeters = Math.max(10, Math.min(45, Number(config.depthMeters || 20)));
+        const doorPos = String(config.doorPos || 'bottom-center');
+        const numAisles = Math.max(2, Math.min(5, Number(config.aisles || 3)));
+
+        // Proportional SVG canvas dimensions based on real meter ratio
+        const svgW = 900;
+        const svgH = Math.round(Math.max(480, Math.min(750, (depthMeters / widthMeters) * svgW)));
+        
+        const padX = 36;
+        const padY = 36;
+        const innerW = svgW - (padX * 2);
+        const innerH = svgH - (padY * 2);
+
+        // Calculate dynamic entrance opening position
+        let doorX = 0, doorY = 0, doorW = 0, doorH = 0, doorLabelX = 0, doorLabelY = 0;
+        const doorLength = 110;
+
+        switch (doorPos) {
+          case 'bottom-left':
+            doorX = padX + 50;
+            doorY = svgH - padY - 6;
+            doorW = doorLength;
+            doorH = 12;
+            doorLabelX = doorX + (doorLength / 2);
+            doorLabelY = svgH - padY - 14;
+            break;
+          case 'bottom-right':
+            doorX = svgW - padX - 50 - doorLength;
+            doorY = svgH - padY - 6;
+            doorW = doorLength;
+            doorH = 12;
+            doorLabelX = doorX + (doorLength / 2);
+            doorLabelY = svgH - padY - 14;
+            break;
+          case 'top-center':
+            doorX = (svgW / 2) - (doorLength / 2);
+            doorY = padY - 6;
+            doorW = doorLength;
+            doorH = 12;
+            doorLabelX = svgW / 2;
+            doorLabelY = padY + 24;
+            break;
+          case 'right-center':
+            doorX = svgW - padX - 6;
+            doorY = (svgH / 2) - (doorLength / 2);
+            doorW = 12;
+            doorH = doorLength;
+            doorLabelX = svgW - padX - 22;
+            doorLabelY = svgH / 2;
+            break;
+          case 'left-center':
+            doorX = padX - 6;
+            doorY = (svgH / 2) - (doorLength / 2);
+            doorW = 12;
+            doorH = doorLength;
+            doorLabelX = padX + 22;
+            doorLabelY = svgH / 2;
+            break;
+          case 'bottom-center':
+          default:
+            doorX = (svgW / 2) - (doorLength / 2);
+            doorY = svgH - padY - 6;
+            doorW = doorLength;
+            doorH = 12;
+            doorLabelX = svgW / 2;
+            doorLabelY = svgH - padY - 14;
+            break;
+        }
+
+        // Dynamically compute zone partitions
+        const zoneMargin = 20;
+        const zoneTop = padY + 28;
+        const zoneBottom = (doorPos.startsWith('bottom') ? svgH - padY - 65 : svgH - padY - 28);
+        const availH = Math.max(160, zoneBottom - zoneTop);
+        const colWidth = (innerW - (zoneMargin * (numAisles - 1))) / numAisles;
+
+        const zoneThemes = [
+          { name: 'المنطقة أ - المخبوزات والطازج', fill: '#143825', stroke: '#22c55e', text: '#86efac', aisleA: 'ممر 01', aisleB: 'ممر 02' },
+          { name: 'المنطقة ب - الألبان والمبردات', fill: '#13354f', stroke: '#38bdf8', text: '#7dd3fc', aisleA: 'ممر 03', aisleB: 'ممر 04' },
+          { name: 'المنطقة ج - التسالي والمشروبات', fill: '#3d2508', stroke: '#f59e0b', text: '#fcd34d', aisleA: 'ممر 05', aisleB: 'ممر 06' },
+          { name: 'المنطقة د - المجمدات واللحوم', fill: '#351224', stroke: '#f43f5e', text: '#fda4af', aisleA: 'ممر 07', aisleB: 'ممر 08' },
+          { name: 'المنطقة هـ - المنظفات والعناية', fill: '#281c44', stroke: '#a855f7', text: '#d8b4fe', aisleA: 'ممر 09', aisleB: 'ممر 10' }
+        ];
+
+        let zonesSvg = '';
+        for (let i = 0; i < numAisles; i++) {
+          const zx = padX + (i * (colWidth + zoneMargin));
+          const theme = zoneThemes[i % zoneThemes.length];
+          const shelfW = Math.max(30, (colWidth - 50) / 2);
+          const shelfH = Math.max(60, availH - 70);
+
+          zonesSvg += `
+            <g>
+              <rect x="${zx}" y="${zoneTop}" width="${colWidth}" height="${availH}" fill="${theme.fill}" stroke="${theme.stroke}" stroke-width="2" stroke-dasharray="6,4" rx="10"/>
+              <text x="${zx + colWidth / 2}" y="${zoneTop + 24}" fill="${theme.text}" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">${theme.name}</text>
+              <rect x="${zx + 18}" y="${zoneTop + 45}" width="${shelfW}" height="${shelfH}" fill="#334155" rx="5"/>
+              <text x="${zx + 18 + shelfW / 2}" y="${zoneTop + 45 + shelfH / 2}" fill="#94a3b8" font-family="sans-serif" font-size="10" font-weight="bold" text-anchor="middle">${theme.aisleA}</text>
+              <rect x="${zx + colWidth - 18 - shelfW}" y="${zoneTop + 45}" width="${shelfW}" height="${shelfH}" fill="#334155" rx="5"/>
+              <text x="${zx + colWidth - 18 - shelfW / 2}" y="${zoneTop + 45 + shelfH / 2}" fill="#94a3b8" font-family="sans-serif" font-size="10" font-weight="bold" text-anchor="middle">${theme.aisleB}</text>
+            </g>
+          `;
+        }
+
         const svgContent = `
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" width="900" height="560">
-            <rect width="900" height="560" fill="#0f172a"/>
-            <rect x="20" y="20" width="860" height="520" fill="#1e293b" stroke="#38bdf8" stroke-width="4" rx="10"/>
-            <rect x="400" y="534" width="100" height="12" fill="#22c55e" rx="4"/>
-            <text x="450" y="525" fill="#4ade80" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">المدخل الرئيسي / كاونتر الدفع</text>
-            <g>
-              <rect x="60" y="60" width="220" height="160" fill="#153f2d" stroke="#22c55e" stroke-width="2" stroke-dasharray="6,4" rx="8"/>
-              <text x="170" y="90" fill="#86efac" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">المنطقة أ - المخبوزات والطازج</text>
-              <rect x="80" y="110" width="40" height="90" fill="#334155" rx="4"/>
-              <text x="100" y="160" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">ممر 01</text>
-              <rect x="150" y="110" width="40" height="90" fill="#334155" rx="4"/>
-              <text x="170" y="160" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">ممر 02</text>
-            </g>
-            <g>
-              <rect x="340" y="60" width="220" height="160" fill="#1e3a5f" stroke="#38bdf8" stroke-width="2" stroke-dasharray="6,4" rx="8"/>
-              <text x="450" y="90" fill="#7dd3fc" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">المنطقة ب - الألبان والمبردات</text>
-              <rect x="360" y="110" width="40" height="90" fill="#334155" rx="4"/>
-              <text x="380" y="160" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">ممر 03</text>
-              <rect x="430" y="110" width="40" height="90" fill="#334155" rx="4"/>
-              <text x="450" y="160" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">ممر 04</text>
-            </g>
-            <g>
-              <rect x="620" y="60" width="220" height="160" fill="#451a03" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6,4" rx="8"/>
-              <text x="730" y="90" fill="#fcd34d" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">المنطقة ج - التسالي والمشروبات</text>
-              <rect x="640" y="110" width="40" height="90" fill="#334155" rx="4"/>
-              <text x="660" y="160" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">ممر 07</text>
-            </g>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}">
+            <!-- Background Grid Blueprint -->
+            <rect width="${svgW}" height="${svgH}" fill="#0b1322"/>
+            <defs>
+              <pattern id="gridPattern" width="30" height="30" patternUnits="userSpaceOnUse">
+                <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+              </pattern>
+            </defs>
+            <rect width="${svgW}" height="${svgH}" fill="url(#gridPattern)"/>
+
+            <!-- Metric Boundary Frame with Dimension Tags -->
+            <rect x="${padX}" y="${padY}" width="${innerW}" height="${innerH}" fill="#111c30" stroke="#38bdf8" stroke-width="3" rx="12"/>
+            
+            <!-- Real-world scale meter tags -->
+            <text x="${svgW / 2}" y="${padY - 12}" fill="#94a3b8" font-family="sans-serif" font-size="11" font-weight="bold" text-anchor="middle">العرض الهندسي: ${widthMeters} متراً</text>
+            <text x="${svgW - padX + 16}" y="${svgH / 2}" fill="#94a3b8" font-family="sans-serif" font-size="11" font-weight="bold" text-anchor="middle" transform="rotate(90 ${svgW - padX + 16} ${svgH / 2})">العمق: ${depthMeters} متراً</text>
+
+            <!-- Dynamic Zones and Aisles -->
+            ${zonesSvg}
+
+            <!-- Customizable Dynamic Entrance Door & Checkout Counter -->
+            <rect x="${doorX}" y="${doorY}" width="${doorW}" height="${doorH}" fill="#22c55e" rx="4"/>
+            <text x="${doorLabelX}" y="${doorLabelY}" fill="#4ade80" font-family="sans-serif" font-size="11" font-weight="bold" text-anchor="middle">المدخل الرئيسي / كاونتر الدفع 🚪</text>
           </svg>
         `;
         return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgContent.trim());
+      }
+
+      function createSampleBlueprintSvg() {
+        return createDynamicStoreBlueprintSvg({ widthMeters: 30, depthMeters: 20, doorPos: 'bottom-center', aisles: 3 });
       }
 
       const SAMPLE_CSV_RAW = `Item Name,Product SKU,Unit Price,Department,Store Zone,Aisle Name
@@ -288,9 +392,15 @@
         camZoneSelect: document.getElementById('cam-zone-select'),
         camAisleSelect: document.getElementById('cam-aisle-select'),
         camShelfSelect: document.getElementById('cam-shelf-select'),
+        mapWidthInput: document.getElementById('store-map-width-input'),
+        mapWidthVal: document.getElementById('store-map-width-val'),
+        mapDepthInput: document.getElementById('store-map-depth-input'),
+        mapDepthVal: document.getElementById('store-map-depth-val'),
+        mapDoorSelect: document.getElementById('store-map-door-select'),
+        mapAislesSelect: document.getElementById('store-map-aisles-select'),
       };
 
-      const formatCurrency = (val) => `${Number(val).toFixed(2)} ر.س`;
+      const formatCurrency = (val) => `${Number(val).toFixed(2)} ₪`;
 
       function showToast(message, type = 'success') {
         if (window.showToast && typeof window.showToast === 'function') {
@@ -1345,7 +1455,14 @@
 
         DOM.dropzoneContainer.classList.add('hidden');
         DOM.workspace.classList.remove('hidden');
-        DOM.floorplanImage.src = state.floorPlan.imageUrl;
+
+        const floorImg = (typeof resolveImageUrl === 'function')
+          ? resolveImageUrl(state.floorPlan.imageUrl)
+          : (window.CONFIG && window.CONFIG.resolveImageUrl ? window.CONFIG.resolveImageUrl(state.floorPlan.imageUrl) : state.floorPlan.imageUrl);
+        DOM.floorplanImage.src = floorImg;
+        DOM.floorplanImage.onerror = function() {
+          window.handleImageError ? window.handleImageError(this, 'صورة المخطط غير متوفرة') : (this.style.display = 'none');
+        };
 
         DOM.mapContainer.style.transform = `scale(${state.floorPlan.zoom})`;
         DOM.zoomLevelLabel.textContent = `${Math.round(state.floorPlan.zoom * 100)}%`;
@@ -1712,15 +1829,34 @@
               stockBadge = `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>متوفر (${qty})</span>`;
             }
 
+            const rawProdImg = p.image_url || p.imageUrl || p.image || '';
+            const resolvedImg = (typeof resolveImageUrl === 'function')
+              ? resolveImageUrl(rawProdImg)
+              : (window.CONFIG && window.CONFIG.resolveImageUrl ? window.CONFIG.resolveImageUrl(rawProdImg) : rawProdImg);
+
             return `
               <tr class="hover:bg-slate-50/90 transition ${isSel ? 'bg-[#edf5f0]/60' : ''}">
                 <td class="px-6 py-4">
                   <input type="checkbox" class="row-select-checkbox w-4 h-4 rounded text-[#153f2d] cursor-pointer accent-[#153f2d]" data-id="${p.id}" ${isSel ? 'checked' : ''}>
                 </td>
                 <td class="px-6 py-4 font-bold text-slate-900">
-                  <div class="text-sm font-extrabold text-slate-900">${escapeHtml(p.name)}</div>
-                  <div class="text-[11px] font-mono text-slate-400 font-normal" dir="ltr">${p.sku}</div>
-                  <div class="text-[11px] text-slate-500 font-medium mt-0.5">المتوفر بالمخزون: <strong class="text-slate-800">${qty}</strong> قطعة</div>
+                  <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 relative flex items-center justify-center">
+                      ${resolvedImg ? `
+                        <img src="${resolvedImg}" alt="${escapeHtml(p.name)}" class="w-full h-full object-cover" onerror="window.handleImageError ? window.handleImageError(this, 'لم يتم الاستخراج') : (this.style.display='none');">
+                      ` : `
+                        <div class="img-fallback-placeholder flex flex-col items-center justify-center text-center p-1 w-full h-full text-slate-400 select-none">
+                          <svg class="w-4 h-4 text-slate-400 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                          <span class="text-[9px] font-medium leading-tight">لم يتم الاستخراج</span>
+                        </div>
+                      `}
+                    </div>
+                    <div>
+                      <div class="text-sm font-extrabold text-slate-900">${escapeHtml(p.name)}</div>
+                      <div class="text-[11px] font-mono text-slate-400 font-normal" dir="ltr">${p.sku}</div>
+                      <div class="text-[11px] text-slate-500 font-medium mt-0.5">المتوفر بالمخزون: <strong class="text-slate-800">${qty}</strong> قطعة</div>
+                    </div>
+                  </div>
                 </td>
                 <td class="px-6 py-4"><span class="px-3 py-1 rounded-xl text-xs font-bold bg-[#edf5f0] text-[#153f2d]">${escapeHtml(p.category)}</span></td>
                 <td class="px-6 py-4 font-bold text-slate-900">${formatCurrency(p.price)}</td>
@@ -1980,10 +2116,34 @@
         DOM.btnReplaceMap.addEventListener('click', () => {
           state.floorPlan.imageUrl = ''; renderFloorPlan();
         });
-        DOM.btnLoadSampleMap.addEventListener('click', () => {
-          state.floorPlan.imageUrl = createSampleBlueprintSvg();
+        function updateDynamicStoreMap(notify = true) {
+          const widthMeters = DOM.mapWidthInput ? Number(DOM.mapWidthInput.value) : 30;
+          const depthMeters = DOM.mapDepthInput ? Number(DOM.mapDepthInput.value) : 20;
+          const doorPos = DOM.mapDoorSelect ? DOM.mapDoorSelect.value : 'bottom-center';
+          const aisles = DOM.mapAislesSelect ? Number(DOM.mapAislesSelect.value) : 3;
+
+          if (DOM.mapWidthVal) DOM.mapWidthVal.textContent = `${widthMeters} م`;
+          if (DOM.mapDepthVal) DOM.mapDepthVal.textContent = `${depthMeters} م`;
+
+          state.floorPlan.storeConfig = { widthMeters, depthMeters, doorPos, aisles };
+          try {
+            localStorage.setItem('dawwer_store_map_config', JSON.stringify(state.floorPlan.storeConfig));
+          } catch (e) {}
+
+          state.floorPlan.imageUrl = createDynamicStoreBlueprintSvg(state.floorPlan.storeConfig);
           renderFloorPlan();
-          showToast('تم تحميل المخطط النموذجي!');
+          if (notify) {
+            showToast(`تم تحديث المخطط التفاعلي بأبعاد ${widthMeters}×${depthMeters}م وتحديث موقع المدخل بنجاح!`);
+          }
+        }
+
+        if (DOM.mapWidthInput) DOM.mapWidthInput.addEventListener('input', () => updateDynamicStoreMap(false));
+        if (DOM.mapDepthInput) DOM.mapDepthInput.addEventListener('input', () => updateDynamicStoreMap(false));
+        if (DOM.mapDoorSelect) DOM.mapDoorSelect.addEventListener('change', () => updateDynamicStoreMap(true));
+        if (DOM.mapAislesSelect) DOM.mapAislesSelect.addEventListener('change', () => updateDynamicStoreMap(true));
+
+        DOM.btnLoadSampleMap.addEventListener('click', () => {
+          updateDynamicStoreMap(true);
         });
         DOM.btnClearAllPins.addEventListener('click', () => {
           if (confirm('هل أنت متأكد من مسح جميع نقاط التوجيه؟')) {
@@ -2338,7 +2498,7 @@
                 if (idx !== -1) {
                   const oldPrice = state.products[idx].price;
                   state.products[idx] = { ...state.products[idx], ...payload };
-                  recordAuditLog('Price/Stock Update', payload.name, payload.sku, `تعديل السعر: ${oldPrice} ➔ ${payload.price} ر.س | المخزون: ${quantityVal}`, 'تحديث بيانات المنتج وموقعه الهندسي بالسيرفر الحي');
+                  recordAuditLog('Price/Stock Update', payload.name, payload.sku, `تعديل السعر: ${oldPrice} ➔ ${payload.price} ₪ | المخزون: ${quantityVal}`, 'تحديث بيانات المنتج وموقعه الهندسي بالسيرفر الحي');
                 }
                 saveCatalogProducts();
                 closeModal();
@@ -2370,7 +2530,7 @@
                 }
 
                 state.products.unshift({ id: newId, ...payload });
-                recordAuditLog('Manual Creation', payload.name, payload.sku, `إضافة منتج يدوي جديد بالسعر: ${payload.price} ر.س (المخزون: ${quantityVal})`, 'إنشاء الصنف يدوياً بالسيرفر والكتالوج');
+                recordAuditLog('Manual Creation', payload.name, payload.sku, `إضافة منتج يدوي جديد بالسعر: ${payload.price} ₪ (المخزون: ${quantityVal})`, 'إنشاء الصنف يدوياً بالسيرفر والكتالوج');
                 saveCatalogProducts();
                 closeModal();
                 renderCatalog();
@@ -2450,28 +2610,39 @@
         const categorySelects = document.querySelectorAll('select[name="category"], #product-category, #edit-product-category, #filter-category, #category-filter, #form-category');
         if (!categorySelects.length) return;
 
-        const storeId = localStorage.getItem('activeStoreId') || localStorage.getItem('storeId') || '';
         const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
-        const FASTAPI_BASE_URL = (window.CONFIG && window.CONFIG.FASTAPI_BASE_URL)
-          ? window.CONFIG.FASTAPI_BASE_URL.replace(/\/+$/, '')
-          : 'https://dawwer-backend-fastapi.onrender.com';
+        const apiBase = (window.CONFIG && (window.CONFIG.API_BASE_URL || window.CONFIG.AUTH_BASE_URL))
+          ? (window.CONFIG.API_BASE_URL || window.CONFIG.AUTH_BASE_URL).replace(/\/+$/, '')
+          : 'https://dawwer.runasp.net/api';
+        const categoriesEndpoint = apiBase.endsWith('/api') ? `${apiBase}/categories` : `${apiBase}/api/categories`;
 
         try {
-          // Attempt to fetch from store categories or global categories endpoint
-          const res = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${storeId}/categories`, {
-            headers: {
-              'Authorization': token ? `Bearer ${token}` : '',
-              'Accept': 'application/json'
-            }
-          });
-
           let categories = [];
-          if (res.ok) {
-            categories = await res.json();
-          } else {
-            // Fallback endpoint if store-specific route fails
-            const fallbackRes = await fetch(`${FASTAPI_BASE_URL}/api/v1/categories`);
-            if (fallbackRes.ok) categories = await fallbackRes.json();
+
+          // 1. First attempt via ApiClient taxonomies
+          if (typeof ApiClient !== 'undefined' && ApiClient.categories && typeof ApiClient.categories.list === 'function') {
+            try {
+              const res = await ApiClient.categories.list();
+              const data = (res && res.data !== undefined) ? res.data : res;
+              categories = Array.isArray(data) ? data : (data?.categories || data?.data || []);
+            } catch (e) {
+              console.warn('[Catalog] ApiClient.categories.list fallback:', e);
+            }
+          }
+
+          // 2. Direct fetch to primary platform backend /api/categories
+          if (!categories || categories.length === 0) {
+            const res = await fetch(categoriesEndpoint, {
+              headers: {
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                'Accept': 'application/json'
+              }
+            }).catch(() => null);
+
+            if (res && res.ok) {
+              const data = await res.json().catch(() => null);
+              categories = Array.isArray(data) ? data : (data?.categories || data?.data || []);
+            }
           }
 
           // Normalize categories response (array of strings OR array of objects {id, name, name_ar})
