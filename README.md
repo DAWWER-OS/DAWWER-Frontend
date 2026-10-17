@@ -27,10 +27,11 @@
 
 ## ✨ Key Features
 
-### 1. In-Store Navigation & Shelf Mapping (`shelves.html`)
-- **Aisle & Shelf Grid System**: Visual organization of in-store layout mapping (e.g., Aisle A1, A2, Shelves F1-F4).
-- **Product Location Tracking**: Link products to exact aisle coordinates and physical shelf identifiers for rapid customer discovery and staff fulfillment.
-- **Dynamic Filtering & Search**: Instant client-side search by aisle name, shelf code, or assigned category with live product counts.
+### 1. In-Store Navigation & Shelf Mapping (`store-map.html`)
+- **Map & Shelf Editor**: Build the store layout, configure shelf faces and levels, and place products from the live store catalog.
+- **Shopper Preview**: Preview product lookup and routes on the map, with the same light/dark theme as the merchant site.
+- **Persistence**: Layouts and placements currently save locally per store. Cloud publishing requires the integration described in `MAP_API_REQUIREMENTS.md`.
+- **Navigation**: Desktop navigation displays labels beside every icon; mobile uses a labeled drawer. The retired `shelves.html` editor redirects to the map.
 
 ### 2. Merchant Store Lifecycle & Verification (`merchant-application.html`)
 - **Step-by-Step Onboarding**: Draft, update, and submit store registration profiles.
@@ -83,7 +84,8 @@ dawwer/
 ├── merchant-application.html     # Store onboarding wizard & legal document verification submission
 ├── store-staff.html              # Multi-user staff directory, permission matrix & custom role creator
 ├── orders.html                   # Order fulfillment manager with lifecycle status tracking
-├── shelves.html                  # Visual in-store aisle & shelf layout mapping interface
+├── store-map.html                # Integrated map, shelf editor and product placement preview
+├── shelves.html                  # Compatibility redirect to store-map.html
 ├── profile.html                  # User profile settings, contact info updates & password change
 ├── login.html                    # Universal authentication portal (Merchants, Staff, Customers)
 ├── register.html                 # New user registration portal

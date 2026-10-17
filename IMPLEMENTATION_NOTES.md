@@ -34,3 +34,7 @@ Automated browser tests intercept API responses. They verify actual XLSX parsing
 - `npm run test:e2e`
 
 The e2e suite includes dashboard disclosure, successful/rejected XLSX import, employee creation/rejected role edit, nested password email failure/success, map catalog pagination and store isolation, plus the pre-existing workflows. Screenshots are written to ignored `test-results/` during testing.
+
+## Navigation consolidation
+
+The standalone aisle/shelf editor was retired: it stored a separate, browser-only aisle list and manual item counts without synchronizing map geometry or product placements. Its navigation entry and controller were removed. `shelves.html` now redirects old bookmarks to `store-map.html`; existing local aisle data is left intact. Merchant navigation now shows permanent icon labels on desktop and the same labeled links in the mobile drawer, with active-page indication and grouped destinations.

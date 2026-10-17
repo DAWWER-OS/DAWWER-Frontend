@@ -6,7 +6,7 @@ const Auth = {
         const target = new URL(redirect, window.location.href);
         const page = target.pathname.split('/').pop();
         const allowed = isAdmin ? ['admin-dashboard.html', 'profile.html']
-          : ['dashboard.html', 'catalog.html', 'ai-capture.html', 'review-drafts.html', 'merchant-application.html', 'select-store.html', 'orders.html', 'profile.html', 'shelves.html', 'store-staff.html', 'inventory-audit.html', 'payment-review.html', 'delivery-settings.html'];
+          : ['dashboard.html', 'catalog.html', 'ai-capture.html', 'review-drafts.html', 'merchant-application.html', 'select-store.html', 'orders.html', 'profile.html', 'shelves.html', 'store-map.html', 'store-staff.html', 'inventory-audit.html', 'payment-review.html', 'delivery-settings.html'];
         if (target.origin === window.location.origin && allowed.includes(page)) return target.pathname + target.search + target.hash;
       } catch (e) {}
     }

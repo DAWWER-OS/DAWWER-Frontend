@@ -408,3 +408,51 @@ test('map editor and shopper follow the site theme without reloading or losing t
   await expect(map.locator('#shopMap > rect').first()).toHaveCSS('fill','rgb(255, 255, 255)');
   await page.screenshot({path:'test-results/map-shopper-light.png',fullPage:true});
 });
+
+test('merchant sidebar always displays labels and keeps the layout clear on desktop and mobile',async({page})=>{
+  await setup(page);
+  await page.addInitScript(()=>{localStorage.setItem('sidebar_expanded','false');localStorage.setItem('theme','light');});
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.setViewportSize({width:1440,height:1000});
+  await page.goto('/dashboard.html');
+  const sidebar=page.locator('#main-sidebar');
+  await expect(sidebar.locator('.sidebar-label')).toHaveCount(11);
+  for(const label of await sidebar.locator('.sidebar-label').all())await expect(label).toBeVisible();
+  await expect(sidebar.locator('a[href="shelves.html"]')).toHaveCount(0);
+  await expect(sidebar.locator('a[href="store-map.html"]')).toHaveCount(1);
+  await expect(sidebar.locator('a[href="dashboard.html"].nav-item')).toHaveAttribute('aria-current','page');
+  await expect(sidebar).toHaveCSS('width','248px');
+  await expect(sidebar.locator('.nav-item.active svg')).toHaveCSS('color','rgb(21, 63, 45)');
+  const mainBounds=await page.locator('main').boundingBox(),sidebarBounds=await sidebar.boundingBox();
+  expect(mainBounds.x+mainBounds.width).toBeLessThanOrEqual(sidebarBounds.x+1);
+  await page.locator('main').click({position:{x:10,y:10}});
+  await expect(sidebar.locator('a[href="store-map.html"] .sidebar-label')).toBeVisible();
+  await page.screenshot({path:'test-results/sidebar-desktop-light.png',fullPage:true});
+  await page.locator('#theme-toggle-btn').click();
+  await expect(page.locator('html')).toHaveClass(/dark/);
+  await page.screenshot({path:'test-results/sidebar-desktop-dark.png',fullPage:true});
+  await page.setViewportSize({width:390,height:844});
+  await expect(sidebar).toHaveAttribute('aria-hidden','true');
+  expect(await sidebar.evaluate(el=>el.inert)).toBe(true);
+  await page.getByRole('button',{name:'القائمة الرئيسية',exact:true}).click();
+  await expect(sidebar).toHaveAttribute('aria-hidden','false');
+  for(const label of await sidebar.locator('.sidebar-label').all())await expect(label).toBeVisible();
+  await page.screenshot({path:'test-results/sidebar-mobile.png',fullPage:true});
+  await page.getByRole('button',{name:'إغلاق القائمة',exact:true}).click();
+  await expect(sidebar).toHaveAttribute('aria-hidden','true');
+  await page.getByRole('button',{name:'القائمة الرئيسية',exact:true}).click();
+  await sidebar.getByRole('link',{name:'حسابي',exact:true}).click();
+  await expect(page).toHaveURL(/profile.html$/);
+  await expect(page.locator('#main-sidebar')).toHaveAttribute('aria-hidden','true');
+  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
+test('retired shelves page redirects to the map without removing existing aisle data',async({page})=>{
+  await setup(page);
+  const saved=JSON.stringify([{id:1,name:'A',shelves:['F1','F2']}]);
+  await page.addInitScript(saved=>localStorage.setItem('dawwer_store_aisles',saved),saved);
+  await page.goto('/shelves.html');
+  await expect(page).toHaveURL(/store-map.html$/);
+  await expect(page.locator('#store-map-frame')).toBeVisible();
+  expect(await page.evaluate(()=>localStorage.getItem('dawwer_store_aisles'))).toBe(saved);
+});

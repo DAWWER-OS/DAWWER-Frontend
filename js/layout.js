@@ -9,7 +9,6 @@ const DawwerLayout = {
 
     this.injectStyles();
     this.ensureSidebar();
-    this.initExpandableSidebar();
     this.setupUserInfo();
     this.initStoreIdentity();
     this.setupActiveLinks();
@@ -52,226 +51,63 @@ const DawwerLayout = {
         font-variant-numeric: tabular-nums;
       }
 
-      /* Enhanced Platform Sidebar (Expandable between w-20 and w-64) */
+      /* Labeled merchant navigation: fixed on desktop, drawer on mobile. */
+      :root { --merchant-sidebar-width: 15.5rem; }
       #main-sidebar, #sidebar-box, #sidebar-drawer {
-        position: fixed !important;
-        top: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        height: 100vh !important;
-        background: #0e2c1f !important;
-        color: #f1f5f9 !important;
-        z-index: 50 !important;
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: space-between !important;
-        align-items: stretch !important;
-        padding: 12px 0 !important;
-        box-shadow: -4px 0 24px rgba(0, 0, 0, 0.28) !important;
-        border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
-        user-select: none !important;
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
-        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.28s ease !important;
-        will-change: width, transform !important;
+        position: fixed !important; inset: 0 0 0 auto !important;
+        width: var(--merchant-sidebar-width) !important; height: 100dvh !important;
+        display: flex !important; flex-direction: column !important; align-items: stretch !important;
+        padding: 0 !important; background: #153f2d !important; color: #d1fae5 !important;
+        border-left: 1px solid #ffffff14 !important; box-shadow: -4px 0 24px #0f172a0a !important;
+        overflow: hidden !important; z-index: 50;
+        transition: transform .22s ease, opacity .22s ease !important;
       }
-
-      /* Collapsed State: w-20 (5rem = 80px) */
-      #main-sidebar.w-20, #sidebar-box.w-20 {
-        width: 5rem !important;
-        min-width: 5rem !important;
-        max-width: 5rem !important;
+      html.dark #main-sidebar { background: #0e2c1f !important; }
+      #main-sidebar .sidebar-brand { display: flex; align-items: center; gap: 12px; padding: 24px 20px 20px; color: white; text-decoration: none; }
+      #main-sidebar .sidebar-logo-badge { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid #ffffff24; border-radius: 14px; background: #ffffff0a; flex-shrink: 0; }
+      #main-sidebar .sidebar-logo-badge img { width: 30px; height: 30px; object-fit: contain; }
+      #main-sidebar .sidebar-brand-copy { display: grid; gap: 3px; }
+      #main-sidebar .sidebar-brand-copy strong { font-size: 22px; line-height: 1.25; }
+      #main-sidebar .sidebar-brand-copy small { font-size: 11px; color: #a8c9b6; }
+      #main-sidebar .sidebar-nav { flex: 1; min-height: 0; overflow: auto; padding: 0 12px 12px; scrollbar-width: thin; scrollbar-color: #436850 transparent; }
+      #main-sidebar .sidebar-section-title { margin: 14px 12px 8px; font-size: 10px; font-weight: 600; color: #a8c9b6; }
+      #main-sidebar .nav-item {
+        display: flex !important; align-items: center !important; justify-content: flex-start !important;
+        width: 100%; min-height: 44px; gap: 12px; margin: 3px 0; padding: 11px 13px;
+        border: 1px solid transparent; border-radius: 12px; text-decoration: none;
+        color: #c4dfcf !important; background: transparent; transition: background .15s, color .15s;
       }
-      #main-sidebar.w-20 .sidebar-label,
-      #main-sidebar.w-20 .nav-label,
-      #sidebar-box.w-20 .sidebar-label,
-      #sidebar-box.w-20 .nav-label {
-        display: none !important;
-        opacity: 0 !important;
-        width: 0 !important;
-        overflow: hidden !important;
-        pointer-events: none !important;
-      }
-      #main-sidebar.w-20 .nav-item,
-      #sidebar-box.w-20 .nav-item {
-        justify-content: center !important;
-        padding-left: 0.5rem !important;
-        padding-right: 0.5rem !important;
-      }
-      #main-sidebar.w-20 #sidebar-collapse-btn,
-      #sidebar-box.w-20 #sidebar-collapse-btn {
-        display: none !important;
-      }
-
-      /* Expanded State: w-64 (16rem = 256px) */
-      #main-sidebar.w-64, #sidebar-box.w-64 {
-        width: 16rem !important;
-        min-width: 16rem !important;
-        max-width: 16rem !important;
-        box-shadow: -8px 0 32px rgba(0, 0, 0, 0.45) !important;
-      }
-      #main-sidebar.w-64 .sidebar-label,
-      #main-sidebar.w-64 .nav-label,
-      #sidebar-box.w-64 .sidebar-label,
-      #sidebar-box.w-64 .nav-label {
-        display: inline-block !important;
-        opacity: 1 !important;
-        width: auto !important;
-        white-space: nowrap !important;
-      }
-      #main-sidebar.w-64 .nav-item,
-      #sidebar-box.w-64 .nav-item {
-        justify-content: flex-start !important;
-        padding-left: 0.75rem !important;
-        padding-right: 0.75rem !important;
-      }
-      #main-sidebar.w-64 .sidebar-tooltip,
-      #sidebar-box.w-64 .sidebar-tooltip {
-        display: none !important;
-      }
-      #main-sidebar.w-64 #sidebar-collapse-btn,
-      #sidebar-box.w-64 #sidebar-collapse-btn {
-        display: flex !important;
-      }
-
-      /* Inactive & Hover Navigation Items */
-      #main-sidebar .nav-item,
-      #sidebar-box .nav-item,
-      #sidebar-drawer .nav-item {
-        color: rgba(209, 250, 229, 0.65) !important; /* text-emerald-100/60 */
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-      }
-      #main-sidebar .nav-item svg,
-      #sidebar-box .nav-item svg,
-      #sidebar-drawer .nav-item svg {
-        color: rgba(209, 250, 229, 0.65) !important;
-        stroke: currentColor !important;
-        width: 1.5rem !important; /* w-6 */
-        height: 1.5rem !important; /* h-6 */
-        stroke-width: 1.85px !important;
-        transition: color 0.15s ease, stroke 0.15s ease !important;
-      }
-      #main-sidebar .nav-item:hover,
-      #sidebar-box .nav-item:hover,
-      #sidebar-drawer .nav-item:hover {
-        background-color: rgba(255, 255, 255, 0.1) !important;
-        color: #ffffff !important;
-      }
-      #main-sidebar .nav-item:hover svg,
-      #sidebar-box .nav-item:hover svg,
-      #sidebar-drawer .nav-item:hover svg {
-        color: #ffffff !important;
-        stroke: #ffffff !important;
-      }
-
-      /* Active Navigation Item (High-contrast, crisp white icon, backdrop blur) */
-      #main-sidebar .nav-item.active,
-      #main-sidebar .nav-item.active-tab,
-      #sidebar-box .nav-item.active,
-      #sidebar-box .nav-item.active-tab,
-      #sidebar-drawer .nav-item.active,
-      #sidebar-drawer .nav-item.active-tab,
-      .nav-item.active,
-      .nav-item.active-tab {
-        background-color: rgba(255, 255, 255, 0.15) !important;
-        backdrop-filter: blur(8px) !important;
-        -webkit-backdrop-filter: blur(8px) !important;
-        border: 1px solid rgba(52, 211, 153, 0.35) !important;
-        color: #ffffff !important;
-        font-weight: 600 !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
-      }
-
-      /* Active Icon Color: MUST be bright crisp white */
-      #main-sidebar .nav-item.active svg,
-      #main-sidebar .nav-item.active-tab svg,
-      #sidebar-box .nav-item.active svg,
-      #sidebar-box .nav-item.active-tab svg,
-      #sidebar-drawer .nav-item.active svg,
-      #sidebar-drawer .nav-item.active-tab svg,
-      .nav-item.active svg,
-      .nav-item.active-tab svg {
-        color: #ffffff !important;
-        stroke: #ffffff !important;
-        stroke-width: 2px !important;
-        width: 1.5rem !important;
-        height: 1.5rem !important;
-        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3)) !important;
-      }
-
-      /* Active Indicator Dot: Bright mint green */
-      #main-sidebar .nav-item.active .active-indicator,
-      #sidebar-box .nav-item.active .active-indicator,
-      #sidebar-drawer .nav-item.active .active-indicator,
-      .nav-item.active .active-indicator {
-        opacity: 1 !important;
-        display: inline-block !important;
-        background-color: #10b981 !important;
-        box-shadow: 0 0 8px rgba(16, 185, 129, 0.7) !important;
-      }
-
-      .sidebar-nav {
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
-        scrollbar-width: none !important;
-      }
-      .sidebar-nav::-webkit-scrollbar {
-        display: none !important;
-      }
-
-      /* Desktop Layout: w-20 fixed rail by default */
+      #main-sidebar .nav-icon { display: grid; place-items: center; width: 22px; height: 22px; flex: 0 0 22px; }
+      #main-sidebar .nav-icon svg { width: 21px !important; height: 21px !important; stroke: currentColor !important; stroke-width: 1.7px !important; filter: none !important; }
+      #main-sidebar .sidebar-label { display: inline-block !important; opacity: 1 !important; width: auto !important; font-size: 13px; font-weight: 500; white-space: nowrap; }
+      #main-sidebar .nav-item:hover { background: #ffffff0d !important; color: white !important; }
+      #main-sidebar .nav-item.active { background: #edf5f0 !important; border-color: #ffffff33 !important; color: #153f2d !important; box-shadow: none !important; }
+      html.dark #main-sidebar .nav-item.active { background: #1c5335 !important; border-color: #436850 !important; color: #ecfdf5 !important; }
+      #main-sidebar .nav-item.active svg { color: #153f2d !important; stroke: currentColor !important; }
+      html.dark #main-sidebar .nav-item.active svg { color: #ecfdf5 !important; stroke: currentColor !important; }
+      #main-sidebar .nav-item::before { display: none !important; }
+      #main-sidebar .nav-item.active .sidebar-label { font-weight: 700; }
+      #main-sidebar .active-indicator { display: none; width: 5px; height: 5px; margin-right: auto; background: #d6a950; border-radius: 50%; flex-shrink: 0; }
+      #main-sidebar .nav-item.active .active-indicator { display: block; }
+      #main-sidebar .sidebar-footer { padding: 10px 12px 14px; border-top: 1px solid #ffffff14; }
+      #main-sidebar .sidebar-logout { color: #fecdd3 !important; cursor: pointer; text-align: right; }
+      #main-sidebar .nav-item:focus-visible, #main-sidebar .sidebar-brand:focus-visible, #main-sidebar .sidebar-close-btn:focus-visible { outline: 2px solid #d6a950; outline-offset: 2px; }
+      #main-sidebar .sidebar-close-btn { display: none; position: absolute; top: 22px; left: 12px; width: 32px; height: 32px; border-radius: 8px; color: #d1fae5; background: #ffffff0d; border: 1px solid #ffffff1a; }
+      .backdrop-hidden { opacity: 0; pointer-events: none; }
+      .backdrop-visible { opacity: 1; pointer-events: auto; }
       @media (min-width: 768px) {
-        #main-sidebar, #sidebar-box, #sidebar-drawer {
-          transform: translateX(0) !important;
-          opacity: 1 !important;
-          pointer-events: auto !important;
-        }
-
-        body:not(.auth-page) {
-          margin-right: 5rem !important;
-        }
-
-        body:not(.auth-page) > header,
-        body:not(.auth-page) > main,
-        body:not(.auth-page) > footer,
-        body:not(.auth-page) > div.main-content {
-          max-width: calc(100vw - 5rem) !important;
-        }
-
-        #sidebar-backdrop {
-          display: none !important;
-        }
-
-        .sidebar-toggle-btn, #sidebar-toggle-btn {
-          display: none !important;
-        }
+        #main-sidebar { transform: none !important; opacity: 1 !important; pointer-events: auto !important; }
+        body.has-slim-sidebar { margin-right: var(--merchant-sidebar-width) !important; }
+        body.has-slim-sidebar > header, body.has-slim-sidebar > main, body.has-slim-sidebar > footer, body.has-slim-sidebar > div.main-content { max-width: calc(100vw - var(--merchant-sidebar-width)) !important; }
+        #sidebar-backdrop, .sidebar-toggle-btn, #sidebar-toggle-btn { display: none !important; }
       }
-
-      /* Mobile Behavior (< 768px): Off-canvas drawer sliding from right */
       @media (max-width: 767.98px) {
-        #main-sidebar.drawer-closed, #sidebar-box.drawer-closed, #sidebar-drawer.drawer-closed {
-          transform: translateX(100%) !important;
-          opacity: 0 !important;
-          pointer-events: none !important;
-        }
-
-        #main-sidebar.drawer-open, #sidebar-box.drawer-open, #sidebar-drawer.drawer-open {
-          transform: translateX(0) !important;
-          opacity: 1 !important;
-          pointer-events: auto !important;
-          width: 16rem !important;
-          min-width: 16rem !important;
-          max-width: 16rem !important;
-        }
-
-        body:not(.auth-page) {
-          margin-right: 0 !important;
-        }
-
-        /* Lock body scroll when mobile drawer is open */
-        body.sidebar-open {
-          overflow: hidden !important;
-        }
+        #main-sidebar { width: min(18rem, calc(100vw - 3rem)) !important; }
+        #main-sidebar.drawer-closed { transform: translateX(100%) !important; opacity: 0 !important; pointer-events: none !important; }
+        #main-sidebar.drawer-open { transform: none !important; opacity: 1 !important; pointer-events: auto !important; }
+        #main-sidebar .sidebar-close-btn { display: grid; place-items: center; }
+        body.has-slim-sidebar { margin-right: 0 !important; }
+        body.sidebar-open { overflow: hidden !important; }
       }
 
       /* ============================================================
@@ -482,55 +318,6 @@ const DawwerLayout = {
         background-color: rgba(15, 23, 42, 0.9) !important; /* slate-900/90 */
         border-color: #1e293b !important; /* slate-800 */
       }
-      html.dark #main-sidebar,
-      html.dark #sidebar-box,
-      html.dark #sidebar-drawer {
-        background-color: #0e2c1f !important; /* forest-green consistent background */
-        border-color: rgba(255, 255, 255, 0.1) !important;
-      }
-      html.dark #main-sidebar .nav-item:not(.active),
-      html.dark #sidebar-box .nav-item:not(.active),
-      html.dark #sidebar-drawer .nav-item:not(.active) {
-        color: rgba(209, 250, 229, 0.65) !important;
-      }
-      html.dark #main-sidebar .nav-item:not(.active) svg,
-      html.dark #sidebar-box .nav-item:not(.active) svg,
-      html.dark #sidebar-drawer .nav-item:not(.active) svg {
-        color: rgba(209, 250, 229, 0.65) !important;
-        stroke: currentColor !important;
-      }
-      html.dark #main-sidebar .nav-item:hover,
-      html.dark #sidebar-box .nav-item:hover,
-      html.dark #sidebar-drawer .nav-item:hover {
-        background-color: rgba(255, 255, 255, 0.1) !important;
-        color: #ffffff !important;
-      }
-      html.dark #main-sidebar .nav-item:hover svg,
-      html.dark #sidebar-box .nav-item:hover svg,
-      html.dark #sidebar-drawer .nav-item:hover svg {
-        color: #ffffff !important;
-        stroke: #ffffff !important;
-      }
-      html.dark #main-sidebar .nav-item.active,
-      html.dark #main-sidebar .nav-item.active-tab,
-      html.dark #sidebar-box .nav-item.active,
-      html.dark #sidebar-box .nav-item.active-tab,
-      html.dark #sidebar-drawer .nav-item.active,
-      html.dark #sidebar-drawer .nav-item.active-tab {
-        background-color: rgba(255, 255, 255, 0.15) !important;
-        border: 1px solid rgba(52, 211, 153, 0.35) !important;
-        color: #ffffff !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
-      }
-      html.dark #main-sidebar .nav-item.active svg,
-      html.dark #main-sidebar .nav-item.active-tab svg,
-      html.dark #sidebar-box .nav-item.active svg,
-      html.dark #sidebar-box .nav-item.active-tab svg,
-      html.dark #sidebar-drawer .nav-item.active svg,
-      html.dark #sidebar-drawer .nav-item.active-tab svg {
-        color: #ffffff !important;
-        stroke: #ffffff !important;
-      }
       html.dark .bg-white:not(.nav-item):not(.sidebar-logo-badge):not(.sidebar-brand-badge),
       html.dark .card,
       html.dark .panel,
@@ -615,230 +402,33 @@ const DawwerLayout = {
   },
 
   getSlimSidebarHTML() {
-    return `
-      <!-- TOP: Brand Logo & Title with Subtle Collapse Button -->
-      <div class="flex items-center justify-between w-full pt-1 px-3 shrink-0 overflow-visible">
-        <div class="sidebar-brand-wrapper flex items-center gap-3 cursor-pointer py-1">
-          <div class="sidebar-logo-badge flex items-center justify-center w-10 h-10 rounded-xl bg-white/10 border border-white/15 backdrop-blur-xs shrink-0 shadow-xs">
-            <img src="assets/images/FrameLogo.png" alt="دوّر" class="h-6 w-auto object-contain pointer-events-none">
-          </div>
-          <div class="sidebar-label nav-label hidden flex-col">
-            <span class="font-bold text-white text-base leading-tight tracking-wide whitespace-nowrap">دوّر</span>
-            <span class="text-[10px] text-emerald-300 font-medium whitespace-nowrap">منظومة إدارة التجزئة</span>
-          </div>
-        </div>
-        <button id="sidebar-collapse-btn" type="button" aria-label="طي القائمة الجانبية" title="طي القائمة" class="sidebar-label nav-label hidden p-1.5 rounded-lg text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors cursor-pointer active:scale-95 shrink-0">
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-        </button>
-        <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-4 opacity-0 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
-          دوّر - الرئيسية
-        </div>
-      </div>
-
-      <!-- CENTER: Clean Navigation Links with Expandable Labels -->
-      <nav class="flex flex-col items-stretch gap-1.5 my-auto w-full py-2 sidebar-nav overflow-y-auto overflow-x-hidden">
-        ${(typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function' && Auth.isAdmin()) ? `
-        <!-- 0. الإدارة المركزية (للمسؤولين) -->
-        <div class="relative group/nav flex items-center w-full px-2">
-          <a href="admin-dashboard.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-amber-300 hover:text-white hover:bg-amber-500/20 transition-all duration-200 shrink-0" aria-label="الإدارة المركزية">
-            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
-              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-            </span>
-            <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
-              لوحة الإدارة المركزية
-            </span>
-            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-amber-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(251,191,36,0.7)]"></span>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
-            لوحة الإدارة المركزية
-          </div>
-        </div>` : ''}
-
-        <!-- 1. لوحة التحكم -->
-        <div class="relative group/nav flex items-center w-full px-2">
-          <a href="dashboard.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="لوحة التحكم">
-            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
-              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-            </span>
-            <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
-              لوحة التحكم الرئيسية
-            </span>
-            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
-            لوحة التحكم الرئيسية
-          </div>
-        </div>
-
-        <!-- 2. الكتالوج والمخططات -->
-        <div class="relative group/nav flex items-center w-full px-2">
-          <a href="catalog.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الكتالوج والمخططات">
-            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
-              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-            </span>
-            <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
-              إدارة الكتالوج والمخطط
-            </span>
-            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
-            إدارة الكتالوج والمخطط
-          </div>
-        </div>
-
-        <!-- 3. مسح الرفوف بالذكاء الاصطناعي (AI) -->
-        <div class="relative group/nav flex items-center w-full px-2">
-          <a href="ai-capture.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="مسح الرفوف بالذكاء">
-            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
-              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M19 7l-.01.01"/></svg>
-            </span>
-            <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
-              مسح الرفوف بالذكاء الاصطناعي
-            </span>
-            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
-            مسح الرفوف بالذكاء الاصطناعي
-          </div>
-        </div>
-
-        <!-- 4. مراجعة المسودات المستخرجة -->
-        <div class="relative group/nav flex items-center w-full px-2">
-          <a href="review-drafts.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="مراجعة المسودات">
-            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
-              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-            </span>
-            <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
-              مراجعة واعتماد المسودات
-            </span>
-            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
-            مراجعة واعتماد المسودات
-          </div>
-        </div>
-
-        <!-- 5. المخزون وسجل التدقيق -->
-        <div class="relative group/nav flex items-center w-full px-2">
-          <a href="inventory-audit.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="المخزون والتدقيق">
-            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
-              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
-            </span>
-            <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
-              المخزون وسجل التدقيق
-            </span>
-            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
-            المخزون وسجل التدقيق
-          </div>
-        </div>
-
-        <!-- 6. الطلبات والمبيعات -->
-        <div class="relative group/nav flex items-center w-full px-2">
-          <a href="orders.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الطلبات والمبيعات">
-            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
-              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
-            </span>
-            <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
-              الطلبات والمبيعات
-            </span>
-            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
-            الطلبات والمبيعات
-          </div>
-        </div>
-
-        <!-- 7. الممرات والرفوف -->
-        <div class="relative group/nav flex items-center w-full px-2">
-          <a href="shelves.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الممرات والرفوف">
-            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
-              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
-            </span>
-            <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
-              مواقع الممرات والرفوف
-            </span>
-            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
-            مواقع الممرات والرفوف
-          </div>
-        </div>
-
-        <div class="relative group/nav flex items-center w-full px-2">
-          <a href="store-map.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10" aria-label="خريطة المتجر">
-            <span class="nav-icon w-6 h-6 shrink-0"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.8" d="M3 5l6 2 6-3 6 2v14l-6-2-6 3-6-2z M9 7v14 M15 4v14"/></svg></span>
-            <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap">خريطة المتجر</span>
-          </a>
-        </div>
-
-        <!-- 8. فريق العمل والصلاحيات -->
-        <div class="relative group/nav flex items-center w-full px-2">
-          <a href="store-staff.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="فريق العمل">
-            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
-              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-            </span>
-            <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
-              فريق العمل والأدوار
-            </span>
-            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
-            فريق العمل والأدوار
-          </div>
-        </div>
-
-        <!-- 9. تسجيل واعتماد المتجر -->
-        <div class="relative group/nav flex items-center w-full px-2">
-          <a href="merchant-application.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="بيانات المتجر">
-            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
-              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z"/></svg>
-            </span>
-            <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
-              تسجيل واعتماد المتجر
-            </span>
-            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
-            تسجيل واعتماد المتجر
-          </div>
-        </div>
-
-        <!-- 10. الملف الشخصي والإعدادات -->
-        <div class="relative group/nav flex items-center w-full px-2">
-          <a href="profile.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10 transition-colors shrink-0" aria-label="الملف الشخصي">
-            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
-              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-            </span>
-            <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200">
-              الملف الشخصي والإعدادات
-            </span>
-            <span class="active-indicator mr-auto w-2 h-2 rounded-full bg-emerald-400 hidden group-[.active]/item:inline-block shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
-          </a>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
-            الملف الشخصي والإعدادات
-          </div>
-        </div>
-      </nav>
-
-      <!-- BOTTOM: Single Logout Button -->
-      <div class="flex flex-col w-full pt-2 pb-1 border-t border-white/10 dark:border-slate-800 px-2 shrink-0 overflow-visible">
-        <div class="relative group/nav flex items-center w-full">
-          <button id="logout-btn" data-action="logout" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-rose-300 hover:text-white hover:bg-rose-500/20 dark:hover:bg-rose-950/40 dark:text-rose-400 transition-all duration-200 cursor-pointer active:scale-95 shrink-0" aria-label="تسجيل الخروج">
-            <span class="nav-icon shrink-0 w-6 h-6 flex items-center justify-center">
-              <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.85" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-            </span>
-            <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap transition-all duration-200 text-rose-300 group-hover/item:text-white">
-              تسجيل الخروج
-            </span>
-          </button>
-          <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-rose-200 border border-rose-900/60 dark:border-slate-800 text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap">
-            تسجيل الخروج
-          </div>
-        </div>
-      </div>
-    `;
+    const icon = path => `<span class="nav-icon" aria-hidden="true"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="${path}"/></svg></span>`;
+    const groups = [
+      { title: 'المتجر', items: [
+        ['dashboard.html', 'لوحة التحكم', 'M3 10l9-7 9 7v10a1 1 0 01-1 1h-5v-7H9v7H4a1 1 0 01-1-1z'],
+        ['catalog.html', 'المنتجات', 'M4 7h16l1 13H3L4 7z M8 7V5a4 4 0 018 0v2'],
+        ['store-map.html', 'خريطة المتجر', 'M3 5l6 2 6-3 6 2v14l-6-2-6 3-6-2z M9 7v14 M15 4v14'],
+        ['inventory-audit.html', 'المخزون والجرد', 'M9 5H5v16h14V5h-4 M9 3h6v4H9z M8 12h8 M8 16h5'],
+        ['orders.html', 'الطلبات', 'M4 7h16v14H4z M8 7V5a4 4 0 018 0v2 M9 12h6'],
+      ]},
+      { title: 'إضافة ومراجعة', items: [
+        ['ai-capture.html', 'تصوير الرفوف', 'M3 7h4l2-3h6l2 3h4v13H3z M16 13a4 4 0 11-8 0 4 4 0 018 0'],
+        ['review-drafts.html', 'مراجعة المنتجات', 'M9 5H5v16h14V5h-4 M9 3h6v4H9z M8 14l3 3 5-6'],
+      ]},
+      { title: 'الإدارة', items: [
+        ['store-staff.html', 'الموظفون والصلاحيات', 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2 M13 7a4 4 0 11-8 0 4 4 0 018 0 M17 3a4 4 0 010 8 M22 21v-2a4 4 0 00-3-3.87'],
+        ['merchant-application.html', 'بيانات المتجر', 'M3 21h18 M5 21V4h14v17 M9 8h2 M13 8h2 M9 12h2 M13 12h2 M10 21v-5h4v5'],
+        ['profile.html', 'حسابي', 'M16 7a4 4 0 11-8 0 4 4 0 018 0 M4 21a8 8 0 0116 0'],
+      ]},
+    ];
+    if (typeof Auth !== 'undefined' && Auth.isAdmin?.()) groups[2].items.unshift(['admin-dashboard.html', 'الإدارة المركزية', 'M12 3l9 4c0 7-4 12-9 14-5-2-9-7-9-14z M8 12l3 3 5-6']);
+    return `<a href="dashboard.html" class="sidebar-brand" aria-label="دوّر — الرئيسية">
+      <span class="sidebar-logo-badge"><img src="assets/images/FrameLogo.png" alt=""/></span>
+      <span class="sidebar-brand-copy"><strong>دوّر</strong><small>إدارة متجرك</small></span>
+    </a>
+    <button type="button" class="sidebar-close-btn" data-sidebar-close aria-label="إغلاق القائمة">${icon('M6 6l12 12 M6 18L18 6')}</button>
+    <nav class="sidebar-nav" aria-label="التنقل الرئيسي">${groups.map(group => `<div class="sidebar-section"><p class="sidebar-section-title">${group.title}</p>${group.items.map(([href, label, path]) => `<a href="${href}" class="nav-item" aria-label="${label}">${icon(path)}<span class="sidebar-label">${label}</span><span class="active-indicator" aria-hidden="true"></span></a>`).join('')}</div>`).join('')}</nav>
+    <div class="sidebar-footer"><button id="logout-btn" type="button" data-action="logout" class="nav-item sidebar-logout">${icon('M9 5H4v14h5 M13 8l4 4-4 4 M8 12h13')}<span class="sidebar-label">تسجيل الخروج</span></button></div>`;
   },
 
   ensureSidebar() {
@@ -860,10 +450,7 @@ const DawwerLayout = {
       sidebar.id = 'main-sidebar';
     }
 
-    const isExpanded = localStorage.getItem('sidebar_expanded') === 'true';
-    const widthClass = isExpanded ? 'w-64' : 'w-20';
-
-    sidebar.className = `fixed top-0 right-0 h-screen ${widthClass} transition-all duration-300 ease-in-out bg-[#0e2c1f] dark:bg-slate-900 text-white flex flex-col justify-between py-3 z-50 shadow-xl border-l border-white/10 dark:border-slate-800 select-none overflow-x-hidden overflow-y-auto`;
+    sidebar.className = 'merchant-sidebar';
     sidebar.innerHTML = this.getSlimSidebarHTML();
 
     let backdrop = document.getElementById('sidebar-backdrop');
@@ -875,85 +462,6 @@ const DawwerLayout = {
     }
 
     document.body.classList.add('has-slim-sidebar');
-  },
-
-  initExpandableSidebar() {
-    const sidebar = document.getElementById('main-sidebar') || document.getElementById('sidebar-box');
-    if (!sidebar) return;
-    if (sidebar._expandableInit) return;
-    sidebar._expandableInit = true;
-
-    if (sidebar.id !== 'main-sidebar') {
-      sidebar.id = 'main-sidebar';
-    }
-
-    const isExpandedStored = localStorage.getItem('sidebar_expanded') === 'true';
-    setSidebarState(isExpandedStored);
-
-    function setSidebarState(expand) {
-      sidebar.classList.toggle('w-64', expand);
-      sidebar.classList.toggle('w-20', !expand);
-
-      sidebar.querySelectorAll('.sidebar-label, .nav-label').forEach(el => {
-        if (expand) {
-          el.classList.remove('hidden', 'opacity-0', 'pointer-events-none', 'w-0', 'overflow-hidden');
-          el.classList.add('opacity-100', 'w-auto', 'inline-block', 'whitespace-nowrap');
-        } else {
-          el.classList.add('hidden', 'opacity-0', 'pointer-events-none', 'w-0', 'overflow-hidden');
-          el.classList.remove('opacity-100', 'w-auto', 'inline-block', 'whitespace-nowrap');
-        }
-      });
-
-      const collapseBtn = sidebar.querySelector('#sidebar-collapse-btn');
-      if (collapseBtn) {
-        collapseBtn.classList.toggle('hidden', !expand);
-      }
-
-      localStorage.setItem('sidebar_expanded', expand);
-    }
-
-    // Expand on clicking sidebar empty space / container / logo / padding
-    sidebar.addEventListener('click', (e) => {
-      // If clicking the subtle collapse button:
-      if (e.target.closest('#sidebar-collapse-btn')) {
-        e.preventDefault();
-        e.stopPropagation();
-        setSidebarState(false);
-        return;
-      }
-
-      // If clicking directly on a navigation link item or action button, do not hijack navigation
-      if (
-        e.target.closest('a.nav-item') ||
-        e.target.closest('button.nav-item') ||
-        e.target.closest('button.action-btn') ||
-        e.target.closest('#logout-btn') ||
-        e.target.closest('[data-action="logout"]') ||
-        e.target.closest('button[data-tab]')
-      ) {
-        return;
-      }
-
-      const isExpanded = sidebar.classList.contains('w-64');
-      setSidebarState(!isExpanded);
-    });
-
-    // Clicking outside the expanded sidebar on mobile/tablet/desktop collapses it back
-    document.addEventListener('click', (e) => {
-      if (!sidebar.contains(e.target) && sidebar.classList.contains('w-64')) {
-        setSidebarState(false);
-      }
-    });
-
-    // Pressing Escape collapses it back
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && sidebar.classList.contains('w-64')) {
-        setSidebarState(false);
-      }
-    });
-
-    sidebar.setSidebarState = setSidebarState;
-    window.setSidebarState = setSidebarState;
   },
 
   getSidebar() {
@@ -982,7 +490,11 @@ const DawwerLayout = {
     const backdrop = this.getBackdrop();
     if (!sidebar) return;
 
-    if (window.innerWidth < 768) {
+    const mobile = window.innerWidth < 768;
+    sidebar.inert = mobile;
+    sidebar.setAttribute('aria-hidden', String(mobile));
+    this.updateSidebarTriggers(!mobile);
+    if (mobile) {
       sidebar.classList.remove('drawer-open');
       sidebar.classList.add('drawer-closed');
       if (backdrop) {
@@ -1000,6 +512,9 @@ const DawwerLayout = {
     const backdrop = this.getBackdrop();
     if (!sidebar) return;
 
+    sidebar.inert = false;
+    sidebar.setAttribute('aria-hidden', 'false');
+    this.updateSidebarTriggers(true);
     sidebar.classList.remove('drawer-closed');
     sidebar.classList.add('drawer-open');
 
@@ -1016,6 +531,9 @@ const DawwerLayout = {
     const sidebar = this.getSidebar();
     const backdrop = this.getBackdrop();
     if (sidebar && window.innerWidth < 768) {
+      sidebar.inert = true;
+      sidebar.setAttribute('aria-hidden', 'true');
+      this.updateSidebarTriggers(false);
       sidebar.classList.remove('drawer-open');
       sidebar.classList.add('drawer-closed');
     }
@@ -1039,7 +557,16 @@ const DawwerLayout = {
     }
   },
 
+  updateSidebarTriggers(open) {
+    document.querySelectorAll('.sidebar-toggle-btn, #mobile-menu-btn, #sidebar-toggle-btn, [data-sidebar-toggle]').forEach(btn => {
+      btn.setAttribute('aria-expanded', String(open));
+      btn.setAttribute('aria-controls', 'main-sidebar');
+      btn.setAttribute('aria-label', 'القائمة الرئيسية');
+    });
+  },
+
   setupSidebarControls() {
+    document.querySelectorAll('[data-sidebar-close]').forEach(btn => btn.addEventListener('click', () => this.closeSidebar()));
     document.querySelectorAll('.sidebar-toggle-btn, #mobile-menu-btn, #sidebar-toggle-btn, [data-sidebar-toggle]').forEach(btn => {
       btn.onclick = (e) => {
         e.preventDefault();
@@ -1517,9 +1044,11 @@ const DawwerLayout = {
 
       if (isCurrent) {
         link.classList.add('active', 'active-tab', 'text-white');
+        link.setAttribute('aria-current', 'page');
         link.classList.remove('text-emerald-100/60', 'text-white/70');
       } else {
         link.classList.remove('active', 'active-tab', 'text-white');
+        link.removeAttribute('aria-current');
         link.classList.add('text-emerald-100/60');
       }
     });
