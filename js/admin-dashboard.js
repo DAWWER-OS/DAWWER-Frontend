@@ -68,27 +68,11 @@
   // Store applications will strictly be loaded dynamically from GET /api/admin/stores/applications
   const fallbackStores = [];
 
-  const fallbackUsers = [
-    { id: "u-101", fullName: "مدير النظام العام", email: "admin@dawwer.com", role: "Admin", status: 2, statusName: "Active" },
-    { id: "u-102", fullName: "عبدالله التاجر", email: "merchant@dawwer.com", role: "Merchant", status: 2, statusName: "Active" },
-    { id: "u-103", fullName: "سارة الزبون", email: "sarah.customer@gmail.com", role: "Customer", status: 3, statusName: "Suspended" }
-  ];
+  const fallbackUsers = [];
 
-  const fallbackCategories = [
-    { id: "cat-1", name: "خضار وفواكه طازجة", slug: "fresh-produce", description: "أصناف الخضار والفاكهة اليومية", isActive: true, displayOrder: 1, children: [
-      { id: "cat-11", name: "فواكه موسمية", slug: "seasonal-fruits", parentId: "cat-1", isActive: true, displayOrder: 1 },
-      { id: "cat-12", name: "ورقيات وأعشاب", slug: "fresh-herbs", parentId: "cat-1", isActive: true, displayOrder: 2 }
-    ]},
-    { id: "cat-2", name: "ألبان وأجبان وبيض", slug: "dairy-and-eggs", description: "منتجات الحليب والأجبان والبيض", isActive: true, displayOrder: 2, children: [
-      { id: "cat-21", name: "حليب طازج وطويل الأجل", slug: "fresh-milk", parentId: "cat-2", isActive: true, displayOrder: 1 }
-    ]},
-    { id: "cat-3", name: "مخبوزات وحلويات", slug: "bakery", description: "الخبز والمعجنات اليومية", isActive: true, displayOrder: 3, children: [] }
-  ];
+  const fallbackCategories = [];
 
-  const fallbackAudit = [
-    { id: "aud-1", timestamp: "2026-09-27 08:30:14", userName: "admin@dawwer.com", action: "ApproveStore", entityType: "StoreApplication", oldValues: '{"verificationStatus": 2}', newValues: '{"verificationStatus": 5}' },
-    { id: "aud-2", timestamp: "2026-09-27 07:15:02", userName: "admin@dawwer.com", action: "SuspendUser", entityType: "UserAccount", oldValues: '{"status": "Active"}', newValues: '{"status": "Suspended", "reason": "مخالفة الشروط"}' }
-  ];
+  const fallbackAudit = [];
 
   // =========================================================================
   // Initialization & Authentication Verification

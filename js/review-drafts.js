@@ -31,46 +31,14 @@ var FASTAPI_BASE_URL = (typeof window !== 'undefined' && window.CONFIG && window
   : 'https://dawwer-backend-fastapi.onrender.com';
 
 function getApiHeaders() {
-  const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
-  const cleanToken = token ? token.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '') : '';
-  return {
-    'Authorization': cleanToken ? `Bearer ${cleanToken}` : '',
-    'Accept': 'application/json'
-  };
+  const token = ApiClient.getAuthToken(true);
+  return { ...(token ? { Authorization: `Bearer ${token}` } : {}), Accept: 'application/json' };
 }
-
-function handleUnauthorizedResponse() {
-  if (typeof showToast === 'function') {
-    showToast('انتهت صلاحية الجلسة، يرجى إعادة تسجيل الدخول لمتابعة العمليات', 'warning');
-  } else {
-    alert('انتهت صلاحية الجلسة، يرجى إعادة تسجيل الدخول');
-  }
-}
-
+function handleUnauthorizedResponse() { showToast('تعذر التحقق من الجلسة لخدمة المنتجات. يرجى المحاولة مجدداً.', 'warning'); }
 function getStoreContext() {
-  const urlParams = new URLSearchParams(typeof window !== 'undefined' && window.location ? window.location.search : '');
-  let jobId = urlParams.get('job_id') || urlParams.get('jobId') || localStorage.getItem('dawwer_active_job_id') || '';
-  if (!jobId) {
-    try {
-      const cur = JSON.parse(localStorage.getItem('dawwer_current_job') || '{}');
-      jobId = cur.id || cur.job_id || '';
-    } catch (e) {}
-  }
-  let storeId = '3fa85f64-5717-4562-b3fc-2c963f66afa6';
-  let token = '';
-
-  try {
-    storeId = localStorage.getItem('activeStoreId') ||
-              localStorage.getItem('storeId') ||
-              localStorage.getItem('active_store_id') ||
-              '3fa85f64-5717-4562-b3fc-2c963f66afa6';
-    token = localStorage.getItem('accessToken') ||
-            localStorage.getItem('token') ||
-            localStorage.getItem('storeToken') ||
-            '';
-  } catch (e) {}
-
-  return { jobId, storeId, token };
+  const params = new URLSearchParams(window.location.search);
+  return { jobId: params.get('job_id') || params.get('jobId') || localStorage.getItem('dawwer_active_job_id') || '',
+    storeId: ApiClient.getActiveStoreId(), token: ApiClient.getAuthToken(true) };
 }
 
 function escapeHtml(str) {
@@ -115,7 +83,7 @@ async function loadAvailableCategories() {
         ? (CONFIG.API_BASE_URL || CONFIG.AUTH_BASE_URL).replace(/\/+$/, '')
         : 'https://dawwer.runasp.net/api';
       const categoriesEndpoint = apiBase.endsWith('/api') ? `${apiBase}/categories` : `${apiBase}/api/categories`;
-      const res = await fetch(categoriesEndpoint, {
+      const res = await ApiClient.fetchResponse(categoriesEndpoint, {
         headers: {
           ...headers,
           'Accept': 'application/json'
@@ -141,7 +109,7 @@ async function loadAvailableCategories() {
     } else {
       // Fallback: extract unique categories from products if available
       try {
-        const pRes = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products?limit=100`, { headers }).catch(() => null);
+        const pRes = await ApiClient.fetchResponse(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products?limit=100`, { headers }).catch(() => null);
         if (pRes && pRes.ok) {
           const pData = await pRes.json();
           const items = Array.isArray(pData) ? pData : (pData?.items || pData?.data || []);
@@ -195,25 +163,7 @@ function resolveShelfImageUrl(jobData) {
 
   if (!imgUrl) return '';
 
-  if (typeof resolveImageUrl === 'function') {
-    return resolveImageUrl(imgUrl);
-  }
-  if (typeof CONFIG !== 'undefined' && typeof CONFIG.resolveImageUrl === 'function') {
-    return CONFIG.resolveImageUrl(imgUrl);
-  }
-
-  // 3. Fallback: If it's a relative backend path (e.g. /uploads/...), prepend the backend host
-  if (!imgUrl.startsWith('http') && !imgUrl.startsWith('data:') && !imgUrl.startsWith('blob:')) {
-    if (imgUrl.startsWith('assets/') || imgUrl.startsWith('./assets/') || imgUrl === 'assets/images/placeholder-shelf.jpg') {
-      return imgUrl.startsWith('./') ? imgUrl.slice(2) : imgUrl;
-    }
-    const backendHost = (typeof CONFIG !== 'undefined' && (CONFIG.BACKEND_BASE_URL || CONFIG.API_BASE_URL)) 
-      ? (CONFIG.BACKEND_BASE_URL || CONFIG.API_BASE_URL).replace(/\/api\/?$/i, '').replace(/\/+$/, '') 
-      : (window.BACKEND_BASE_URL || 'https://dawwer.runasp.net');
-    imgUrl = `${backendHost}/${imgUrl.replace(/^\/+/, '')}`;
-  }
-
-  return imgUrl;
+  return CONFIG.resolveImageUrl(imgUrl, 'fastapi');
 }
 
 let allJobs = [];
@@ -269,9 +219,9 @@ function generateShelfPlaceholderSVG(zoneName, count) {
 }
 
 function normalizeDraftProduct(item, index, jobContext) {
-  const name = item.product_name || item.proposed_name || item.name || `صنف #${index + 1}`;
+  const name = item.name || item.proposed_name || item.product_name || `صنف #${index + 1}`;
   const price = item.price !== undefined ? Number(item.price) : (item.estimated_price !== undefined ? Number(item.estimated_price) : 0);
-  const sku = item.barcode_detected || item.store_sku || item.sku || `SKU-${Math.floor(100000 + Math.random() * 900000)}`;
+  const sku = item.barcode_detected || item.store_sku || item.sku || '';
   const category = item.category_hint || item.category || 'عام';
   const size = item.pack_size || item.size || '';
   const confidence = item.confidence_score !== undefined
@@ -296,8 +246,9 @@ function normalizeDraftProduct(item, index, jobContext) {
   const isApproved = rawStatus === 'approved' || rawStatus === 'published' || rawStatus === 'معتمد';
 
   return {
-    id: item.id || `DRF-${jobContext?.id || 'JOB'}-${index + 1}`,
-    serverId: item.serverId || item.draft_id || item.id || null,
+    id: item.id || item.draft_id || `DRF-${jobContext?.id || 'JOB'}-${index + 1}`,
+    serverId: item.isManual || String(item.id).startsWith('DRF-MAN-') ? null : (item.serverId || item.draft_id || item.id || null),
+    isManual: !!item.isManual || String(item.id).startsWith('DRF-MAN-'),
     name,
     brand: item.brand || '',
     size,
@@ -315,7 +266,7 @@ function normalizeDraftProduct(item, index, jobContext) {
     },
     box,
     imageUrl: item.image_url || item.imageUrl || item.image || item.photo_url || item.thumbnail || '',
-    status: isApproved ? 'Approved' : 'Draft',
+    status: isApproved ? 'Approved' : (rawStatus === 'rejected' ? 'Rejected' : 'Draft'),
     hasDuplicateMatch: !!item.has_duplicate_match || !!item.hasDuplicateMatch,
     duplicateMatch: item.duplicate_match || item.duplicateMatch || null
   };
@@ -328,12 +279,12 @@ function normalizeServerJob(job) {
   const level = job.shelf || job.shelf_tier || job.shelfLocation?.level || '1';
   const label = job.shelfLocation?.label || `${zone} > ممر ${aisle} > رف ${level}`;
 
-  let extracted = job.extracted_items || job.draft_products || job.extractedItems || job.items || [];
+  let extracted = job.extractedItems || job.extracted_items || job.draft_products || job.items || [];
   if (!Array.isArray(extracted)) extracted = [];
 
   return {
     id: job.id || job.job_id || `JOB-${Date.now().toString().slice(-4)}`,
-    serverId: job.serverId || job.id,
+    serverId: job.serverId || job.id || job.job_id,
     createdAt: job.created_at || job.createdAt || 'الآن',
     timestamp: job.timestamp || (job.created_at ? new Date(job.created_at).getTime() : Date.now()),
     shelfLocation: {
@@ -343,6 +294,7 @@ function normalizeServerJob(job) {
       level,
       label
     },
+    has_warning: job.has_warning || job.hasWarning || false,
     image_url: (job.image_url && !String(job.image_url).startsWith('JOB-')) ? job.image_url : (job.imageDataUrl || 'assets/placeholder-product.png'),
     thumbnail: resolveShelfImageUrl(
       (job.shelf_image_url && !String(job.shelf_image_url).startsWith('JOB-'))
@@ -361,6 +313,13 @@ function normalizeServerJob(job) {
     confidence: job.confidence || 98.4,
     extractedItems: extracted
   };
+}
+
+function loadJobsData() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(JOBS_STORAGE_KEY) || '[]');
+    allJobs = Array.isArray(parsed) ? parsed.filter(j => j && (j.id || j.job_id)).map(normalizeServerJob) : [];
+  } catch (error) { allJobs = []; }
 }
 
 function saveJobsData() {
@@ -423,123 +382,38 @@ function updateEmptyJobUI() {
 
 async function fetchShelfJobAndDrafts(targetJobId) {
   const { storeId } = getStoreContext();
-  const headers = getApiHeaders();
-
+  if (!storeId || !targetJobId) return null;
   try {
-    const jobUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/shelf-jobs/${encodeURIComponent(targetJobId)}`;
-    const jobRes = await fetch(jobUrl, { headers });
-
-    if (jobRes.status === 401) {
-      handleUnauthorizedResponse();
-      return null;
-    }
-
-    if (jobRes.ok) {
-      const jobData = await jobRes.json();
-      const serverJob = jobData?.data || jobData;
-      if (serverJob) {
-        // Dynamic Image Binding: update image source with server URL
-        const shelfImgElement = document.getElementById('shelf-source-img') || document.getElementById('shelf-image') || document.getElementById('canvas-image');
-        const imgPlaceholder = document.getElementById('image-loading-placeholder');
-        const validServerImg = resolveShelfImageUrl(serverJob || jobData);
-        if (shelfImgElement && validServerImg) {
-          shelfImgElement.src = validServerImg;
-          shelfImgElement.classList.remove('opacity-0');
-          if (imgPlaceholder) imgPlaceholder.classList.add('hidden');
-        }
-
-        let extracted = serverJob.extracted_items || serverJob.draft_products || serverJob.items || [];
-
-        // If job object has no drafts array, query the drafts endpoint directly
-        if (!Array.isArray(extracted) || extracted.length === 0) {
-          try {
-            const draftsUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/draft-products?shelf_job_id=${encodeURIComponent(targetJobId)}&limit=100`;
-            const draftsRes = await fetch(draftsUrl, { headers });
-            if (draftsRes.status === 401) {
-              handleUnauthorizedResponse();
-            } else if (draftsRes.ok) {
-              const draftsData = await draftsRes.json();
-              extracted = Array.isArray(draftsData) ? draftsData : (draftsData?.data || []);
-            }
-          } catch (e) {
-            console.warn('[review-drafts] Secondary drafts fetch note:', e);
-          }
-        }
-
-        if (!Array.isArray(extracted) || extracted.length === 0) {
-          const localExisting = allJobs.find(j => String(j.id) === String(targetJobId));
-          if (localExisting && Array.isArray(localExisting.extractedItems) && localExisting.extractedItems.length > 0) {
-            extracted = localExisting.extractedItems;
-          }
-        }
-
-        serverJob.extractedItems = extracted;
-        const normalized = normalizeServerJob(serverJob);
-
-        const idx = allJobs.findIndex(j => String(j.id) === String(targetJobId));
-        if (idx !== -1) {
-          allJobs[idx] = normalized;
-        } else {
-          allJobs.unshift(normalized);
-        }
-        saveJobsData();
-        populateJobSelector();
-        return normalized;
-      }
-    }
-  } catch (err) {
-    console.warn('[review-drafts] Backend fetch shelf job fallback:', err);
+    const response = await ApiClient.shelfJobs.get(storeId, targetJobId);
+    let job = response?.data || response;
+    if (['QUEUED', 'PROCESSING', 'PENDING'].includes(String(job.status).toUpperCase())) job = await ApiClient.shelfJobs.waitForReview(storeId, job);
+    if (job.has_warning || job.hasWarning) showToast(job.user_message || job.userMessage || 'لم يتم التعرف على منتجات في الصورة.', 'warning');
+    const extracted = await ApiClient.listAll(`/stores/${encodeURIComponent(storeId)}/draft-products`, { shelf_job_id: targetJobId });
+    const existing = allJobs.find(j => String(j.id) === String(targetJobId));
+    const manual = (existing?.extractedItems || []).filter(d => d.isManual || String(d.id).startsWith('DRF-MAN-'));
+    const normalized = normalizeServerJob({ ...job, extractedItems: [...extracted, ...manual] });
+    const idx = allJobs.findIndex(j => String(j.id) === String(targetJobId));
+    if (idx >= 0) allJobs[idx] = normalized; else allJobs.unshift(normalized);
+    saveJobsData(); populateJobSelector();
+    return normalized;
+  } catch (error) {
+    showToast('تعذر تحديث المسودات. المعروض قد يكون محفوظاً سابقاً. ' + error.message, 'warning');
+    return allJobs.find(j => String(j.id) === String(targetJobId)) || null;
   }
-
-  // Fallback to local storage
-  try {
-    const curRaw = localStorage.getItem('dawwer_current_job');
-    if (curRaw) {
-      const cur = JSON.parse(curRaw);
-      if (cur && (String(cur.id) === String(targetJobId) || String(cur.job_id) === String(targetJobId) || !targetJobId)) {
-        const norm = normalizeServerJob(cur);
-        const idx = allJobs.findIndex(j => String(j.id) === String(norm.id));
-        if (idx !== -1) allJobs[idx] = norm;
-        else allJobs.unshift(norm);
-        saveJobsData();
-        populateJobSelector();
-        return norm;
-      }
-    }
-  } catch (e) {}
-
-  return allJobs.find(j => String(j.id) === String(targetJobId)) || null;
 }
 
 async function fetchAllStoreJobs() {
   const { storeId } = getStoreContext();
-  const headers = getApiHeaders();
-  if (!headers.Authorization) return;
-
+  if (!storeId) return;
   try {
-    const url = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/shelf-jobs`;
-    const res = await fetch(url, { headers });
-    if (res.status === 401) {
-      handleUnauthorizedResponse();
-      return;
-    }
-    if (res.ok) {
-      const data = await res.json();
-      const remoteJobs = Array.isArray(data) ? data : (data?.data || []);
-      if (Array.isArray(remoteJobs) && remoteJobs.length > 0) {
-        const idMap = new Map();
-        remoteJobs.map(normalizeServerJob).forEach(j => idMap.set(String(j.id), j));
-        allJobs.forEach(j => {
-          if (!idMap.has(String(j.id))) idMap.set(String(j.id), j);
-        });
-        allJobs = Array.from(idMap.values());
-        saveJobsData();
-        populateJobSelector();
-      }
-    }
-  } catch (e) {
-    console.warn('[review-drafts] Background shelf jobs fetch note:', e);
-  }
+    const jobs = await ApiClient.listAll(`/stores/${encodeURIComponent(storeId)}/shelf-jobs`);
+    // Preserve loaded drafts until the selected job is refreshed separately.
+    allJobs = jobs.map(job => {
+      const old = allJobs.find(j => String(j.id) === String(job.id || job.job_id));
+      return normalizeServerJob({ ...job, extractedItems: old?.extractedItems || [] });
+    });
+    saveJobsData(); populateJobSelector();
+  } catch (error) { console.warn('[review-drafts] Could not refresh job list:', error.message); }
 }
 
 function setActiveJob(jobId, triggerBackendSync = false) {
@@ -583,7 +457,7 @@ function setActiveJob(jobId, triggerBackendSync = false) {
 
   // Load drafts into memory
   draftItems = (activeJob.extractedItems || []).map((item, index) => normalizeDraftProduct(item, index, activeJob));
-  selectedDraftIds = new Set(draftItems.map(d => d.id));
+  selectedDraftIds = new Set(draftItems.filter(d => d.status === 'Draft').map(d => d.id));
 
   resetZoomAndPan();
 
@@ -648,7 +522,7 @@ function setActiveJob(jobId, triggerBackendSync = false) {
     fetchShelfJobAndDrafts(activeJob.id).then(updated => {
       if (updated && updated.extractedItems && updated.extractedItems.length > 0) {
         draftItems = updated.extractedItems.map((item, index) => normalizeDraftProduct(item, index, updated));
-        selectedDraftIds = new Set(draftItems.map(d => d.id));
+        selectedDraftIds = new Set(draftItems.filter(d => d.status === 'Draft').map(d => d.id));
         renderBoundingBoxes();
         renderDraftCards();
         updateSelectionSummary();
@@ -662,6 +536,7 @@ function setActiveJob(jobId, triggerBackendSync = false) {
 // =========================================================================
 
 function updateDraftField(itemId, field, value) {
+  if (approvalBusy) return;
   const item = draftItems.find(d => d.id === itemId);
   if (!item) return;
 
@@ -669,7 +544,7 @@ function updateDraftField(itemId, field, value) {
 
   // Sync to activeJob and save to local storage
   if (activeJob && activeJob.extractedItems) {
-    const parentItem = activeJob.extractedItems.find(x => (x.id === itemId || x.sku === item.sku));
+    const parentItem = activeJob.extractedItems.find(x => (x.id === itemId));
     if (parentItem) parentItem[field] = value;
     saveJobsData();
   }
@@ -689,40 +564,24 @@ function updateDraftField(itemId, field, value) {
   // Debounced live update to FastAPI backend
   clearTimeout(_syncDebounceTimers[itemId]);
   _syncDebounceTimers[itemId] = setTimeout(() => {
-    syncDraftUpdateToBackend(itemId);
+    syncDraftUpdateToBackend(itemId).catch(error => showToast('تعذر حفظ تعديل المسودة: ' + error.message, 'error'));
   }, 600);
 }
 
+const draftSyncPromises = new Map();
 async function syncDraftUpdateToBackend(itemId) {
   const item = draftItems.find(d => d.id === itemId);
-  if (!item) return;
-
-  const { storeId, token } = getStoreContext();
-  const draftId = item.serverId || item.id;
-
-  const payload = {
-    product_name: item.name,
-    price: Number(item.price) || 0,
-    barcode_detected: item.sku || '',
-    category_hint: item.category || 'عام',
-    shelf_tier: item.shelfLocation?.level || '1',
-    aisle_code: item.shelfLocation?.aisle || '01'
-  };
-
-  try {
-    const url = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/draft-products/${encodeURIComponent(draftId)}`;
-    await fetch(url, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      },
-      body: JSON.stringify(payload)
-    });
-  } catch (err) {
-    console.warn('[review-drafts] Background inline update note:', err);
-  }
+  if (!item || item.isManual) return;
+  const previous = draftSyncPromises.get(itemId) || Promise.resolve();
+  const operation = previous.catch(() => {}).then(() => ApiClient.draftProducts.update(getStoreContext().storeId, item.serverId || item.id, {
+    proposed_name: item.name, estimated_price: Number(item.price),
+    barcode_detected: item.sku || null, category_hint: item.category || null,
+    zone: item.shelfLocation?.zone, aisle: item.shelfLocation?.aisle,
+    rack: item.shelfLocation?.rack, shelf: item.shelfLocation?.level, pack_size: item.size || null
+  }));
+  draftSyncPromises.set(itemId, operation);
+  try { return await operation; }
+  finally { if (draftSyncPromises.get(itemId) === operation) draftSyncPromises.delete(itemId); }
 }
 
 // =========================================================================
@@ -751,352 +610,104 @@ function formatProductPayload(item) {
     category: cleanCategory,
     price: cleanPrice,
     barcode: cleanBarcode,
-    store_sku: cleanBarcode || `SKU-${Date.now().toString().slice(-6)}`,
+    store_sku: item.sku || null,
     shelf_location: item.shelf_location || shelfLocLabel,
     zone: cleanZone,
     aisle: cleanAisle,
     rack: cleanRack,
     shelf: cleanShelf,
     map_target: `${cleanZone} - ممر ${cleanAisle} - رف ${cleanShelf}`,
-    quantity: 10,
-    stock_status: "IN_STOCK"
+    quantity: item.quantity ?? 0,
+    stock_status: item.quantity > 0 ? "IN_STOCK" : "OUT_OF_STOCK"
   };
 }
 
+let approvalBusy = false;
+async function approveDraftItem(item) {
+  if (!item.name?.trim() || !Number.isFinite(Number(item.price)) || Number(item.price) < 0) {
+    throw new Error(`يرجى مراجعة اسم وسعر الصنف "${item.name || item.id}".`);
+  }
+  clearTimeout(_syncDebounceTimers[item.id]);
+  const { storeId } = getStoreContext();
+  if (item.isManual) {
+    await ApiClient.products.create(storeId, formatProductPayload(item));
+  } else {
+    await syncDraftUpdateToBackend(item.id);
+    // Approval is the server operation that publishes a draft. Never create it twice.
+    await ApiClient.draftProducts.approve(storeId, item.serverId || item.id);
+  }
+  item.status = 'Approved';
+  selectedDraftIds.delete(item.id);
+  const cached = activeJob?.extractedItems?.find(d => String(d.id || d.draft_id) === String(item.id));
+  if (cached) cached.status = 'Approved';
+  if (activeJob) activeJob.status = draftItems.every(d => ['Approved', 'Rejected'].includes(d.status)) ? 'Completed' : 'Review Required';
+  saveJobsData();
+}
+
+function updateDraftUI() { renderBoundingBoxes(); renderDraftCards(); updateSelectionSummary(); }
+
 async function approveSingleDraft(itemId) {
   const item = draftItems.find(d => d.id === itemId);
-  if (!item || item.status === 'Approved') return;
-
-  const btn = document.querySelector(`[data-action="approve-single"][data-id="${itemId}"]`) ||
-              document.querySelector(`[data-action="approve-draft"][data-id="${itemId}"]`) ||
-              document.querySelector(`button[data-id="${itemId}"]`);
-  let originalBtnHtml = '';
-  if (btn) {
-    if (btn.disabled) return;
-    btn.disabled = true;
-    btn.style.pointerEvents = 'none';
-    originalBtnHtml = btn.innerHTML;
-    btn.classList.add('opacity-75', 'cursor-not-allowed');
-    btn.innerHTML = `
-      <span class="inline-flex items-center gap-1">
-        <svg class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-        </svg>
-        <span>جاري الاعتماد...</span>
-      </span>
-    `;
-  }
-
-  try {
-    const { storeId } = getStoreContext();
-    const headers = getApiHeaders();
-    const draftId = item.serverId || item.id;
-
-    // 1. Call Backend Approve Endpoint
-    try {
-      const approveUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/draft-products/${encodeURIComponent(draftId)}/approve`;
-      const appRes = await fetch(approveUrl, {
-        method: 'POST',
-        headers
-      });
-      if (appRes.status === 401) {
-        handleUnauthorizedResponse();
-        return;
-      }
-    } catch (err) {
-      console.warn('[review-drafts] Backend single approve note:', err);
-    }
-
-    // 2. Register into products catalog on backend
-    try {
-      const prodRes = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products`, {
-        method: 'POST',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formatProductPayload(item))
-      });
-      if (prodRes.status === 401) {
-        handleUnauthorizedResponse();
-        return;
-      }
-    } catch (e) {}
-
-    // 3. Mark Approved locally and commit to catalog storage
-    item.status = 'Approved';
-    if (activeJob && activeJob.extractedItems) {
-      const parentItem = activeJob.extractedItems.find(x => (x.id === itemId || x.sku === item.sku));
-      if (parentItem) parentItem.status = 'Approved';
-      saveJobsData();
-    }
-
-    try {
-      const stored = localStorage.getItem(CATALOG_STORAGE_KEY);
-      const catalog = stored ? JSON.parse(stored) : [];
-      catalog.unshift(createCatalogEntryFromDraft(item, new Date().toISOString()));
-      localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(catalog));
-      localStorage.setItem('dawwer_merchant_catalog_v2', JSON.stringify(catalog));
-    } catch (e) {}
-
-    renderBoundingBoxes();
-    renderDraftCards();
-    updateSelectionSummary();
-    showToast('تم اعتماد الصنف وإضافته للكتالوج بنجاح', 'success');
-  } finally {
-    if (btn && item.status !== 'Approved') {
-      btn.disabled = false;
-      btn.style.pointerEvents = '';
-      btn.classList.remove('opacity-75', 'cursor-not-allowed');
-      if (originalBtnHtml) btn.innerHTML = originalBtnHtml;
-    }
-  }
+  if (!item || item.status !== 'Draft' || approvalBusy) return;
+  approvalBusy = true;
+  try { await approveDraftItem(item); showToast('تم اعتماد الصنف بنجاح.', 'success'); }
+  catch (error) { showToast(error.message, 'error'); }
+  finally { approvalBusy = false; updateDraftUI(); }
 }
 
 async function approveAllDrafts() {
-  const pendingItems = draftItems.filter(d => (selectedDraftIds.has(d.id) || selectedDraftIds.size === 0) && d.status !== 'Approved');
-  if (pendingItems.length === 0) {
-    if (draftItems.length > 0 && draftItems.every(d => d.status === 'Approved')) {
-      showToast('جميع الأصناف معتمدة بالفعل في الكتالوج', 'info');
-      setTimeout(() => { window.location.href = 'catalog.html'; }, 500);
-      return;
-    }
-    showToast('يرجى تحديد صنف واحد على الأقل للاعتماد', 'warning');
-    return;
-  }
-
-  // Prevent double submissions: disable button immediately and display loading state
+  if (approvalBusy) return;
+  const pending = draftItems.filter(d => d.status === 'Draft' && (selectedDraftIds.size === 0 || selectedDraftIds.has(d.id)));
+  if (!pending.length) return showToast('لا توجد أصناف بانتظار الاعتماد.', 'info');
+  approvalBusy = true;
   const btn = document.getElementById('btn-approve-all-drafts') || document.querySelector('[data-alias="btn-publish-catalog"]');
-  let originalBtnHtml = '';
-  if (btn) {
-    if (btn.disabled) return;
-    btn.disabled = true;
-    btn.style.pointerEvents = 'none';
-    originalBtnHtml = btn.innerHTML;
-    btn.classList.add('opacity-75', 'cursor-not-allowed');
-    btn.innerHTML = `
-      <span class="inline-flex items-center gap-2">
-        <svg class="animate-spin h-4 w-4 text-[#d6a950]" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-        </svg>
-        <span>جاري اعتماد وإضافة الأصناف للكتالوج...</span>
-      </span>
-    `;
-  }
-
+  const original = btn?.innerHTML;
+  if (btn) btn.disabled = true;
+  const errors = [];
+  let approved = 0;
   try {
-    const { storeId } = getStoreContext();
-    const headers = getApiHeaders();
-
-    // 1. Batch approve on backend
-    try {
-      const draftIds = pendingItems.map(d => d.serverId || d.id);
-      const batchApproveUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/draft-products/batch-approve`;
-      const baRes = await fetch(batchApproveUrl, {
-        method: 'POST',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ draft_ids: draftIds })
-      });
-      if (baRes.status === 401) {
-        handleUnauthorizedResponse();
-        return;
-      }
-    } catch (e) {
-      console.warn('[review-drafts] Backend draft batch approve note:', e);
+    for (const item of pending) {
+      if (btn) btn.textContent = `جارٍ الاعتماد ${approved + errors.length + 1} / ${pending.length}...`;
+      try { await approveDraftItem(item); approved++; }
+      catch (error) { errors.push(`${item.name}: ${error.message}`); }
     }
-
-    // 2. Batch catalog creation / insertion
-    let batchCreated = false;
-    try {
-      const batchUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products/batch`;
-      const bRes = await fetch(batchUrl, {
-        method: 'POST',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          products: pendingItems.map(formatProductPayload)
-        })
-      });
-      if (bRes.status === 401) {
-        handleUnauthorizedResponse();
-        return;
-      }
-      if (bRes.ok) batchCreated = true;
-    } catch (e) {}
-
-    // Fallback: iterate individual product creation if batch endpoint is not present
-    if (!batchCreated) {
-      for (const item of pendingItems) {
-        try {
-          const pRes = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products`, {
-            method: 'POST',
-            headers: {
-              ...headers,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formatProductPayload(item))
-          });
-          if (pRes.status === 401) {
-            handleUnauthorizedResponse();
-            return;
-          }
-        } catch (e) {}
-      }
-    }
-
-    // 3. Mark all items as Approved locally
-    pendingItems.forEach(item => {
-      item.status = 'Approved';
-    });
-
-    if (activeJob) {
-      activeJob.status = 'Completed';
-      if (activeJob.extractedItems) {
-        activeJob.extractedItems.forEach(xi => {
-          xi.status = 'Approved';
-        });
-      }
-      saveJobsData();
-    }
-
-    // 4. Save to catalog cache (both legacy and v2 keys)
-    try {
-      const stored = localStorage.getItem(CATALOG_STORAGE_KEY);
-      const catalog = stored ? JSON.parse(stored) : [];
-      pendingItems.forEach(item => {
-        catalog.unshift(createCatalogEntryFromDraft(item, new Date().toISOString()));
-      });
-      localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(catalog));
-      localStorage.setItem('dawwer_merchant_catalog_v2', JSON.stringify(catalog));
-    } catch (e) {}
-
-    // 5. Clear draft cache
-    try {
-      localStorage.removeItem('dawwer_current_job');
-      localStorage.removeItem('dawwer_current_draft_products');
-      sessionStorage.removeItem('dawwer_current_review_job');
-      sessionStorage.removeItem('dawwer_current_draft_products');
-      localStorage.setItem('dawwer_first_capture_done', 'true');
-    } catch (e) {}
-
-    renderBoundingBoxes();
-    renderDraftCards();
-    updateSelectionSummary();
-
-    // 6. Show success toast and redirect to catalog.html
-    showToast('تم اعتماد وإضافة الأصناف للكتالوج بنجاح!', 'success');
-    setTimeout(() => {
-      window.location.href = 'catalog.html';
-    }, 700);
-
-  } catch (err) {
-    console.error('[review-drafts] Bulk approval error:', err);
-    showToast('حدث خطأ أثناء اعتماد الأصناف، يرجى المحاولة مرة أخرى', 'error');
+    if (errors.length) showToast(`تم اعتماد ${approved} من ${pending.length}. بقيت الأصناف المتعثرة للمراجعة. ${errors.slice(0, 3).join(' | ')}`, 'error');
+    else showToast(`تم اعتماد ${approved} صنف بنجاح.`, 'success');
   } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.style.pointerEvents = '';
-      btn.classList.remove('opacity-75', 'cursor-not-allowed');
-      if (originalBtnHtml) btn.innerHTML = originalBtnHtml;
-    }
+    approvalBusy = false;
+    if (btn) { btn.disabled = false; btn.innerHTML = original; }
+    updateDraftUI();
   }
 }
 
-// =========================================================================
-// 5. Delete / Reject Draft
-// =========================================================================
-
 async function discardSingleDraft(itemId) {
+  if (approvalBusy) return false;
   const item = draftItems.find(d => d.id === itemId);
-  if (!item) return;
-
-  const card = document.getElementById(`card-${itemId}`);
-  const bbox = document.getElementById(`bbox-${itemId}`);
-
-  if (card) {
-    card.style.transition = 'all 0.25s ease-out';
-    card.style.opacity = '0';
-    card.style.transform = 'scale(0.95)';
-  }
-  if (bbox) {
-    bbox.style.transition = 'all 0.25s ease-out';
-    bbox.style.opacity = '0';
-  }
-
-  const { storeId, token } = getStoreContext();
-  const draftId = item.serverId || item.id;
-
+  if (!item || item.status !== 'Draft') return false;
+  clearTimeout(_syncDebounceTimers[itemId]);
   try {
-    const delUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/draft-products/${encodeURIComponent(draftId)}`;
-    fetch(delUrl, {
-      method: 'DELETE',
-      headers: {
-        'Accept': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      }
-    }).catch(e => console.warn('[review-drafts] Backend delete note:', e));
-  } catch (e) {}
-
-  setTimeout(() => {
+    if (!item.isManual) {
+      await draftSyncPromises.get(itemId)?.catch(() => {});
+      await ApiClient.draftProducts.reject(getStoreContext().storeId, item.serverId || item.id);
+    }
     draftItems = draftItems.filter(d => d.id !== itemId);
     selectedDraftIds.delete(itemId);
-
-    if (activeJob && activeJob.extractedItems) {
-      activeJob.extractedItems = activeJob.extractedItems.filter(x => x.id !== itemId && x.sku !== item.sku);
+    if (activeJob) {
+      activeJob.extractedItems = activeJob.extractedItems.filter(d => String(d.id || d.draft_id) !== String(itemId));
       activeJob.detectedCount = draftItems.length;
       saveJobsData();
     }
-
-    renderBoundingBoxes();
-    renderDraftCards();
-    updateSelectionSummary();
-    showToast('تم استبعاد الصنف', 'تمت إزالة الصنف من قائمة المسودات', 'info');
-  }, 220);
+    updateDraftUI();
+    return true;
+  } catch (error) { showToast(error.message, 'error'); return false; }
 }
 
-function discardSelectedDrafts() {
-  if (selectedDraftIds.size === 0) return;
-  if (!confirm(`هل أنت متأكد من استبعاد ${selectedDraftIds.size} أصناف محددة؟`)) return;
-
-  const { storeId, token } = getStoreContext();
-  const discardedIds = Array.from(selectedDraftIds);
-
-  discardedIds.forEach(id => {
-    const it = draftItems.find(d => d.id === id);
-    if (it) {
-      const draftId = it.serverId || it.id;
-      try {
-        fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/draft-products/${encodeURIComponent(draftId)}`, {
-          method: 'DELETE',
-          headers: {
-            'Accept': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-          }
-        }).catch(() => {});
-      } catch (e) {}
-    }
-  });
-
-  draftItems = draftItems.filter(d => !selectedDraftIds.has(d.id));
-  selectedDraftIds.clear();
-
-  if (activeJob) {
-    activeJob.extractedItems = draftItems;
-    activeJob.detectedCount = draftItems.length;
-    saveJobsData();
-  }
-
-  renderBoundingBoxes();
-  renderDraftCards();
-  updateSelectionSummary();
-  showToast('تم استبعاد الأصناف المحددة', `تمت إزالة ${discardedIds.length} أصناف من المسودة`, 'info');
+async function discardSelectedDrafts() {
+  if (approvalBusy || !selectedDraftIds.size) return;
+  if (!confirm(`هل تريد استبعاد ${selectedDraftIds.size} أصناف؟`)) return;
+  let count = 0;
+  for (const id of [...selectedDraftIds]) if (await discardSingleDraft(id)) count++;
+  showToast(`تم استبعاد ${count} أصناف.`, 'info');
 }
 
 // =========================================================================
@@ -1659,6 +1270,7 @@ function handleManualDraftSubmit(e) {
 
   const newDraft = {
     id: `DRF-MAN-${Date.now()}`,
+    isManual: true,
     name,
     brand: name.split(' ')[0] || 'عام',
     size,
@@ -1953,7 +1565,7 @@ function bootstrapReview() {
   initReviewEvents();
 
   const urlParams = new URLSearchParams(window.location.search);
-  const requestedJobId = urlParams.get('job_id') || urlParams.get('id');
+  const requestedJobId = urlParams.get('job_id') || urlParams.get('jobId') || urlParams.get('id');
 
   // Match requested job or fallback to session cache / most recent job
   const matchingCachedJob = requestedJobId

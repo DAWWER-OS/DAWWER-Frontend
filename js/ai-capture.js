@@ -45,18 +45,7 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         return trimmed;
       }
 
-      // 5. Backend upload paths: resolve against backend host origin (CONFIG.API_BASE_URL / BACKEND_BASE_URL)
-      const backendHost = (typeof CONFIG !== 'undefined' && typeof CONFIG.getBackendBaseUrl === 'function')
-        ? CONFIG.getBackendBaseUrl()
-        : ((typeof CONFIG !== 'undefined' && (CONFIG.BACKEND_BASE_URL || CONFIG.API_BASE_URL))
-          ? (CONFIG.BACKEND_BASE_URL || CONFIG.API_BASE_URL).replace(/\/api\/?$/i, '').replace(/\/+$/, '')
-          : (window.BACKEND_BASE_URL || 'https://dawwer.runasp.net'));
-
-      const cleanPath = trimmed.replace(/^\/+/, '');
-      if (cleanPath.startsWith('uploads/') || cleanPath.startsWith('static/') || cleanPath.startsWith('media/')) {
-        return `${backendHost}/${cleanPath}`;
-      }
-      return `${backendHost}/uploads/${cleanPath}`;
+      return CONFIG.resolveImageUrl(trimmed, 'fastapi');
     }
 
     /**
@@ -94,59 +83,7 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
       window.resolveShelfImageUrl = resolveShelfImageUrl;
     }
 
-    function getStoreContext() {
-      let storeId = null;
-      let token = null;
-
-      if (typeof ApiClient !== 'undefined') {
-        try {
-          if (typeof ApiClient.getActiveStoreId === 'function') storeId = ApiClient.getActiveStoreId();
-          if (typeof ApiClient.getToken === 'function') token = ApiClient.getToken();
-        } catch (e) {}
-      }
-
-      if (!storeId && typeof window !== 'undefined' && window.location) {
-        try {
-          const p = new URLSearchParams(window.location.search);
-          const q = p.get('store_id') || p.get('storeId') || p.get('activeStoreId');
-          if (q && q.trim() && q !== 'null' && q !== 'undefined') storeId = q.trim();
-        } catch (e) {}
-      }
-
-      if (!storeId) {
-        const keys = ['activeStoreId', 'store_id', 'active_store_id', 'storeId', 'dawwer_active_store_id', 'dawwer_store_id'];
-        for (const k of keys) {
-          try {
-            const val = localStorage.getItem(k);
-            if (val && val.trim() && val !== 'null' && val !== 'undefined') {
-              storeId = val.trim();
-              break;
-            }
-          } catch (e) {}
-        }
-      }
-
-      if (!token) {
-        const rawToken = localStorage.getItem('accessToken') || 
-                         localStorage.getItem('token') || 
-                         localStorage.getItem('storeToken') || 
-                         sessionStorage.getItem('accessToken') || 
-                         localStorage.getItem('access_token') || 
-                         localStorage.getItem('store_token') || 
-                         sessionStorage.getItem('token') || '';
-        if (rawToken && rawToken.trim() && rawToken !== 'null' && rawToken !== 'undefined') {
-          token = rawToken.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-        }
-      }
-
-      if (!storeId) {
-        storeId = (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_STORE_ID)
-          ? CONFIG.DEFAULT_STORE_ID
-          : '3fa85f64-5717-4562-b3fc-2c963f66afa6';
-      }
-
-      return { storeId, token };
-    }
+    function getStoreContext() { return { storeId: ApiClient.getActiveStoreId(), token: ApiClient.getAuthToken(true) }; }
     const getActiveStoreContext = getStoreContext;
 
     function getApiHeaders() {
@@ -226,98 +163,12 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
 
     let jobsList = [];
     let uploadedFiles = [];
+    let captureBusy = false;
     let currentFilter = 'all';
     let currentModalJob = null;
 
-    function resolveActiveStoreId() {
-      const isInvalid = (id) => !id || id === 'null' || id === 'undefined' || id === '7b8f6a91-45c2-48df-bc88-825dfa234123' || id === '11111111-1111-1111-1111-111111111111';
-
-      // 1. Search first in URL Query Params (?store_id=... or ?storeId=...)
-      try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const qStoreId = urlParams.get('store_id') || urlParams.get('storeId');
-        if (qStoreId && !isInvalid(qStoreId.trim())) {
-          const clean = qStoreId.trim();
-          persistActiveStoreId(clean);
-          return clean;
-        }
-      } catch (e) {}
-
-      // 2. Search second in localStorage under store_id or active_store_id
-      try {
-        const direct = localStorage.getItem('store_id') ||
-                       localStorage.getItem('active_store_id') ||
-                       localStorage.getItem('storeId') ||
-                       localStorage.getItem('dawwer_active_store_id') ||
-                       localStorage.getItem('dawwer_store_id');
-        if (direct && !isInvalid(direct.trim())) {
-          const clean = direct.trim();
-          persistActiveStoreId(clean);
-          return clean;
-        } else if (direct && isInvalid(direct.trim())) {
-          localStorage.removeItem('store_id');
-          localStorage.removeItem('active_store_id');
-          localStorage.removeItem('storeId');
-        }
-
-        const activeStoreRaw = localStorage.getItem('dawwer_active_store');
-        if (activeStoreRaw) {
-          const parsed = JSON.parse(activeStoreRaw);
-          const sid = parsed?.storeId || parsed?.id || parsed?.store_id;
-          if (sid && !isInvalid(sid.trim())) {
-            const clean = sid.trim();
-            persistActiveStoreId(clean);
-            return clean;
-          }
-        }
-
-        const userDataRaw = localStorage.getItem('dawwer_user_data') || localStorage.getItem('currentUser');
-        if (userDataRaw) {
-          const parsed = JSON.parse(userDataRaw);
-          const sid = parsed?.storeId || parsed?.store_id || parsed?.store?.id;
-          if (sid && !isInvalid(sid.trim())) {
-            const clean = sid.trim();
-            persistActiveStoreId(clean);
-            return clean;
-          }
-        }
-
-        if (typeof ApiClient !== 'undefined' && typeof ApiClient.getActiveStoreId === 'function') {
-          const clientSid = ApiClient.getActiveStoreId();
-          if (clientSid && !isInvalid(clientSid.trim())) {
-            persistActiveStoreId(clientSid.trim());
-            return clientSid.trim();
-          }
-        }
-      } catch (e) {}
-
-      // 3. Fallback: Only use configured default if valid
-      const fallbackId = (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_STORE_ID) ? CONFIG.DEFAULT_STORE_ID : null;
-      if (fallbackId && !isInvalid(fallbackId)) {
-        persistActiveStoreId(fallbackId);
-        return fallbackId;
-      }
-      return null;
-    }
-
-    function persistActiveStoreId(id) {
-      if (!id) return;
-      try {
-        localStorage.setItem('store_id', id);
-        localStorage.setItem('active_store_id', id);
-        localStorage.setItem('dawwer_active_store_id', id);
-        localStorage.setItem('dawwer_store_id', id);
-
-        if (typeof ApiClient !== 'undefined' && typeof ApiClient.setActiveStoreId === 'function') {
-          ApiClient.setActiveStoreId(id);
-        }
-
-        const backBtn = document.getElementById('btn-back-to-catalog');
-        if (backBtn) {
-          backBtn.href = `catalog.html?store_id=${encodeURIComponent(id)}`;
-        }
-      } catch (e) {}
-    }
+    function resolveActiveStoreId() { return ApiClient.getActiveStoreId(); }
+    function persistActiveStoreId(id) { ApiClient.setActiveStoreId(id); }
 
     function syncStoreContext() {
       resolveActiveStoreId();
@@ -384,23 +235,8 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
 
       // Fetch from GET /api/v1/stores/{store_id}/shelf-jobs
       try {
-        const headers = {
-          'Accept': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        };
-
-        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-        const timeout = setTimeout(() => controller && controller.abort(), 10000);
-
-        const response = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/shelf-jobs`, {
-          method: 'GET',
-          headers,
-          signal: controller ? controller.signal : undefined
-        }).finally(() => clearTimeout(timeout));
-
-        if (response.ok) {
-          const data = await response.json();
-          const serverJobs = Array.isArray(data) ? data : (data?.data || data?.jobs || []);
+        const serverJobs = await ApiClient.listAll(`/stores/${encodeURIComponent(storeId)}/shelf-jobs`);
+        {
           const blacklist = getDeletedBlacklist();
           jobsList = (Array.isArray(serverJobs) ? serverJobs : [])
             .map(normalizeJob)
@@ -416,6 +252,7 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
       }
 
       // If backend fetch was not successful, only render real non-mock jobs from localStorage
+      showToast('تعذر تحديث سجل التصوير. المعروض بيانات محفوظة سابقاً.', 'warning');
       let localJobs = [];
       try {
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -790,6 +627,7 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
     }
 
     function processSelectedFiles(files) {
+      if (captureBusy) return;
       if (!files || files.length === 0) return;
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -892,12 +730,12 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         grid.innerHTML = uploadedFiles.map((f, idx) => `
           <div class="relative group bg-white border border-slate-200 rounded-2xl p-2.5 shadow-sm">
             <div class="aspect-square bg-slate-100 rounded-xl overflow-hidden mb-2 flex items-center justify-center relative">
-              <img src="${f.dataUrl}" alt="${f.name}" class="w-full h-full object-cover" onerror="window.handleImageError ? window.handleImageError(this, 'لم يتم الاستخراج') : (this.style.display='none');">
+              <img src="${f.dataUrl}" alt="${ApiClient.escapeHtml(f.name)}" class="w-full h-full object-cover" onerror="window.handleImageError ? window.handleImageError(this, 'لم يتم الاستخراج') : (this.style.display='none');">
               <button type="button" onclick="removeUploadedImage(${idx})" class="absolute top-2 left-2 w-7 h-7 rounded-full bg-red-600 text-white flex items-center justify-center shadow-md hover:bg-red-700 transition cursor-pointer z-10" title="حذف الصورة">
                 ✕
               </button>
             </div>
-            <div class="text-[11px] font-bold text-slate-800 truncate">${f.name}</div>
+            <div class="text-[11px] font-bold text-slate-800 truncate">${ApiClient.escapeHtml(f.name)}</div>
             <div class="text-[10px] text-slate-400">${f.sizeFormatted}</div>
           </div>
         `).join('');
@@ -933,7 +771,7 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
       const zone = document.getElementById('shelf-zone')?.value?.trim();
       const btn = document.getElementById('btn-start-extraction');
       const hasImages = uploadedFiles && uploadedFiles.length > 0;
-      const isValid = Boolean(zone && hasImages);
+      const isValid = Boolean(zone && hasImages && !captureBusy);
 
       if (btn) {
         btn.disabled = !isValid;
@@ -945,517 +783,67 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
     }
 
     async function startAIExtraction() {
-      const { storeId, token } = getStoreContext();
-
-      // 1. Ensure files are attached
-      const fileInput = document.getElementById('file-input');
-      if ((!uploadedFiles || uploadedFiles.length === 0) && fileInput && fileInput.files && fileInput.files.length > 0) {
-        processSelectedFiles(fileInput.files);
-      }
-
-      if (!uploadedFiles || uploadedFiles.length === 0) {
-        showToast('صورة الرف مطلوبة', 'يرجى اختيار أو رفع صورة الرف أولاً لبدء التحليل.', 'warning');
-        if (fileInput) fileInput.click();
-        return;
-      }
-
-      // 2. Read spatial parameters
-      const zoneEl = document.getElementById('zone-select') || document.getElementById('shelf-zone');
-      const aisleEl = document.getElementById('aisle-select') || document.getElementById('shelf-aisle');
-      const rackEl = document.getElementById('rack-select') || document.getElementById('shelf-rack');
-      const shelfLevelEl = document.getElementById('shelf-level-select') || document.getElementById('shelf-level');
-
-      const zoneVal = zoneEl?.value?.trim() || 'Zone A';
-      const aisleVal = aisleEl?.value?.trim() || 'Aisle 1';
-      const rackVal = rackEl?.value?.trim() || 'Rack 1';
-      const shelfLevelVal = shelfLevelEl?.value?.trim() || 'Shelf 1';
-      const shelfLocationLabel = `${zoneVal} > ${aisleVal} > ${rackVal} > ${shelfLevelVal}`;
-
-      // 3. Prepare image file
-      let selectedImageFile = uploadedFiles[0]?.file;
-      const primaryFileName = uploadedFiles[0]?.name || 'shelf_scan.jpg';
-      const primaryThumbnail = uploadedFiles[0]?.dataUrl || 'assets/placeholder-product.png';
-
-      if (!(selectedImageFile instanceof File || selectedImageFile instanceof Blob)) {
-        if (uploadedFiles[0]?.dataUrl) {
-          try {
-            const res = await fetch(uploadedFiles[0].dataUrl);
-            const blob = await res.blob();
-            selectedImageFile = new File([blob], primaryFileName, { type: blob.type || 'image/jpeg' });
-            uploadedFiles[0].file = selectedImageFile;
-          } catch (convErr) {
-            selectedImageFile = new Blob(['shelf_image'], { type: 'image/jpeg' });
-          }
-        } else {
-          selectedImageFile = new Blob(['shelf_image'], { type: 'image/jpeg' });
-        }
-      }
-
-      // 4. Setup Button Loading State & Progress Bar
-      const btnStart = document.getElementById('btn-start-extraction');
-      const progressContainer = document.getElementById('extraction-progress-container');
-      const progressBar = document.getElementById('extraction-progress-bar');
-      const progressPercent = document.getElementById('extraction-percent-badge');
-      const progressTitle = document.getElementById('extraction-status-title');
-      const progressSubtitle = document.getElementById('extraction-status-subtitle');
-
-      const originalBtnHTML = btnStart ? btnStart.innerHTML : '';
-      if (btnStart) {
-        btnStart.disabled = true;
-        btnStart.style.pointerEvents = 'none';
-        btnStart.classList.add('opacity-90', 'cursor-wait');
-        btnStart.innerHTML = `
-          <svg class="animate-spin w-5 h-5 text-[#d6a950] shrink-0" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <span id="btn-extraction-status">جارٍ فحص صورة الرف واستخراج الأصناف بالذكاء الاصطناعي...</span>
-        `;
-      }
-
-      function setProgressState(percent, title, subtitle) {
-        if (progressContainer) progressContainer.classList.remove('hidden');
-        if (progressBar) progressBar.style.width = `${percent}%`;
-        if (progressPercent) progressPercent.textContent = `${percent}%`;
-        if (progressTitle && title) progressTitle.textContent = title;
-        if (progressSubtitle && subtitle) progressSubtitle.textContent = subtitle;
-        const statusSpan = document.getElementById('btn-extraction-status');
-        if (statusSpan && title) statusSpan.textContent = title;
-      }
-
-      setProgressState(20, 'جارٍ فحص صورة الرف واستخراج الأصناف بالذكاء الاصطناعي...', `يتم إرسال صورة الرف (${zoneVal} > ${aisleVal}) للتحليل البصري الذكي...`);
-
-      // 5. Build FormData matching FastAPI documentation
-      const formData = new FormData();
-      formData.append('file', selectedImageFile, primaryFileName);
-      formData.append('image', selectedImageFile, primaryFileName);
-      formData.append('zone', zoneVal);
-      formData.append('zone_id', zoneVal);
-      formData.append('aisle', aisleVal);
-      formData.append('aisle_id', aisleVal);
-      formData.append('rack', rackVal);
-      formData.append('rack_id', rackVal);
-      formData.append('shelf', shelfLevelVal);
-      formData.append('shelf_level', shelfLevelVal);
-      formData.append('store_id', storeId);
-      formData.append('storeId', storeId);
-
-      const uploadHeaders = getApiHeaders();
-
-      // Check if user has an active authentication token
-      if (!token) {
-        console.info('[AI Capture] No active authorization token. Processing shelf extraction via local AI vision engine simulation.');
-
-        // Run high-fidelity progress animation
-        await new Promise(resolve => {
-          let step = 25;
-          const simTimer = setInterval(() => {
-            step += 25;
-            if (step === 50) {
-              setProgressState(50, 'كشف المنتجات وقراءة بطاقات الأسعار OCR...', 'تحليل الرؤية الحاسوبية لاكتشاف العبوات والباركود...');
-            } else if (step === 75) {
-              setProgressState(75, 'مطابقة المنتجات والأسعار مع الكتالوج...', 'إنشاء مسودات الأصناف وربطها بموقع الرف...');
-            } else if (step >= 100) {
-              clearInterval(simTimer);
-              setProgressState(100, 'اكتملت المعالجة بنجاح!', 'تم تحليل الرف وتجهيز الأصناف');
-              setTimeout(resolve, 400);
-            }
-          }, 450);
-        });
-
-        const simJobId = `JOB-${Date.now().toString().slice(-4)}`;
-        const simItems = generateExtractedItemsForZone(simJobId, zoneVal);
-        const simJob = {
-          id: simJobId,
-          serverId: null,
-          createdAt: 'الآن',
-          timestamp: Date.now(),
-          shelfLocation: {
-            zone: zoneVal,
-            aisle: aisleVal,
-            rack: rackVal,
-            level: shelfLevelVal,
-            label: shelfLocationLabel
-          },
-          thumbnail: resolveShelfImageUrl(primaryThumbnail, zoneVal),
-          imagesCount: 1,
-          status: 'Review Required',
-          detectedCount: simItems.length,
-          confidence: 98.4,
-          extractedItems: simItems
-        };
-
-        jobsList.unshift(simJob);
-        saveJobs();
-        try {
-          sessionStorage.setItem('current_shelf_job', JSON.stringify(simJob));
-        sessionStorage.setItem('dawwer_current_review_job', JSON.stringify(simJob));
-          sessionStorage.setItem('dawwer_current_draft_products', JSON.stringify(simItems));
-        } catch (e) {}
-
-        renderJobsTable();
-        updateKPIs();
-        clearUploadedImages();
-
-        const localImageSrc = uploadedFiles[0]?.dataUrl || primaryThumbnail;
-        localStorage.setItem('dawwer_current_job', JSON.stringify(simJob));
-        localStorage.setItem('dawwer_active_job_id', simJob.id || simJob.job_id);
-        if (localImageSrc) {
-          localStorage.setItem('dawwer_current_shelf_image', localImageSrc);
-          sessionStorage.setItem('current_shelf_image', localImageSrc);
-          localStorage.setItem('current_shelf_image', localImageSrc);
-        }
-
-        showToast('تم استخراج المنتجات بنجاح! جارٍ تحويلك لمراجعة المسودة...', 'success');
-        setTimeout(() => {
-          window.location.href = `review-drafts.html?job_id=${encodeURIComponent(simJob.id || simJob.job_id)}`;
-        }, 500);
-        return;
-      }
-
-      const progressTimer = setInterval(() => {
-        const cur = parseInt(progressBar?.style.width || '20', 10);
-        if (cur < 85) {
-          const next = cur + 15;
-          if (next >= 40 && next < 65) {
-            setProgressState(next, 'كشف المنتجات وقراءة بطاقات الأسعار OCR...', 'تحليل الرؤية الحاسوبية لاكتشاف العبوات والباركود...');
-          } else if (next >= 65) {
-            setProgressState(next, 'مطابقة المنتجات والأسعار مع الكتالوج...', 'إنشاء مسودات الأصناف وربطها بموقع الرف...');
-          } else {
-            setProgressState(next);
-          }
-        }
-      }, 750);
-
-      // Helper function to extract candidate items from any backend response structure
-      function extractCandidateItems(target) {
-        if (!target) return [];
-        const candidateArrays = [
-          target?.extracted_items,
-          target?.draft_products,
-          target?.products,
-          target?.items,
-          target?.extracted_drafts,
-          target?.data?.extracted_items,
-          target?.data?.draft_products,
-          target?.data?.products,
-          target?.data?.items,
-          Array.isArray(target) ? target : null
-        ];
-        for (const cand of candidateArrays) {
-          if (Array.isArray(cand) && cand.length > 0) return cand;
-        }
-        return [];
-      }
-
-      /**
-       * 1. Image Upload / Processing:
-       * Dispatches image payload to create/start the extraction job via POST /shelf-jobs (or /api/v1/stores/{storeId}/shelf-jobs).
-       */
-      async function uploadShelfCaptureJob(fData, sId, headers) {
-        if (typeof ApiClient !== 'undefined' && ApiClient.shelfJobs && typeof ApiClient.shelfJobs.create === 'function') {
-          try {
-            const clientRes = await ApiClient.shelfJobs.create(sId, fData, { headers });
-            if (clientRes) return clientRes;
-          } catch (e) {
-            if (e && e.status === 401) throw e;
-            console.warn('[AI Capture] ApiClient.shelfJobs.create fallback:', e);
-          }
-        }
-
-        const endpointUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(sId)}/shelf-jobs`;
-        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-        const timer = controller ? setTimeout(() => controller.abort(), 45000) : null;
-
-        try {
-          const res = await fetch(endpointUrl, {
-            method: 'POST',
-            headers,
-            body: fData,
-            signal: controller ? controller.signal : undefined
-          });
-          if (res.status === 401) {
-            handleUnauthorizedResponse();
-            const err = new Error('Unauthorized');
-            err.status = 401;
-            throw err;
-          }
-          if (!res.ok) {
-            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-          }
-          return await res.json();
-        } finally {
-          if (timer) clearTimeout(timer);
-        }
-      }
-
-      /**
-       * 2. Fetching Job Status / Extracted Items:
-       * Calls GET /shelf-jobs/{jobId} to poll or retrieve extracted items & detection coordinates.
-       * Does NOT reuse the upload endpoint logic.
-       */
-      async function fetchShelfJobStatusAndItems(jobId, sId) {
-        if (!jobId) return null;
-
-        if (typeof ApiClient !== 'undefined' && ApiClient.shelfJobs && typeof ApiClient.shelfJobs.get === 'function') {
-          try {
-            const clientRes = await ApiClient.shelfJobs.get(sId, jobId, { headers: getApiHeaders() });
-            if (clientRes) return clientRes?.data || clientRes;
-          } catch (e) {
-            console.warn('[AI Capture] ApiClient.shelfJobs.get fallback:', e);
-          }
-        }
-
-        const pollUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(sId)}/shelf-jobs/${encodeURIComponent(jobId)}`;
-        const pollRes = await fetch(pollUrl, { headers: getApiHeaders() });
-        if (pollRes.ok) {
-          const pollData = await pollRes.json();
-          return pollData?.data || pollData;
-        }
-        return null;
-      }
-
+      const btn = document.getElementById('btn-start-extraction');
+      if (captureBusy || btn?.disabled || !uploadedFiles.length) return;
+      captureBusy = true;
+      const original = btn?.innerHTML;
+      if (btn) { btn.disabled = true; btn.textContent = 'جارٍ رفع وتحليل الصور...'; }
+      const files = [...uploadedFiles];
+      const completed = [], submitted = new Set();
       try {
-        // Step 1: Upload Shelf Image & Start Job (POST /shelf-jobs)
-        const resJson = await uploadShelfCaptureJob(formData, storeId, uploadHeaders);
-        let serverJob = resJson?.data || resJson;
+        const { storeId } = getStoreContext();
+        if (!ApiClient.isValidStoreId(storeId)) throw new Error('يرجى اختيار متجر أولاً.');
+        const zone = document.getElementById('shelf-zone')?.value?.trim();
+        const aisle = document.getElementById('shelf-aisle')?.value?.trim() || '';
+        const rack = document.getElementById('shelf-rack')?.value?.trim() || '';
+        const level = document.getElementById('shelf-level')?.value?.trim() || '';
+        if (!zone) throw new Error('يرجى تحديد المنطقة أولاً.');
+        for (let index = 0; index < files.length; index++) {
+          const image = files[index];
+          try {
+            if (btn) btn.textContent = `جارٍ تحليل الصورة ${index + 1} من ${files.length}...`;
+            const file = image.file;
+            if (!(file instanceof Blob)) throw new Error('تعذر قراءة الصورة. يرجى اختيارها مجدداً.');
+            const form = new FormData();
+            form.append('file', file, image.name || 'shelf.jpg');
+            form.append('zone', zone); form.append('aisle', aisle);
+            form.append('rack', rack); form.append('shelf', level);
+            const result = await ApiClient.shelfJobs.create(storeId, form);
+            let job = result?.data || result;
+            const jobId = job?.id || job?.job_id;
+            if (!jobId) throw new Error('لم يُرجع الخادم معرّفاً لعملية التصوير.');
+            submitted.add(image.id);
+            const entry = { ...job, id: jobId, serverId: jobId, store_id: storeId,
+              shelfLocation: { zone, aisle, rack, level, label: `${zone} > ${aisle} > ${rack} > ${level}` },
+              thumbnail: job.image_url || image.dataUrl, timestamp: Date.now(), extractedItems: [] };
+            jobsList.unshift(entry); saveJobs(); renderJobsTable(); updateKPIs();
+            job = await ApiClient.shelfJobs.waitForReview(storeId, job);
+            Object.assign(entry, job, { status: 'Review Required', detectedCount: job.extractedItems.length });
+            saveJobs(); completed.push(entry);
+          } catch (error) {
 
-        const resolvedJobId = serverJob?.id || serverJob?.job_id || resJson?.id || resJson?.job_id || `JOB-${Date.now().toString().slice(-4)}`;
-
-        let rawDetected = extractCandidateItems(serverJob) || extractCandidateItems(resJson);
-        let jobStatus = (serverJob?.status || resJson?.status || '').toLowerCase();
-
-        // Step 2: Separate Fetching / Polling via GET /shelf-jobs/{jobId}
-        const isAsyncPending = jobStatus === 'processing' || jobStatus === 'pending' || (rawDetected.length === 0 && jobStatus !== 'completed' && jobStatus !== 'failed');
-
-        if (isAsyncPending) {
-          let pollAttempts = 0;
-          const maxPolls = 30; // 30 * 1.5s = 45 seconds
-
-          await new Promise((resolve) => {
-            const pollInterval = setInterval(async () => {
-              pollAttempts++;
-              const curPct = Math.min(92, 35 + pollAttempts * 4);
-              setProgressState(
-                curPct,
-                'جارٍ فحص صورة الرف واستخراج الأصناف بالذكاء الاصطناعي...',
-                `كشف المنتجات وقراءة بطاقات الأسعار OCR (محاولة ${pollAttempts})...`
-              );
-
-              try {
-                // Call separated GET /shelf-jobs/{jobId}
-                const updatedJob = await fetchShelfJobStatusAndItems(resolvedJobId, storeId);
-                if (updatedJob) {
-                  const updatedStatus = (updatedJob?.status || '').toLowerCase();
-                  let updatedItems = extractCandidateItems(updatedJob);
-
-                  // If still empty but status is completed, query drafts endpoint directly
-                  if (updatedItems.length === 0 && (updatedStatus === 'completed' || pollAttempts > 3)) {
-                    try {
-                      const draftsUrl = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/draft-products?shelf_job_id=${encodeURIComponent(resolvedJobId)}&limit=100`;
-                      const dRes = await fetch(draftsUrl, { headers: getApiHeaders() });
-                      if (dRes.ok) {
-                        const dJson = await dRes.json();
-                        const dItems = Array.isArray(dJson) ? dJson : (dJson?.data || []);
-                        if (Array.isArray(dItems) && dItems.length > 0) {
-                          updatedItems = dItems;
-                        }
-                      }
-                    } catch (e) {}
-                  }
-
-                  if (updatedStatus === 'completed' || updatedStatus === 'review required' || updatedItems.length > 0) {
-                    clearInterval(pollInterval);
-                    serverJob = updatedJob;
-                    rawDetected = updatedItems;
-                    jobStatus = updatedStatus || 'completed';
-                    resolve();
-                    return;
-                  }
-                }
-              } catch (pollErr) {
-                console.warn('[AI Capture] Polling job note:', pollErr);
-              }
-
-              if (pollAttempts >= maxPolls) {
-                clearInterval(pollInterval);
-                resolve();
-              }
-            }, 1500);
-          });
+            showToast(error.message || 'تعذر تحليل الصورة.', error.pending ? 'info' : 'error');
+            // A created job remains in history and must not be submitted again.
+            if (error.pending || error.status === 408 || error.status === 0) break;
+          }
         }
-
-        clearInterval(progressTimer);
-        setProgressState(100, 'اكتملت المعالجة بنجاح!', 'تم تحليل الرف وتجهيز الأصناف للمراجعة');
-
-        let extractedItems = [];
-        if (Array.isArray(rawDetected) && rawDetected.length > 0) {
-          // Extract the REAL detected items returned from the AI model
-          extractedItems = rawDetected.map((p, idx) => {
-            const name = p.proposed_name || p.product_name || p.name || p.title || `صنف #${idx + 1}`;
-            const price = Number(p.estimated_price !== undefined ? p.estimated_price : (p.price !== undefined ? p.price : 0));
-            const sku = p.barcode_detected || p.barcode || p.store_sku || p.sku || `SKU-${idx + 100}`;
-            const category = p.category_hint || p.category || 'عام';
-            const confidence = p.confidence_score !== undefined
-              ? (p.confidence_score <= 1.0 ? Math.round(p.confidence_score * 100) : Math.round(p.confidence_score))
-              : (p.confidence || 98);
-
-            let box = p.bounding_box || p.box || p.bbox;
-            if (!box || typeof box !== 'object') {
-              box = { x: 8 + (idx % 3) * 30, y: 15 + Math.floor(idx / 3) * 35, w: 22, h: 28 };
-            } else {
-              let bx = Number(box.x !== undefined ? box.x : (box.left !== undefined ? box.left : 10));
-              let by = Number(box.y !== undefined ? box.y : (box.top !== undefined ? box.top : 15));
-              let bw = Number(box.w !== undefined ? box.w : (box.width !== undefined ? box.width : 20));
-              let bh = Number(box.h !== undefined ? box.h : (box.height !== undefined ? box.height : 25));
-              if (bx <= 1 && by <= 1 && bw <= 1 && bh <= 1) {
-                bx = Math.round(bx * 100);
-                by = Math.round(by * 100);
-                bw = Math.round(bw * 100);
-                bh = Math.round(bh * 100);
-              }
-              box = { x: bx, y: by, w: bw, h: bh };
-            }
-
-            return {
-              id: p.id || p.draft_id || `ITEM-${resolvedJobId}-${idx + 1}`,
-              serverId: p.id || p.draft_id || null,
-              proposed_name: name,
-              name: name,
-              price: price,
-              estimated_price: price,
-              sku: sku,
-              barcode_detected: sku,
-              barcode: sku,
-              category: category,
-              category_hint: category,
-              confidence: confidence,
-              confidence_score: confidence / 100,
-              box: box,
-              bounding_box: box,
-              shelfLocation: {
-                zone: zoneVal,
-                aisle: aisleVal,
-                rack: rackVal,
-                level: shelfLevelVal,
-                label: shelfLocationLabel
-              },
-              status: p.status || 'Draft'
-            };
-          });
-        } else {
-          extractedItems = [];
-        }
-
-        const newJob = {
-          id: resolvedJobId,
-          serverId: serverJob?.id || resolvedJobId,
-          createdAt: 'الآن',
-          timestamp: Date.now(),
-          shelfLocation: {
-            zone: zoneVal,
-            aisle: aisleVal,
-            rack: rackVal,
-            level: shelfLevelVal,
-            label: shelfLocationLabel
-          },
-          thumbnail: resolveShelfImageUrl(primaryThumbnail, zoneVal),
-          imagesCount: 1,
-          status: 'Review Required',
-          detectedCount: extractedItems.length,
-          confidence: serverJob?.confidence || 98.4,
-          extractedItems: extractedItems
-        };
-
-        // Save entire job including extractedItems into localStorage & sessionStorage
-        jobsList.unshift(newJob);
-        saveJobs();
-
-        try {
-          sessionStorage.setItem('current_shelf_job', JSON.stringify(newJob));
-          sessionStorage.setItem('dawwer_current_review_job', JSON.stringify(newJob));
-          sessionStorage.setItem('dawwer_current_draft_products', JSON.stringify(extractedItems));
-        } catch (e) {}
-
-        renderJobsTable();
-        updateKPIs();
-        clearUploadedImages();
-
-        const localImageSrc = uploadedFiles[0]?.dataUrl || primaryThumbnail;
-        localStorage.setItem('dawwer_current_job', JSON.stringify(newJob));
-        localStorage.setItem('dawwer_active_job_id', newJob.id || newJob.job_id);
-        localStorage.setItem('dawwer_first_capture_done', 'true');
-        if (localImageSrc) {
-          localStorage.setItem('dawwer_current_shelf_image', localImageSrc);
-          sessionStorage.setItem('current_shelf_image', localImageSrc);
-          localStorage.setItem('current_shelf_image', localImageSrc);
-        }
-
-        showToast('تم استخراج المنتجات بنجاح! جارٍ تحويلك لمراجعة المسودة...', 'success');
-        setTimeout(() => {
-          window.location.href = `review-drafts.html?job_id=${encodeURIComponent(newJob.id || newJob.job_id)}`;
-        }, 500);
-
-      } catch (err) {
-        clearInterval(progressTimer);
-        console.warn('[AI Capture] Network/server note (using local fallback items):', err);
-
-        const fallbackJobId = `JOB-${Date.now().toString().slice(-4)}`;
-        const fallbackItems = generateExtractedItemsForZone(fallbackJobId, zoneVal);
-
-        const fallbackJob = {
-          id: fallbackJobId,
-          serverId: null,
-          createdAt: 'الآن',
-          timestamp: Date.now(),
-          shelfLocation: {
-            zone: zoneVal,
-            aisle: aisleVal,
-            rack: rackVal,
-            level: shelfLevelVal,
-            label: shelfLocationLabel
-          },
-          thumbnail: resolveShelfImageUrl(primaryThumbnail, zoneVal),
-          imagesCount: 1,
-          status: 'Review Required',
-          detectedCount: fallbackItems.length,
-          confidence: 97.6,
-          extractedItems: fallbackItems
-        };
-
-        jobsList.unshift(fallbackJob);
-        saveJobs();
-        renderJobsTable();
-        updateKPIs();
-        clearUploadedImages();
-
-        const fallbackImageSrc = uploadedFiles[0]?.dataUrl || primaryThumbnail;
-        sessionStorage.setItem('current_shelf_job', JSON.stringify(fallbackJob));
-        sessionStorage.setItem('dawwer_current_review_job', JSON.stringify(fallbackJob));
-        sessionStorage.setItem('dawwer_current_draft_products', JSON.stringify(fallbackItems));
-        localStorage.setItem('dawwer_current_job', JSON.stringify(fallbackJob));
-        localStorage.setItem('dawwer_active_job_id', fallbackJob.id || fallbackJob.job_id);
-        localStorage.setItem('dawwer_first_capture_done', 'true');
-        if (fallbackImageSrc) {
-          localStorage.setItem('dawwer_current_shelf_image', fallbackImageSrc);
-          sessionStorage.setItem('current_shelf_image', fallbackImageSrc);
-          localStorage.setItem('current_shelf_image', fallbackImageSrc);
-        }
-
-        showToast('تم استخراج المنتجات بنجاح! جارٍ تحويلك لمراجعة المسودة...', 'success');
-        setTimeout(() => {
-          window.location.href = `review-drafts.html?job_id=${encodeURIComponent(fallbackJob.id || fallbackJob.job_id)}`;
-        }, 500);
-
-      } finally {
-        if (progressContainer) progressContainer.classList.add('hidden');
-        if (progressBar) progressBar.style.width = '0%';
-        if (btnStart) {
-          btnStart.disabled = false;
-          btnStart.style.pointerEvents = '';
-          btnStart.classList.remove('opacity-90', 'cursor-wait');
-          btnStart.innerHTML = originalBtnHTML;
-        }
+        if (completed.length === files.length) {
+          clearUploadedImages();
+          const latest = completed[0];
+          try {
+            sessionStorage.setItem('dawwer_current_review_job', JSON.stringify(latest));
+            localStorage.setItem('dawwer_active_job_id', latest.id);
+          } catch (e) { /* The server job remains available when browser storage is full. */ }
+          showToast(`اكتمل تحليل ${completed.length} صورة. جارٍ فتح المراجعة...`, 'success');
+          window.location.href = `review-drafts.html?job_id=${encodeURIComponent(latest.id)}`;
+        } else if (completed.length) showToast(`اكتمل تحليل ${completed.length} من ${files.length} صور. راجع سجل العمليات قبل إعادة الرفع.`, 'warning');
+      } catch (error) { showToast(error.message, 'error'); }
+      finally {
+        uploadedFiles = uploadedFiles.filter(image => !submitted.has(image.id));
+        captureBusy = false;
+        renderUploadedThumbnails(); renderJobsTable(); updateKPIs();
+        if (btn) { btn.innerHTML = original; btn.disabled = false; }
+        validateInputs();
       }
     }
 
@@ -1679,7 +1067,7 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
       }
 
       try {
-        const response = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/shelf-jobs/${encodeURIComponent(jobId)}`, {
+        const response = await ApiClient.fetchResponse(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/shelf-jobs/${encodeURIComponent(jobId)}`, {
           method: 'DELETE',
           headers: {
             ...headers,
@@ -1695,7 +1083,8 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
         // Proceed to delete the job locally if response.ok OR response.status === 404
         if (response.ok || response.status === 404) {
           // 1. Remove from localStorage
-          let localJobs = [];
+          showToast('تعذر تحديث سجل التصوير. المعروض بيانات محفوظة سابقاً.', 'warning');
+      let localJobs = [];
           try {
             localJobs = JSON.parse(localStorage.getItem('dawwer_ai_extraction_jobs') || localStorage.getItem(STORAGE_KEY) || '[]');
           } catch (e) {}
@@ -1823,132 +1212,7 @@ const STORAGE_KEY = 'dawwer_ai_extraction_jobs';
     }
 
     async function approveExtractedJob() {
-      if (!currentModalJob) return;
-
-      const approveBtn = document.getElementById('btn-approve-extracted-job');
-      const originalBtnHTML = approveBtn ? approveBtn.innerHTML : '';
-      if (approveBtn) {
-        if (approveBtn.disabled) return;
-        approveBtn.disabled = true;
-        approveBtn.innerHTML = `
-          <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-          <span>جاري الاعتماد والإضافة إلى الكتالوج...</span>
-        `;
-      }
-
-      try {
-        const { storeId, token } = getActiveStoreContext();
-        const items = Array.isArray(currentModalJob.extractedItems) ? currentModalJob.extractedItems : [];
-        const shelfLabel = currentModalJob.shelfLocation?.label || "Aisle 1 > Shelf 2";
-
-        const headers = {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        };
-
-        // 1. Loop through extracted items and push each approved item to the backend catalog
-        for (const item of items) {
-          const payload = {
-            name: item.name || item.proposed_name || 'صنف جديد',
-            product_name: item.name || item.proposed_name || 'صنف جديد',
-            price: Number(item.price !== undefined ? item.price : (item.estimated_price || 0)),
-            barcode: item.sku || item.barcode_detected || null,
-            store_sku: item.sku || item.barcode_detected || `SKU-${Date.now().toString().slice(-6)}`,
-            category: item.category || item.category_hint || "عام",
-            shelf_location: shelfLabel,
-            stock_quantity: 10,
-            quantity: 10,
-            stock_status: "IN_STOCK",
-            zone: currentModalJob.shelfLocation?.zone || "المنطقة أ",
-            aisle: currentModalJob.shelfLocation?.aisle || "01",
-            rack: currentModalJob.shelfLocation?.rack || "R1",
-            shelf: currentModalJob.shelfLocation?.level || "1"
-          };
-
-          try {
-            await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products`, {
-              method: 'POST',
-              headers,
-              body: JSON.stringify(payload)
-            });
-          } catch (e) {
-            console.warn('[AI Capture] Product create note:', e);
-          }
-
-          // Alternatively / additionally, if the backend uses draft approvals:
-          const draftId = item.serverId || item.id;
-          if (draftId && !String(draftId).startsWith('ITEM-') && !String(draftId).startsWith('MOCK-')) {
-            try {
-              await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/draft-products/${encodeURIComponent(draftId)}/approve`, {
-                method: 'POST',
-                headers: {
-                  'Accept': 'application/json',
-                  ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                }
-              });
-            } catch (e) {}
-          }
-        }
-
-        // Also trigger batch approve if items exist
-        try {
-          const draftIds = items.map(it => it.serverId || it.id).filter(id => id && !String(id).startsWith('ITEM-'));
-          if (draftIds.length > 0) {
-            await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/draft-products/batch-approve`, {
-              method: 'POST',
-              headers,
-              body: JSON.stringify({ draft_ids: draftIds })
-            });
-          }
-        } catch (e) {}
-
-        // Synchronize into local catalog storage so catalog.html immediately shows them
-        try {
-          const CATALOG_STORAGE_KEY = 'dawwer_merchant_catalog_products';
-          const stored = localStorage.getItem(CATALOG_STORAGE_KEY);
-          const catalog = stored ? JSON.parse(stored) : [];
-          items.forEach((it, idx) => {
-            catalog.unshift({
-              id: `prod-ai-${Date.now()}-${idx}`,
-              name: it.name || it.proposed_name,
-              sku: it.sku || it.barcode_detected || `SKU-${Date.now().toString().slice(-6)}`,
-              category: it.category || it.category_hint || 'عام',
-              price: Number(it.price !== undefined ? it.price : (it.estimated_price || 0)),
-              isAvailable: true,
-              status: 'Published',
-              location: {
-                zone: currentModalJob.shelfLocation?.zone || 'المنطقة أ',
-                aisle: `ممر ${currentModalJob.shelfLocation?.aisle || '01'}`,
-                rack: `R${currentModalJob.shelfLocation?.rack || '1'}`,
-                shelf: `رف ${currentModalJob.shelfLocation?.level || '1'}`
-              },
-              updatedAt: new Date().toISOString()
-            });
-          });
-          localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(catalog));
-        } catch (e) {}
-
-        // 2. Update job status to 'Completed' in localStorage
-        currentModalJob.status = 'Completed';
-        saveJobs();
-        renderJobsTable();
-        updateKPIs();
-        closeReviewModal();
-
-        // 3. Show success toast
-        showToast('تم بنجاح!', 'تم اعتماد جميع الأصناف وإضافتها إلى كتالوج المتجر بنجاح!', 'success');
-
-        // 4. Automatically redirect to the catalog after 1.5 seconds
-        setTimeout(() => {
-          window.location.href = 'catalog.html';
-        }, 1500);
-      } finally {
-        if (approveBtn && currentModalJob?.status !== 'Completed') {
-          approveBtn.disabled = false;
-          approveBtn.innerHTML = originalBtnHTML;
-        }
-      }
+      if (currentModalJob) openReviewModal(currentModalJob.serverId || currentModalJob.id);
     }
 
     function showToast(title, message, type = 'success') {

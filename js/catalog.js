@@ -160,19 +160,8 @@
         ? CONFIG.FASTAPI_BASE_URL
         : (typeof window !== 'undefined' && window.FASTAPI_BASE_URL ? window.FASTAPI_BASE_URL : 'https://dawwer-backend-fastapi.onrender.com');
 
-      function getStoreId() {
-        return localStorage.getItem('activeStoreId') ||
-               localStorage.getItem('storeId') ||
-               '3fa85f64-5717-4562-b3fc-2c963f66afa6';
-      }
-
-      function getAuthToken() {
-        const storeToken = localStorage.getItem('storeToken') || localStorage.getItem('store_token');
-        if (storeToken) return storeToken.replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '').trim();
-        const accessToken = localStorage.getItem('accessToken') || localStorage.getItem('token');
-        if (accessToken) return accessToken.replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '').trim();
-        return (typeof ApiClient !== 'undefined' && typeof ApiClient.getToken === 'function') ? ApiClient.getToken() : '';
-      }
+      function getStoreId() { return ApiClient.getActiveStoreId(); }
+      function getAuthToken() { return ApiClient.getAuthToken(true); }
 
       const CATALOG_STORAGE_KEY = 'dawwer_merchant_catalog_products';
 
@@ -184,7 +173,7 @@
             if (Array.isArray(parsed) && parsed.length > 0) {
               return parsed.map(p => ({
                 ...p,
-                quantity: (typeof p.quantity === 'number') ? p.quantity : (p.isAvailable ? 12 : 0)
+                quantity: (typeof p.quantity === 'number') ? p.quantity : 0
               }));
             }
           }
@@ -360,6 +349,7 @@
         mapCategory: document.getElementById('map-category'),
         mapZone: document.getElementById('map-zone'),
         mapAisle: document.getElementById('map-aisle'),
+        mapQuantity: document.getElementById('map-quantity'),
         mappingPreviewTbody: document.getElementById('mapping-preview-tbody'),
         metricTotalRows: document.getElementById('metric-total-rows'),
         metricValidRows: document.getElementById('metric-valid-rows'),
@@ -548,154 +538,26 @@
         }, 200);
       }
 
-      async function processShelfImage(imageBlobOrFile) {
-        if (!imageBlobOrFile) return;
-
-        // Validate file type if a File object was passed
-        if (imageBlobOrFile.type && !['image/jpeg', 'image/png', 'image/webp'].includes(imageBlobOrFile.type.toLowerCase())) {
-          showToast('نوع الملف غير مدعوم. يرجى اختيار صورة بصيغة JPG أو PNG أو WEBP.', 'error');
-          return;
-        }
-
+      async function processShelfImage(file) {
+        if (!file || state.camera.uploading) return;
+        if (file.type && !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) return showToast('يرجى اختيار صورة JPG أو PNG أو WEBP.', 'error');
+        state.camera.uploading = true;
         if (DOM.aiCameraAnalyzing) DOM.aiCameraAnalyzing.classList.remove('hidden');
-
-        const zone = DOM.camZoneSelect ? DOM.camZoneSelect.value : 'المنطقة أ';
-        const aisle = DOM.camAisleSelect ? DOM.camAisleSelect.value : 'ممر 01';
-        const shelf = DOM.camShelfSelect ? DOM.camShelfSelect.value : 'رف 1';
-
-        const storeId = (typeof ApiClient !== 'undefined' && ApiClient.getActiveStoreId()) ||
-                        localStorage.getItem('store_id') ||
-                        localStorage.getItem('dawwer_active_store_id') || '';
-
-        // Validate Token & Store Context Before Upload (Requirement 2)
-        let uploadToken = null;
-        if (typeof ApiClient !== 'undefined' && typeof ApiClient.validateUploadContext === 'function') {
-          const contextValidation = await ApiClient.validateUploadContext(storeId);
-          if (!contextValidation.valid) {
-            if (DOM.aiCameraAnalyzing) DOM.aiCameraAnalyzing.classList.add('hidden');
-            return;
-          }
-          uploadToken = contextValidation.token;
-        } else {
-          const isStoreValid = typeof ApiClient !== 'undefined' ? ApiClient.isValidStoreId(storeId) : (storeId && storeId !== 'null' && storeId !== 'undefined');
-          if (!isStoreValid) {
-            if (DOM.aiCameraAnalyzing) DOM.aiCameraAnalyzing.classList.add('hidden');
-            showToast('معرف المتجر غير متوفر أو غير صالح. يرجى اختيار المتجر أولاً.', 'error');
-            if (typeof ApiClient !== 'undefined' && typeof ApiClient.handleStoreVerification404 === 'function') {
-              ApiClient.handleStoreVerification404(storeId);
-            }
-            return;
-          }
-
-          uploadToken = (typeof ApiClient !== 'undefined' && ApiClient.getUploadAuthToken)
-            ? ApiClient.getUploadAuthToken()
-            : (localStorage.getItem('storeToken') || localStorage.getItem('accessToken') || '');
-          if (!uploadToken || uploadToken === 'null' || uploadToken === 'undefined' || (typeof ApiClient !== 'undefined' && ApiClient.isTokenExpired(uploadToken))) {
-            if (DOM.aiCameraAnalyzing) DOM.aiCameraAnalyzing.classList.add('hidden');
-            if (typeof ApiClient !== 'undefined' && ApiClient.promptReauthentication) {
-              ApiClient.promptReauthentication('انتهت صلاحية جلسة العمل. يرجى تسجيل الدخول مجدداً لمعالجة صورة الرف.');
-            } else {
-              showToast('جلسة العمل منتهية أو غير مسجلة. يرجى تسجيل الدخول مجدداً للمتابعة.', 'warning');
-            }
-            return;
-          }
-        }
-
         try {
-          const formData = new FormData();
-          formData.append('file', imageBlobOrFile, 'shelf_scan.jpg');
-          formData.append('store_id', storeId);
-          formData.append('storeId', storeId);
-          formData.append('zone', zone);
-          formData.append('aisle', aisle.replace(/[^0-9]/g, '') || '01');
-          formData.append('rack', '1');
-          formData.append('shelf', shelf.replace(/[^0-9]/g, '') || '1');
-
-          let serverJob = null;
-          if (typeof ApiClient !== 'undefined' && ApiClient.shelfJobs && ApiClient.shelfJobs.create) {
-            const res = await ApiClient.shelfJobs.create(storeId, formData, {
-              timeout: 150000,
-              suppressToastOnError: true
-            });
-            serverJob = res?.data || res;
-          } else {
-            const res = await fetch(`https://dawwer-backend-fastapi.onrender.com/api/v1/stores/${encodeURIComponent(storeId)}/shelf-jobs`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${uploadToken}`
-              },
-              body: formData
-            });
-            if (!res.ok) {
-              const errBody = await res.json().catch(() => ({}));
-              throw new Error(errBody.detail || errBody.message || `HTTP ${res.status}`);
-            }
-            serverJob = await res.json();
-          }
-
-          if (!serverJob || (!serverJob.id && !serverJob.job_id)) {
-            throw new Error('لم يرجع خادم الذكاء الاصطناعي بيانات صالحة لمعالجة صورة الرف.');
-          }
-
-          const resolvedJobId = serverJob.id || serverJob.job_id;
-          const detectedDrafts = Array.isArray(serverJob.draft_products) ? serverJob.draft_products :
-                                 Array.isArray(serverJob.extractedItems) ? serverJob.extractedItems :
-                                 Array.isArray(serverJob.items) ? serverJob.items : [];
-
-          const newJob = {
-            id: resolvedJobId,
-            serverId: resolvedJobId,
-            createdAt: 'الآن',
-            timestamp: Date.now(),
-            shelfLocation: {
-              zone,
-              aisle,
-              rack: 'R1',
-              level: shelf,
-              label: `${zone} > ${aisle} > R1 > ${shelf}`
-            },
-            thumbnail: '',
-            imagesCount: 1,
-            status: detectedDrafts.length > 0 ? 'Review Required' : (serverJob.status || 'Completed'),
-            detectedCount: detectedDrafts.length,
-            confidence: serverJob.confidence || 98.4,
-            extractedItems: detectedDrafts
-          };
-
-          sessionStorage.setItem('dawwer_current_review_job', JSON.stringify(newJob));
-          if (detectedDrafts.length > 0) {
-            sessionStorage.setItem('dawwer_current_draft_products', JSON.stringify(detectedDrafts));
-          }
-
-          closeAiCameraModal();
-          showToast('تم رفع الصورة وتحليل الرف بنجاح! جاري تحويلك لشاشة المراجعة...', 'success');
-
-          setTimeout(() => {
-            window.location.href = `review-drafts.html?jobId=${encodeURIComponent(resolvedJobId)}&store_id=${encodeURIComponent(storeId)}`;
-          }, 1200);
-
-        } catch (jobErr) {
-          if (DOM.aiCameraAnalyzing) DOM.aiCameraAnalyzing.classList.add('hidden');
-          const is401 = jobErr?.status === 401 || (jobErr?.message && (jobErr.message.includes('401') || jobErr.message.includes('Unauthorized')));
-          if (is401) {
-            if (typeof ApiClient !== 'undefined' && ApiClient.promptReauthentication) {
-              ApiClient.promptReauthentication('انتهت صلاحية جلسة العمل أو غير مصرح. يرجى تسجيل الدخول مجدداً.');
-            } else {
-              showToast('جلسة العمل منتهية أو غير مسجلة. يرجى تسجيل الدخول مجدداً للمتابعة.', 'warning');
-            }
-            return;
-          }
-          const isTimeout = jobErr?.isTimeout || (jobErr?.message && jobErr.message.toLowerCase().includes('timeout'));
-          const isCORS = jobErr?.isCORS || (jobErr?.message && jobErr.message.includes('Failed to fetch'));
-          let errMsg = jobErr?.message || 'فشلت معالجة صورة الرف عبر خادم الذكاء الاصطناعي.';
-          if (isTimeout) {
-            errMsg = 'انتهت مهلة معالجة صورة الرف (أكثر من دقيقتين). قد يكون السيرفر قيد التشغيل (Cold Start)، يرجى إعادة المحاولة.';
-          } else if (isCORS) {
-            errMsg = 'تعذر الاتصال بخادم الذكاء الاصطناعي على Render (خطأ اتصال أو CORS).';
-          }
-          console.error('[AI Shelf Scan Error]:', jobErr);
-          showToast(errMsg, 'error');
-        }
+          const storeId = getStoreId();
+          const form = new FormData();
+          form.append('file', file, file.name || 'shelf.jpg');
+          form.append('zone', DOM.camZoneSelect?.value || 'المنطقة أ');
+          form.append('aisle', DOM.camAisleSelect?.value || '01');
+          form.append('shelf', DOM.camShelfSelect?.value || '1');
+          const result = await ApiClient.shelfJobs.create(storeId, form);
+          const job = result?.data || result;
+          const jobId = job.id || job.job_id;
+          localStorage.setItem('dawwer_active_job_id', jobId);
+          // Review loads the existing server job and waits for pending extraction.
+          window.location.href = `review-drafts.html?job_id=${encodeURIComponent(jobId)}`;
+        } catch (error) { showToast(error.message, 'error'); }
+        finally { state.camera.uploading = false; DOM.aiCameraAnalyzing?.classList.add('hidden'); }
       }
 
       function snapCameraPhoto() {
@@ -759,60 +621,35 @@
         }
       }
 
-      function parseCSVText(text) {
-        const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
-        if (lines.length < 2) return { headers: [], rows: [] };
+      function parseCSVText(text) { return CatalogImport.parseCSV(text); }
 
-        function parseLine(line) {
-          const values = [];
-          let insideQuote = false;
-          let entry = '';
-          for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            if (char === '"' || char === "'") {
-              insideQuote = !insideQuote;
-            } else if (char === ',' && !insideQuote) {
-              values.push(entry.trim());
-              entry = '';
-            } else {
-              entry += char;
-            }
-          }
-          values.push(entry.trim());
-          return values;
-        }
-
-        const headers = parseLine(lines[0]);
-        const rows = lines.slice(1).map(l => parseLine(l));
-        return { headers, rows };
-      }
-
-      function handleCSVFile(file) {
-        state.wizard.currentFile = file;
+      let fileReadVersion = 0;
+      async function handleCSVFile(file) {
+        const version = ++fileReadVersion;
+        state.wizard.currentFile = null;
+        state.wizard.rawRows = [];
+        state.wizard.headers = [];
+        state.wizard.validRows = [];
+        DOM.btnWizardNext.disabled = true;
         DOM.csvUploadError.classList.add('hidden');
-        if (!file.name.match(/\.(csv|xlsx)$/i)) {
-          DOM.csvUploadError.textContent = 'صيغة الملف غير مدعومة. يرجى اختيار ملف CSV أو Excel.';
+        try {
+          if (!/\.(csv|xlsx)$/i.test(file.name)) throw new Error('يرجى اختيار ملف CSV أو Excel بصيغة XLSX.');
+          if (file.size > 5 * 1024 * 1024) throw new Error('الحد الأقصى لحجم الملف هو 5 ميغابايت.');
+          let parsed;
+          if (/\.xlsx$/i.test(file.name)) {
+            if (typeof XLSX === 'undefined') throw new Error('تعذر تحميل قارئ Excel. أعد تحميل الصفحة.');
+            parsed = CatalogImport.readWorkbook(await file.arrayBuffer(), XLSX);
+          } else parsed = parseCSVText(await file.text());
+          if (version !== fileReadVersion) return;
+          if (!parsed?.headers.length || !parsed.rows.length) throw new Error('الملف فارغ أو لا يحتوي على صفوف منتجات.');
+          state.wizard.currentFile = file;
+          processParsedData(parsed.headers, parsed.rows.map(row => row.map(value => String(value ?? ''))));
+          DOM.btnWizardNext.disabled = false;
+        } catch (error) {
+          if (version !== fileReadVersion) return;
+          DOM.csvUploadError.textContent = error.message;
           DOM.csvUploadError.classList.remove('hidden');
-          return;
         }
-
-        if (file.size > 5 * 1024 * 1024) {
-          DOM.csvUploadError.textContent = 'حجم الملف كبير جداً. الحد الأقصى المسموح هو 5 ميغابايت.';
-          DOM.csvUploadError.classList.remove('hidden');
-          return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const { headers, rows } = parseCSVText(e.target.result);
-          if (!headers.length || !rows.length) {
-            DOM.csvUploadError.textContent = 'الملف المرفوع فارغ أو تعذر قراءة أعمدته.';
-            DOM.csvUploadError.classList.remove('hidden');
-            return;
-          }
-          processParsedData(headers, rows);
-        };
-        reader.readAsText(file);
       }
 
       // Category taxonomy terms for header matching
@@ -853,29 +690,11 @@
         'كود الصنف', 'كود المنتج', 'رمز_الصنف', 'كود_الصنف', 'الرمز', 'item_code', 'product_code'
       ];
 
-      function isDescriptiveCategoryText(val) {
-        if (!val || typeof val !== 'string') return false;
-        const s = val.trim().toLowerCase();
-        if (!s) return false;
-
-        // Check if value is a known category name
-        for (const cat of KNOWN_CATEGORY_VALUES) {
-          if (s === cat || s.includes(cat) || (cat.includes(s) && s.length >= 4)) return true;
-        }
-
-        // Check common Arabic category words
-        const arabicWords = ['خضار', 'فواكه', 'ألبان', 'أجبان', 'مخبوزات', 'لحوم', 'دواجن', 'مشروبات', 'عصائر', 'تسالي', 'حلويات', 'معلبات', 'مجمدات', 'منظفات', 'عناية', 'طازج', 'تمور', 'بهارات', 'مكسرات', 'بقالة', 'مؤونة'];
-        for (const w of arabicWords) {
-          if (s.includes(w)) return true;
-        }
-
-        // Check English category words
-        const englishWords = ['vegetable', 'fruit', 'dairy', 'bakery', 'meat', 'poultry', 'beverage', 'drink', 'snack', 'grocery', 'produce', 'frozen', 'cleaning', 'pantry'];
-        for (const w of englishWords) {
-          if (s.includes(w)) return true;
-        }
-
-        return false;
+      function isDescriptiveCategoryText(value) {
+        if (typeof value !== 'string') return false;
+        const normalized = value.trim().toLowerCase();
+        // Identifiers such as MILK-01 are valid SKUs even when they contain a category word.
+        return KNOWN_CATEGORY_VALUES.some(category => normalized === category.toLowerCase());
       }
 
       function showSkuWarning(message) {
@@ -1043,6 +862,7 @@
       }
 
       function processParsedData(headers, rows) {
+        state.wizard.batchId = crypto.randomUUID();
         state.wizard.headers = headers;
         state.wizard.rawRows = rows;
         DOM.detectedColumnsCount.textContent = `تم التعرف على ${headers.length} أعمدة`;
@@ -1112,7 +932,7 @@
         if (!skuCol) {
           // Find column with highest barcode ratio and 0 category matches
           skuCol = colStats
-            .filter(c => c.header !== categoryHeader && !c.isCategoryCol && c.categoryRatio === 0)
+            .filter(c => c.header !== categoryHeader && !c.isCategoryCol && !c.priceHeaderMatch && c.categoryRatio === 0 && c.barcodeRatio > 0.8 && !/name|title|product|اسم|منتج/i.test(c.header))
             .sort((a, b) => b.barcodeRatio - a.barcodeRatio)[0];
         }
         const skuHeader = skuCol ? skuCol.header : '';
@@ -1153,6 +973,7 @@
         state.wizard.mappings.category = categoryHeader || '';
         state.wizard.mappings.zone = zoneCol ? zoneCol.header : '';
         state.wizard.mappings.aisle = aisleCol ? aisleCol.header : '';
+        state.wizard.mappings.quantity = headers.find(h => /^(quantity|stock|stock_quantity|qty|الكمية|المخزون|العدد)$/i.test(h.trim())) || '';
 
         setWizardStep(2);
         showToast(`تمت معالجة ${rows.length} سجلاً ومطابقة الحقول بدقة!`);
@@ -1176,6 +997,7 @@
         populateSelect(DOM.mapCategory, state.wizard.mappings.category);
         populateSelect(DOM.mapZone, state.wizard.mappings.zone);
         populateSelect(DOM.mapAisle, state.wizard.mappings.aisle);
+        populateSelect(DOM.mapQuantity, state.wizard.mappings.quantity);
 
         // Run auto-correction and warning check
         checkAndAutoCorrectSkuMapping(false);
@@ -1196,7 +1018,7 @@
           <tr class="hover:bg-slate-50">
             <td class="px-4 py-2.5 font-bold text-slate-800">${escapeHtml(nameIdx !== -1 ? row[nameIdx] : '—')}</td>
             <td class="px-4 py-2.5 font-mono text-slate-500" dir="ltr">${escapeHtml(skuIdx !== -1 ? row[skuIdx] : '—')}</td>
-            <td class="px-4 py-2.5 font-bold text-slate-900">${priceIdx !== -1 ? formatCurrency(parseFloat(row[priceIdx]) || 0) : '—'}</td>
+            <td class="px-4 py-2.5 font-bold text-slate-900">${priceIdx !== -1 ? formatCurrency(CatalogImport.number(row[priceIdx]) || 0) : '—'}</td>
             <td class="px-4 py-2.5"><span class="px-2.5 py-0.5 rounded-lg bg-slate-100 font-bold text-slate-700">${escapeHtml(catIdx !== -1 ? row[catIdx] : 'عام')}</span></td>
             <td class="px-4 py-2.5 text-slate-600 font-bold">${escapeHtml(zoneIdx !== -1 ? row[zoneIdx] : 'المنطقة أ')} › ${escapeHtml(aisleIdx !== -1 ? row[aisleIdx] : 'ممر 01')}</td>
           </tr>
@@ -1210,6 +1032,7 @@
         state.wizard.mappings.category = DOM.mapCategory.value;
         state.wizard.mappings.zone = DOM.mapZone.value;
         state.wizard.mappings.aisle = DOM.mapAisle.value;
+        state.wizard.mappings.quantity = DOM.mapQuantity.value;
 
         const nameIdx = state.wizard.headers.indexOf(state.wizard.mappings.name);
         const skuIdx = state.wizard.headers.indexOf(state.wizard.mappings.sku);
@@ -1217,6 +1040,7 @@
         const catIdx = state.wizard.headers.indexOf(state.wizard.mappings.category);
         const zoneIdx = state.wizard.headers.indexOf(state.wizard.mappings.zone);
         const aisleIdx = state.wizard.headers.indexOf(state.wizard.mappings.aisle);
+        const quantityIdx = state.wizard.headers.indexOf(state.wizard.mappings.quantity);
 
         state.wizard.validRows = [];
         state.wizard.errorRows = [];
@@ -1229,17 +1053,18 @@
           const rowNum = index + 2;
           const rawName = nameIdx !== -1 ? (row[nameIdx] || '').trim() : '';
           const rawSku = skuIdx !== -1 ? (row[skuIdx] || '').trim() : '';
-          const rawPrice = priceIdx !== -1 ? parseFloat(row[priceIdx]) : NaN;
+          const sku = rawSku || `IMP-${state.wizard.batchId || (state.wizard.batchId = Date.now().toString(36))}-${index}`;
+          const rawPrice = priceIdx !== -1 ? CatalogImport.number(row[priceIdx]) : NaN;
           const rawCat = catIdx !== -1 ? (row[catIdx] || 'عام').trim() : 'عام';
           const rawZone = zoneIdx !== -1 ? (row[zoneIdx] || 'المنطقة أ').trim() : 'المنطقة أ';
           const rawAisle = aisleIdx !== -1 ? (row[aisleIdx] || 'ممر 01').trim() : 'ممر 01';
 
+          const quantity = quantityIdx >= 0 ? CatalogImport.number(row[quantityIdx]) : 0;
           let errors = [];
+          if (!Number.isInteger(quantity) || quantity < 0) errors.push('الكمية يجب أن تكون عدداً صحيحاً لا يقل عن صفر.');
 
           if (!rawName) errors.push('اسم المنتج فارغ أو غير متوفر.');
-          if (!rawSku) {
-            errors.push('رمز الباركود / SKU غير متوفر.');
-          } else {
+          if (rawSku) {
             // Validate: SKU must not be descriptive category text!
             if (isDescriptiveCategoryText(rawSku)) {
               categoryAsSkuCount++;
@@ -1251,7 +1076,7 @@
             }
           }
 
-          if (isNaN(rawPrice) || rawPrice <= 0) errors.push(`السعر يجب أن يكون قيمة رقمية موجبة.`);
+          if (!Number.isFinite(rawPrice) || rawPrice < 0) errors.push(`السعر يجب أن يكون قيمة رقمية لا تقل عن صفر.`);
 
           if (errors.length > 0) {
             state.wizard.errorRows.push({
@@ -1266,10 +1091,11 @@
             state.wizard.validRows.push({
               id: `prod-imp-${Date.now()}-${index}`,
               name: rawName,
-              sku: rawSku,
+              sku,
               category: rawCat || 'عام',
               price: rawPrice,
-              isAvailable: true,
+              quantity,
+              isAvailable: quantity > 0,
               location: { zone: rawZone, aisle: rawAisle, rack: 'R1', shelf: 'رف 1 - رئيسي' },
               status: 'Published',
               updatedAt: new Date().toISOString().slice(0, 16)
@@ -1311,11 +1137,11 @@
         const rows = state.wizard.errorRows.map(err => {
           const rowData = [...err.rawRow];
           while (rowData.length < state.wizard.headers.length) rowData.push('');
-          rowData.push(`"${err.reason.replace(/"/g, '""')}"`);
-          return rowData.join(',');
+          rowData.push(err.reason);
+          return rowData.map(value => CatalogImport.csvCell(value)).join(',');
         });
 
-        const csvContent = [headers.join(','), ...rows].join('\r\n');
+        const csvContent = [headers.map(value => CatalogImport.csvCell(value)).join(','), ...rows].join('\r\n');
         const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -1348,32 +1174,6 @@
                         localStorage.getItem('store_id') ||
                         localStorage.getItem('dawwer_active_store_id') || '';
 
-        if (typeof ApiClient !== 'undefined' && typeof ApiClient.validateUploadContext === 'function') {
-          const contextValidation = await ApiClient.validateUploadContext(storeId);
-          if (!contextValidation.valid) {
-            return;
-          }
-        } else {
-          if (!storeId || (typeof ApiClient !== 'undefined' && ApiClient.isInvalidStoreId(storeId))) {
-            showToast('يلزم اختيار متجر نشط قبل استيراد الكتالوج', 'error');
-            if (typeof ApiClient !== 'undefined' && ApiClient.handleStoreVerification404) {
-              ApiClient.handleStoreVerification404(storeId);
-            }
-            return;
-          }
-          const token = (typeof ApiClient !== 'undefined' && ApiClient.getUploadAuthToken)
-            ? ApiClient.getUploadAuthToken()
-            : (localStorage.getItem('storeToken') || localStorage.getItem('accessToken') || '');
-          if (!token || token === 'null' || token === 'undefined' || (typeof ApiClient !== 'undefined' && ApiClient.isTokenExpired(token))) {
-            if (typeof ApiClient !== 'undefined' && ApiClient.promptReauthentication) {
-              ApiClient.promptReauthentication('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مجدداً لاستيراد الكتالوج.');
-            } else {
-              showToast('جلسة العمل منتهية أو غير مسجلة. يرجى تسجيل الدخول مجدداً للمتابعة.', 'warning');
-            }
-            return;
-          }
-        }
-
         const commitBtn = DOM.btnWizardCommit;
         let originalCommitHtml = '';
         if (commitBtn) {
@@ -1393,48 +1193,44 @@
         }
 
         try {
-          const count = state.wizard.validRows.length;
-          if (state.wizard.currentFile) {
-            try {
-              // Construct normalized CSV content so backend parser receives clean standard columns
-              const normalizedCsvLines = [
-                'Product Name,Product SKU,Unit Price,Category,Store Zone,Aisle Name',
-                ...state.wizard.validRows.map(p =>
-                  `"${(p.name || '').replace(/"/g, '""')}","${(p.sku || '').replace(/"/g, '""')}",${p.price},"${(p.category || '').replace(/"/g, '""')}","${(p.location?.zone || '').replace(/"/g, '""')}","${(p.location?.aisle || '').replace(/"/g, '""')}"`
-                )
-              ];
-              const normalizedBlob = new Blob(["\uFEFF" + normalizedCsvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-              const uploadFileName = (state.wizard.currentFile.name || 'catalog_import.csv').replace(/\.[^/.]+$/, "") + "_mapped.csv";
-              const uploadFile = new File([normalizedBlob], uploadFileName, { type: 'text/csv' });
-
-              const formData = new FormData();
-              formData.append('file', uploadFile);
-
-              const uploadToken = getAuthToken();
-              fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/catalog/bulk-import`, {
-                method: 'POST',
-                headers: {
-                  ...(uploadToken ? { 'Authorization': `Bearer ${uploadToken}` } : {})
-                },
-                body: formData
-              }).then(res => {
-                if (res.ok) {
-                  console.info('[Catalog] Bulk import synced to FastAPI backend.');
-                }
-              }).catch(e => {
-                console.warn('[Catalog] Bulk import backend sync note:', e);
-              });
-            } catch (e) {
-              console.warn('[Catalog] Bulk import dispatch error:', e);
+          // The backend CSV parser infers numeric identifiers, losing leading zeros/precision.
+          // Use exact JSON strings for these files and retain unconfirmed rows for retry.
+          if (state.wizard.validRows.some(row => Number.isFinite(Number(row.sku)))) {
+            const remaining = [...state.wizard.validRows];
+            let savedCount = 0;
+            const errors = [];
+            for (const row of [...remaining]) {
+              try {
+                const result = await ApiClient.products.create(storeId, CatalogImport.productPayload(row));
+                const saved = result?.data || result;
+                remaining.splice(remaining.indexOf(row), 1);
+                savedCount++;
+                if (saved?.id) state.products.unshift({ ...row, id: saved.id });
+                saveCatalogProducts();
+              } catch (error) {
+                errors.push(`${row.sku}: ${error.message}`);
+                if ([0, 401, 408].includes(error.status)) break;
+              }
             }
+            state.wizard.validRows = remaining;
+            DOM.finalImportCount.textContent = remaining.length;
+            if (!remaining.length) closeImportWizard();
+            await fetchLiveProducts();
+            showToast(errors.length ? `تم استيراد ${savedCount} صنف. بقي ${remaining.length} صنف للمراجعة. ${errors.slice(0, 2).join(' | ')}` : `تم استيراد ${savedCount} صنف بنجاح.`, errors.length ? 'warning' : 'success');
+            return;
           }
-
-          state.products.unshift(...state.wizard.validRows);
-          saveCatalogProducts();
-          recordAuditLog('Excel Bulk Import', 'استيراد كتالوج ملف', 'CSV-BATCH', `إدراج ${count} صنف جديد بالكتالوج`, 'تمت معالجة ومطابقة أعمدة الملف بنجاح');
+          const csv = CatalogImport.toCSV(state.wizard.validRows);
+          const file = new File([csv], 'catalog_mapped.csv', { type: 'text/csv;charset=utf-8' });
+          const result = await ApiClient.products.bulkImport(storeId, file);
+          const summary = result?.data || result || {};
+          const imported = summary.valid_count ?? summary.imported_count ?? summary.created_count ?? summary.imported ?? summary.success_count;
+          const failed = summary.failed_count ?? summary.error_count ?? (Array.isArray(summary.errors) ? summary.errors.length : 0);
           closeImportWizard();
-          renderCatalog();
-          showToast(`تم استيراد ${count} منتج بنجاح إلى كتالوج المتجر!`);
+          await fetchLiveProducts();
+          if (failed) showToast(`اكتملت معالجة الملف مع ${failed} أخطاء. ${imported != null ? `تم استيراد ${imported} منتج.` : ''} ${(summary.errors || []).slice(0, 2).map(error => (error.error_messages || [error.message || 'خطأ في الصف']).join('، ')).join(' | ')}`, 'warning');
+          else showToast(imported != null ? `تم استيراد ${imported} منتج بنجاح.` : 'تمت معالجة ملف المنتجات بنجاح وتحديث الكتالوج.');
+        } catch (error) {
+          showToast(error.message || 'فشل الاستيراد. لم يتم تأكيد حفظ المنتجات.', 'error');
         } finally {
           if (commitBtn) {
             commitBtn.disabled = false;
@@ -1819,7 +1615,7 @@
               ? `<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">منشور</span>`
               : (p.status === 'Draft' ? `<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">مسودة</span>` : `<span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">غير نشط</span>`);
 
-            const qty = (typeof p.quantity === 'number') ? p.quantity : (p.isAvailable ? 12 : 0);
+            const qty = (typeof p.quantity === 'number') ? p.quantity : 0;
             let stockBadge = '';
             if (qty === 0) {
               stockBadge = `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black bg-rose-50 text-rose-700 border border-rose-200"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>نفد (0)</span>`;
@@ -1928,7 +1724,7 @@
         initShelfZones();
 
         if (mode === 'edit' && productId) {
-          const p = state.products.find(x => x.id === productId);
+          const p = state.products.find(x => String(x.id) === String(productId));
           if (!p) return;
           DOM.modalTitle.textContent = `تعديل الصنف — ${p.name}`;
           DOM.formProductId.value = p.id;
@@ -1937,7 +1733,7 @@
           DOM.formCategory.value = p.category;
           DOM.formPrice.value = p.price;
           if (DOM.formQuantity) {
-            DOM.formQuantity.value = typeof p.quantity === 'number' ? p.quantity : (p.isAvailable ? 10 : 0);
+            DOM.formQuantity.value = typeof p.quantity === 'number' ? p.quantity : 0;
           }
           DOM.formStatus.value = p.status;
           DOM.formAvailable.checked = !!p.isAvailable;
@@ -1950,7 +1746,7 @@
         } else {
           DOM.modalTitle.textContent = 'إضافة صنف جديد';
           DOM.formProductId.value = '';
-          if (DOM.formQuantity) DOM.formQuantity.value = 10;
+          if (DOM.formQuantity) DOM.formQuantity.value = 0;
           DOM.formAvailable.checked = true;
           populateAisles('');
         }
@@ -2040,7 +1836,7 @@
             }
             setWizardStep(2);
           } else if (state.wizard.currentStep === 2) {
-            if (!DOM.mapName.value || !DOM.mapSku.value || !DOM.mapPrice.value) {
+            if (!DOM.mapName.value || !DOM.mapPrice.value) {
               showToast('يرجى مطابقة الحقول الأساسية المطلوبة (الاسم، الرمز، السعر)', 'error');
               return;
             }
@@ -2273,29 +2069,30 @@
           });
         }
 
-        if (DOM.bulkSetAvailable) {
-          DOM.bulkSetAvailable.addEventListener('click', () => {
-            state.selectedIds.forEach(id => {
-              const p = state.products.find(x => String(x.id) === String(id));
-              if (p) p.isAvailable = true;
-            });
-            saveCatalogProducts();
-            renderCatalog();
-            showToast('تم تحديث حالة توفر الأصناف المحددة');
-          });
+        async function runBulkAction(action) {
+          const errors = [];
+          for (const id of [...state.selectedIds]) {
+            const product = state.products.find(p => String(p.id) === String(id));
+            if (!product) continue;
+            try {
+              if (action === 'delete') {
+                await ApiClient.products.delete(getStoreId(), id);
+                state.products = state.products.filter(p => String(p.id) !== String(id));
+              } else {
+                if (product.quantity <= 0) throw new Error(`أدخل كمية للمخزون أولاً: ${product.name}`);
+                await ApiClient.products.update(getStoreId(), id, { stock_status: 'IN_STOCK' });
+                product.isAvailable = true;
+              }
+              state.selectedIds.delete(id);
+            } catch (error) { errors.push(error.message); }
+          }
+          saveCatalogProducts(); renderCatalog();
+          showToast(errors.length ? errors.slice(0, 3).join(' | ') : 'تم حفظ التغييرات بنجاح.', errors.length ? 'error' : 'success');
         }
-
-        if (DOM.bulkDelete) {
-          DOM.bulkDelete.addEventListener('click', () => {
-            if (confirm(`هل أنت متأكد من حذف ${state.selectedIds.size} من المنتجات المحددة؟`)) {
-              state.products = state.products.filter(p => !state.selectedIds.has(String(p.id)));
-              state.selectedIds.clear();
-              saveCatalogProducts();
-              renderCatalog();
-              showToast('تم حذف المنتجات المحددة بنجاح');
-            }
-          });
-        }
+        if (DOM.bulkSetAvailable) DOM.bulkSetAvailable.addEventListener('click', () => runBulkAction('available'));
+        if (DOM.bulkDelete) DOM.bulkDelete.addEventListener('click', () => {
+          if (confirm(`هل تريد حذف ${state.selectedIds.size} منتجات؟`)) runBulkAction('delete');
+        });
 
         if (DOM.btnAddProduct) DOM.btnAddProduct.addEventListener('click', () => openModal('create'));
         if (DOM.btnCloseModal) DOM.btnCloseModal.addEventListener('click', closeModal);
@@ -2326,35 +2123,15 @@
         }
 
         async function deleteCatalogProduct(prodId, targetProduct) {
-          const pName = targetProduct ? targetProduct.name : `منتج #${prodId}`;
-          const storeId = getStoreId();
-          const token = getAuthToken();
-
-          // 1. Immediately delete from local state and re-render table
-          state.products = state.products.filter(p => String(p.id) !== String(prodId));
-          saveCatalogProducts();
-          if (targetProduct) {
-            recordAuditLog('Product Delete', targetProduct.name, targetProduct.sku, 'حذف المنتج نهائياً من الكتالوج', 'تم حذف الصنف من الجدول بنجاح');
-          }
-          renderCatalog();
-          showToast(`تم حذف "${pName}" بنجاح.`);
-
-          // 2. Dispatch DELETE to backend with errors suppressed to mute notifications on failure
           try {
-            fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products/${encodeURIComponent(prodId)}`, {
-              method: 'DELETE',
-              headers: {
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-              }
-            }).catch(err => {
-              console.warn('[Catalog Delete Request Note]:', err.message || err);
-            });
-          } catch (err) {
-            console.warn('[Catalog Delete Request Note]:', err.message || err);
-          }
+            await ApiClient.products.delete(getStoreId(), prodId);
+            state.products = state.products.filter(p => String(p.id) !== String(prodId));
+            saveCatalogProducts(); renderCatalog();
+            showToast(`تم حذف "${targetProduct?.name || 'المنتج'}" بنجاح.`);
+          } catch (error) { showToast(error.message, 'error'); }
         }
 
-        DOM.tableBody.addEventListener('click', (e) => {
+        DOM.tableBody.addEventListener('click', async (e) => {
           const editBtn = e.target.closest('.btn-edit-p');
           if (editBtn) return openModal('edit', editBtn.dataset.id);
 
@@ -2369,13 +2146,18 @@
           }
 
           if (e.target.classList.contains('toggle-availability')) {
-            const p = state.products.find(x => x.id === e.target.dataset.id);
-            if (p) {
-              p.isAvailable = e.target.checked;
-              saveCatalogProducts();
-              recordAuditLog('Stock Adjustment', p.name, p.sku, `تعديل حالة التوفر إلى: ${p.isAvailable ? 'متوفر' : 'غير متوفر'}`, 'تغيير حالة توفر الصنف للعملاء');
-              showToast(`تم تحديث حالة توفر "${p.name}" إلى ${p.isAvailable ? 'متوفر' : 'غير متوفر'}`);
-            }
+            const input = e.target;
+            const product = state.products.find(p => String(p.id) === String(input.dataset.id));
+            if (!product) return;
+            const next = input.checked;
+            input.disabled = true;
+            try {
+              if (next && product.quantity <= 0) throw new Error('أدخل كمية للمخزون أولاً قبل تفعيل توفر المنتج.');
+              await ApiClient.products.update(getStoreId(), product.id, { stock_status: next ? 'IN_STOCK' : 'OUT_OF_STOCK' });
+              product.isAvailable = next; saveCatalogProducts();
+              showToast('تم حفظ حالة التوفر.');
+            } catch (error) { input.checked = product.isAvailable; showToast(error.message, 'error'); }
+            finally { input.disabled = false; }
           }
         });
 
@@ -2411,9 +2193,9 @@
           const barcodeVal = DOM.formSku ? DOM.formSku.value.trim() : '';
           if (!name) return showToast('يرجى تعبئة اسم المنتج', 'error');
 
-          const priceVal = parseFloat(DOM.formPrice.value);
-          if (isNaN(priceVal) || priceVal <= 0) {
-            return showToast('يرجى إدخال سعر صحيح أكبر من الصفر', 'error');
+          const priceVal = Number(DOM.formPrice.value);
+          if (DOM.formPrice.value.trim() === '' || !Number.isFinite(priceVal) || priceVal < 0) {
+            return showToast('يرجى إدخال سعر صحيح لا يقل عن صفر', 'error');
           }
 
           // Debounce button: disable immediately and show loading spinner
@@ -2434,11 +2216,11 @@
           }
 
           try {
-            const rawQty = DOM.formQuantity ? parseInt(DOM.formQuantity.value, 10) : 10;
-            const quantityVal = isNaN(rawQty) ? 10 : Math.max(0, rawQty);
+            const quantityVal = Number(DOM.formQuantity?.value || 0);
+            if (!Number.isInteger(quantityVal) || quantityVal < 0) throw new Error('الكمية يجب أن تكون عدداً صحيحاً لا يقل عن صفر.');
             const isAvail = DOM.formAvailable.checked && quantityVal > 0;
 
-            const chosenCategory = translateCategory(DOM.formCategory.value || 'عام');
+            const chosenCategory = DOM.formCategory.value ? DOM.formCategory.selectedOptions[0].textContent.trim() : 'عام';
 
             const payload = {
               name,
@@ -2465,7 +2247,7 @@
 
             const livePayload = {
               barcode: barcodeVal ? barcodeVal.trim() : null,
-              store_sku: barcodeVal ? barcodeVal.trim().toUpperCase() : null,
+              store_sku: payload.sku,
               product_name: payload.name,
               category: payload.category,
               price: payload.price,
@@ -2484,64 +2266,23 @@
               ...(token ? { 'Authorization': `Bearer ${token}` } : {})
             };
 
-            if (id) {
-              try {
-                fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products/${encodeURIComponent(id)}`, {
-                  method: 'PUT',
-                  headers: reqHeaders,
-                  body: JSON.stringify(livePayload)
-                }).catch(err => {
-                  console.warn('[Catalog Edit Note - Backend Sync]:', err);
-                });
-
-                const idx = state.products.findIndex(p => String(p.id) === String(id));
-                if (idx !== -1) {
-                  const oldPrice = state.products[idx].price;
-                  state.products[idx] = { ...state.products[idx], ...payload };
-                  recordAuditLog('Price/Stock Update', payload.name, payload.sku, `تعديل السعر: ${oldPrice} ➔ ${payload.price} ₪ | المخزون: ${quantityVal}`, 'تحديث بيانات المنتج وموقعه الهندسي بالسيرفر الحي');
-                }
-                saveCatalogProducts();
-                closeModal();
-                renderCatalog();
-                showToast(`تم حفظ وتحديث "${payload.name}" بنجاح!`);
-              } catch (err) {
-                console.error('[Catalog Edit Error]', err);
-                closeModal();
-                renderCatalog();
-                showToast(`تم حفظ التعديل محلياً`, 'warning');
-              }
-            } else {
-              try {
-                let newId = `prod-${Date.now()}`;
-                try {
-                  const res = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products`, {
-                    method: 'POST',
-                    headers: reqHeaders,
-                    body: JSON.stringify(livePayload)
-                  });
-                  if (res.ok) {
-                    const created = await res.json().catch(() => null);
-                    if (created && (created.id || created.data?.id)) {
-                      newId = created.id || created.data.id;
-                    }
-                  }
-                } catch (createErr) {
-                  console.warn('[Catalog Create Note - Backend Sync]:', createErr);
-                }
-
-                state.products.unshift({ id: newId, ...payload });
-                recordAuditLog('Manual Creation', payload.name, payload.sku, `إضافة منتج يدوي جديد بالسعر: ${payload.price} ₪ (المخزون: ${quantityVal})`, 'إنشاء الصنف يدوياً بالسيرفر والكتالوج');
-                saveCatalogProducts();
-                closeModal();
-                renderCatalog();
-                showToast(`تمت إضافة "${payload.name}" بنجاح إلى الكتالوج!`);
-              } catch (err) {
-                console.error('[Catalog Create Error]', err);
-                closeModal();
-                renderCatalog();
-                showToast(`تمت الإضافة بنجاح`, 'success');
-              }
+            const result = id
+              ? await ApiClient.products.update(storeId, id, livePayload)
+              : await ApiClient.products.create(storeId, livePayload);
+            const saved = result?.data || result;
+            const savedId = saved?.id || saved?.product_id || id;
+            if (savedId) {
+              const idx = state.products.findIndex(p => String(p.id) === String(savedId));
+              const entry = { ...payload, id: savedId };
+              if (idx >= 0) state.products[idx] = entry;
+              else state.products.unshift(entry);
+              saveCatalogProducts(); renderCatalog();
             }
+            closeModal();
+            showToast(`تم حفظ "${payload.name}" بنجاح.`);
+            await fetchLiveProducts();
+          } catch (error) {
+            showToast(error.message || 'تعذر حفظ المنتج. يرجى مراجعة البيانات والمحاولة مجدداً.', 'error');
           } finally {
             if (submitBtn) {
               submitBtn.disabled = false;
@@ -2632,7 +2373,7 @@
 
           // 2. Direct fetch to primary platform backend /api/categories
           if (!categories || categories.length === 0) {
-            const res = await fetch(categoriesEndpoint, {
+            const res = await ApiClient.fetchResponse(categoriesEndpoint, {
               headers: {
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                 'Accept': 'application/json'
@@ -2650,14 +2391,14 @@
             categorySelects.forEach(select => {
               const currentVal = select.value;
               // Preserve first option (اختر التصنيف...)
-              select.innerHTML = '<option value="">اختر التصنيف...</option>';
+              select.innerHTML = select === DOM.categoryFilter ? '<option value="ALL">جميع التصنيفات</option>' : '<option value="">اختر التصنيف...</option>';
 
               categories.forEach(cat => {
                 const catId = typeof cat === 'object' ? (cat.id || cat.name) : cat;
                 const catName = typeof cat === 'object' ? (cat.name_ar || cat.name || cat.label) : cat;
 
                 const opt = document.createElement('option');
-                opt.value = catId;
+                opt.value = String(catName);
                 opt.textContent = catName;
                 if (currentVal && (opt.value === currentVal || opt.textContent === currentVal)) {
                   opt.selected = true;
@@ -2694,32 +2435,9 @@
             `;
           }
 
-          const headers = { 'Accept': 'application/json' };
-          if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-          }
-
-          const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-          const timer = controller ? setTimeout(() => controller.abort(), 12000) : null;
-
-          const res = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products`, {
-            method: 'GET',
-            headers,
-            signal: controller ? controller.signal : undefined
-          }).finally(() => {
-            if (timer) clearTimeout(timer);
-          });
-
-          if (!res.ok) {
-            console.warn(`[Catalog] Products request returned HTTP ${res.status}. Preserving local items.`);
-            renderCatalog();
-            return;
-          }
-
-          let json = await res.json().catch(() => null);
-          const liveItems = Array.isArray(json) ? json : (json && Array.isArray(json.data) ? json.data : null);
-
-          if (Array.isArray(liveItems) && liveItems.length > 0) {
+          if (!storeId) { state.products = []; renderCatalog(); return; }
+          const liveItems = await ApiClient.listAll(`/stores/${encodeURIComponent(storeId)}/products`);
+          if (Array.isArray(liveItems)) {
             state.products = liveItems.map((p, idx) => ({
               id: p.id || ('prod-' + (idx + 1)),
               name: p.product_name || p.name || 'منتج بدون اسم',
@@ -2742,7 +2460,8 @@
           }
           renderCatalog();
         } catch (err) {
-          console.warn('[Catalog] Render server is sleeping or returned an error. Displaying fallback mock items:', err.message || err);
+          console.warn('[Catalog] Could not refresh products:', err.message);
+          showToast('تعذر تحديث الكتالوج. البيانات المعروضة قد تكون قديمة. ' + err.message, 'warning');
           if (state.products.length === 0) {
             state.products = loadCatalogProducts();
           }

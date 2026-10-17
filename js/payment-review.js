@@ -23,128 +23,7 @@
     cash:   'دفع نقدي عند الاستلام'
   };
 
-  const SEED_PAYMENTS = [
-    {
-      id: 'ORD-2048',
-      customerName: 'محمد عبد الله الزهراني',
-      customerPhone: '+966 54 812 3456',
-      paymentMethod: 'bank',
-      paymentMethodLabel: 'تحويل بنكي – مصرف الراجحي',
-      bankName: 'مصرف الراجحي',
-      referenceNumber: 'RAJHI-4892017643',
-      uploadedAt: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
-      requiredAmount: 148.75,
-      paymentStatus: 'pending_review',
-      receiptUrl: '',
-      orderStatus: 'submitted',
-      rejectionReason: null,
-      cashNote: null,
-      cashCollected: null
-    },
-    {
-      id: 'ORD-2047',
-      customerName: 'فاطمة حسن العمري',
-      customerPhone: '+966 55 234 9012',
-      paymentMethod: 'wallet',
-      paymentMethodLabel: 'محفظة STC Pay',
-      bankName: 'STC Pay',
-      referenceNumber: 'STCPAY-20260929-778821',
-      uploadedAt: new Date(Date.now() - 22 * 60 * 1000).toISOString(),
-      requiredAmount: 89.50,
-      paymentStatus: 'pending_review',
-      receiptUrl: '',
-      orderStatus: 'submitted',
-      rejectionReason: null,
-      cashNote: null,
-      cashCollected: null
-    },
-    {
-      id: 'ORD-2046',
-      customerName: 'عبد الرحمن الشمري',
-      customerPhone: '+966 50 987 1234',
-      paymentMethod: 'bank',
-      paymentMethodLabel: 'تحويل بنكي – بنك الأهلي',
-      bankName: 'البنك الأهلي السعودي (SNB)',
-      referenceNumber: 'SNB-20260928-112233',
-      uploadedAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-      requiredAmount: 223.00,
-      paymentStatus: 'verified',
-      receiptUrl: '',
-      orderStatus: 'accepted',
-      rejectionReason: null,
-      cashNote: null,
-      cashCollected: null
-    },
-    {
-      id: 'ORD-2045',
-      customerName: 'نورة بنت سعد القحطاني',
-      customerPhone: '+966 53 441 8800',
-      paymentMethod: 'bank',
-      paymentMethodLabel: 'تحويل بنكي – بنك الإنماء',
-      bankName: 'بنك الإنماء',
-      referenceNumber: 'INMA-20260928-992244',
-      uploadedAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
-      requiredAmount: 67.25,
-      paymentStatus: 'rejected',
-      receiptUrl: '',
-      orderStatus: 'submitted',
-      rejectionReason: 'amount_mismatch',
-      rejectionNote: 'المبلغ المحوّل يختلف عن إجمالي الطلب',
-      cashNote: null,
-      cashCollected: null
-    },
-    {
-      id: 'ORD-2044',
-      customerName: 'خالد إبراهيم الغامدي',
-      customerPhone: '+966 56 663 2200',
-      paymentMethod: 'cash',
-      paymentMethodLabel: 'دفع نقدي عند الاستلام',
-      bankName: '—',
-      referenceNumber: '—',
-      uploadedAt: new Date(Date.now() - 120 * 60 * 1000).toISOString(),
-      requiredAmount: 54.00,
-      paymentStatus: 'cash',
-      receiptUrl: '',
-      orderStatus: 'ready',
-      rejectionReason: null,
-      cashNote: 'تم استلام المبلغ كاملاً من العميل عند الباب',
-      cashCollected: 54.00
-    },
-    {
-      id: 'ORD-2043',
-      customerName: 'سلمى محمد العتيبي',
-      customerPhone: '+966 59 112 6640',
-      paymentMethod: 'wallet',
-      paymentMethodLabel: 'محفظة Stc Pay',
-      bankName: 'STC Pay',
-      referenceNumber: 'STCPAY-20260929-552200',
-      uploadedAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-      requiredAmount: 310.00,
-      paymentStatus: 'pending_review',
-      receiptUrl: '',
-      orderStatus: 'submitted',
-      rejectionReason: null,
-      cashNote: null,
-      cashCollected: null
-    },
-    {
-      id: 'ORD-2041',
-      customerName: 'عمر فهد السبيعي',
-      customerPhone: '+966 54 009 7733',
-      paymentMethod: 'cash',
-      paymentMethodLabel: 'دفع نقدي عند الاستلام',
-      bankName: '—',
-      referenceNumber: '—',
-      uploadedAt: new Date(Date.now() - 180 * 60 * 1000).toISOString(),
-      requiredAmount: 77.50,
-      paymentStatus: 'cash_paid',
-      receiptUrl: '',
-      orderStatus: 'completed',
-      rejectionReason: null,
-      cashNote: 'استُلم المبلغ كاملاً من المندوب بعد التوصيل',
-      cashCollected: 77.50
-    }
-  ];
+  const SEED_PAYMENTS = [];
 
   // ─────────────────────────────────────────────────────────────────────────────
   // State
@@ -224,12 +103,12 @@
     try {
       if (typeof ApiClient !== 'undefined' && ApiClient.orders && ApiClient.orders.list) {
         const liveOrders = await ApiClient.orders.list(state.storeId, {}, { suppressToastOnError: true, throwOnError: false });
-        if (Array.isArray(liveOrders) && liveOrders.length > 0) {
+        if (Array.isArray(liveOrders)) {
           const paymentsFromOrders = liveOrders
             .filter(o => o.paymentMethod === 'bank' || o.paymentMethod === 'تحويل بنكي' || o.paymentSlip || o.paymentStatus === 'verification_pending' || o.paymentStatus === 'pending_review' || o.paymentStatus === 2)
             .map(normalizeRemotePayment);
 
-          if (paymentsFromOrders.length > 0) {
+          {
             state.payments = paymentsFromOrders;
             saveToCache();
             renderAll();
@@ -256,8 +135,8 @@
       customerPhone: p.customerPhone || p.customer_phone || '—',
       paymentMethod: p.paymentMethod || p.payment_method || 'bank',
       paymentMethodLabel: p.paymentMethodLabel || p.payment_method_label || 'تحويل بنكي',
-      bankName: p.bankName || p.bank_name || 'مصرف الراجحي',
-      referenceNumber: p.referenceNumber || p.reference_number || 'TXN-98421094',
+      bankName: p.bankName || p.bank_name || '—',
+      referenceNumber: p.referenceNumber || p.reference_number || '—',
       uploadedAt: p.uploadedAt || p.uploaded_at || new Date().toISOString(),
       requiredAmount: Number(p.requiredAmount || p.required_amount || p.total || 0),
       paymentStatus: p.paymentStatus || p.payment_status || 'pending_review',
@@ -289,7 +168,7 @@
       }
     }
     // Graceful offline fallback
-    return { ok: true, offline: true };
+    throw new Error('لم يتم تأكيد حفظ قرار مراجعة الدفع من الخادم. يرجى المحاولة مجدداً.');
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

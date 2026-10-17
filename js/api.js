@@ -41,13 +41,12 @@
  *     * POST   /api/v1/stores/{store_id}/draft-products/batch-approve
  */
 
-var AUTH_BASE = (typeof window !== 'undefined' && window.AUTH_BASE) || (typeof CONFIG !== 'undefined' && (CONFIG.API_BASE_URL || CONFIG.AUTH_BASE_URL))
-  ? (CONFIG.API_BASE_URL || CONFIG.AUTH_BASE_URL)
-  : "https://dawwer.runasp.net/api";
-
-var FASTAPI_BASE = (typeof window !== 'undefined' && (window.FASTAPI_BASE_URL || window.FASTAPI_BASE)) || (typeof CONFIG !== 'undefined' && (CONFIG.FASTAPI_BASE_URL || CONFIG.PRODUCTS_BASE_URL))
-  ? (CONFIG.FASTAPI_BASE_URL || CONFIG.PRODUCTS_BASE_URL)
-  : "https://dawwer-backend-fastapi.onrender.com";
+var AUTH_BASE = (typeof window !== 'undefined' && window.AUTH_BASE)
+  || (typeof CONFIG !== 'undefined' && (CONFIG.API_BASE_URL || CONFIG.AUTH_BASE_URL))
+  || 'https://dawwer.runasp.net/api';
+var FASTAPI_BASE = (typeof window !== 'undefined' && (window.FASTAPI_BASE_URL || window.FASTAPI_BASE))
+  || (typeof CONFIG !== 'undefined' && (CONFIG.FASTAPI_BASE_URL || CONFIG.PRODUCTS_BASE_URL))
+  || 'https://dawwer-backend-fastapi.onrender.com';
 
 var BACKEND_BASE_URL = (typeof window !== 'undefined' && (window.BACKEND_BASE_URL || window.API_BASE_URL))
   || (typeof CONFIG !== 'undefined' ? (CONFIG.BACKEND_BASE_URL || CONFIG.API_BASE_URL) : 'https://dawwer-backend-fastapi.onrender.com');
@@ -146,274 +145,26 @@ const ApiClient = {
   /**
    * Helper: Retrieve unified authorization bearer token
    * Always prioritizes storeToken then accessToken, checking fallback keys across localStorage and sessionStorage.
-   * If running in local testing and no token is stored, returns a safe mock dev token to avoid breaking script execution.
+   * Returns only credentials issued by the server.
    */
   getToken() {
-    try {
-      const candidateKeys = [
-        'storeToken', 'store_token', 'dawwer_store_token',
-        'accessToken', 'token', 'access_token', 'dawwer_access_token', 'dawwer_token'
-      ];
-
-      // 1. Direct candidate keys in localStorage
-      for (const k of candidateKeys) {
-        const val = localStorage.getItem(k);
-        if (val && typeof val === 'string') {
-          const clean = val.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-          if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && clean !== '') {
-            return clean;
-          }
-        }
-      }
-
-      // 2. CONFIG storage helpers
-      if (typeof CONFIG !== 'undefined') {
-        const storeTok = typeof CONFIG.getStoreToken === 'function' ? CONFIG.getStoreToken() : null;
-        if (storeTok && typeof storeTok === 'string') {
-          const clean = storeTok.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-          if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && clean !== '') return clean;
-        }
-        const userTok = typeof CONFIG.getToken === 'function' ? CONFIG.getToken() : null;
-        if (userTok && typeof userTok === 'string') {
-          const clean = userTok.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-          if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && clean !== '') return clean;
-        }
-      }
-
-      // 3. Auth module helper (js/auth.js)
-      if (typeof Auth !== 'undefined' && typeof Auth.getToken === 'function') {
-        const authTok = Auth.getToken();
-        if (authTok && typeof authTok === 'string') {
-          const clean = authTok.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-          if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && clean !== '') return clean;
-        }
-      }
-
-      // 4. sessionStorage fallback
-      if (typeof sessionStorage !== 'undefined') {
-        for (const k of candidateKeys) {
-          const val = sessionStorage.getItem(k);
-          if (val && typeof val === 'string') {
-            const clean = val.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-            if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && clean !== '') {
-              return clean;
-            }
-          }
-        }
-      }
-
-      // 5. User Data object in localStorage
-      const userDataRaw = localStorage.getItem('dawwer_user_data') ||
-                          (typeof CONFIG !== 'undefined' && CONFIG.USER_KEY ? localStorage.getItem(CONFIG.USER_KEY) : null);
-      if (userDataRaw) {
-        try {
-          const u = JSON.parse(userDataRaw);
-          const candidateUserTok = u?.storeToken || u?.store_token || u?.accessToken || u?.access_token || u?.token;
-          if (candidateUserTok && typeof candidateUserTok === 'string') {
-            const clean = candidateUserTok.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-            if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && clean !== '') return clean;
-          }
-        } catch (e) {}
-      }
-
-      // 6. Safe fallback for local testing / development when no token is present in storage
-      if (this.isLocalEnvironment()) {
-        return 'mock-dawwer-dev-token-local';
-      }
-    } catch (e) {}
-    return null;
+    return this.getAuthToken(true);
   },
 
   /**
    * Primary Platform Backend Dispatcher (ASP.NET Core 9 / CONFIG.API_BASE_URL).
    * Unpacks ASP.NET standard envelope { success, data, message, errors }.
    * If success === false, throws an error showing errors.join(', ') or message.
-   * On server sleep or network failure, provides realistic offline mock fallback without unhandled rejections.
+   * Uses the same authentication renewal and error handling as all requests.
    */
   async core(endpoint, options = {}) {
-    const base = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL)
-      ? CONFIG.API_BASE_URL.replace(/\/+$/, '')
-      : (this.API_BASE_URL || this.AUTH_BASE || "https://dawwer.runasp.net/api").replace(/\/+$/, '');
-
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
-    const path = cleanEndpoint.startsWith('/api/') ? cleanEndpoint.slice(4) : (cleanEndpoint === '/api' ? '' : cleanEndpoint);
-    const url = cleanEndpoint.startsWith('http://') || cleanEndpoint.startsWith('https://')
-      ? cleanEndpoint
-      : `${base}${path}`;
-
-    const headers = { ...(options.headers || {}) };
-    const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
-
-    // Attach Authorization: Bearer <token>
-    const token = this.getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    if (!isFormData) {
-      if (!Object.keys(headers).some(k => k.toLowerCase() === 'content-type')) {
-        headers['Content-Type'] = 'application/json';
-      }
-    } else {
-      Object.keys(headers).forEach(k => {
-        if (k.toLowerCase() === 'content-type') delete headers[k];
-      });
-    }
-
-    let requestBody = options.body;
-    if (!isFormData && requestBody !== undefined && requestBody !== null && typeof requestBody !== 'string') {
-      requestBody = JSON.stringify(requestBody);
-    }
-
-    const timeoutMs = (options.timeout !== undefined && options.timeout !== null)
-      ? Number(options.timeout)
-      : (typeof CONFIG !== 'undefined' && (CONFIG.REQUEST_TIMEOUT || CONFIG.TIMEOUT_MS) ? (CONFIG.REQUEST_TIMEOUT || CONFIG.TIMEOUT_MS) : 90000);
-
-    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    let timer = null;
-    if (controller && timeoutMs > 0) {
-      timer = setTimeout(() => controller.abort(), timeoutMs);
-    }
-
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers,
-        body: requestBody,
-        signal: controller ? controller.signal : undefined
-      }).finally(() => {
-        if (timer) clearTimeout(timer);
-      });
-
-      let json = null;
-      try {
-        json = await response.json();
-      } catch (e) {
-        json = null;
-      }
-
-      if (response.ok) {
-        // Universal ASP.NET Response Envelope { success, message, data, errors }
-        if (json && typeof json === 'object' && ('success' in json || 'data' in json)) {
-          if (json.success === false) {
-            const errMsg = (Array.isArray(json.errors) && json.errors.length > 0)
-              ? json.errors.join(' | ')
-              : (json.message || 'فشلت العملية في خادم المنصة.');
-            const err = new Error(errMsg);
-            err.status = response.status;
-            err.response = json;
-            err.errors = json.errors;
-            throw err;
-          }
-          return json.data !== undefined ? json.data : json;
-        }
-        return json;
-      } else {
-        const errMsg = (json && Array.isArray(json.errors) && json.errors.length > 0)
-          ? json.errors.join(' | ')
-          : (json?.message || json?.detail || `HTTP ${response.status}`);
-        const err = new Error(errMsg);
-        err.status = response.status;
-        err.response = json;
-        err.errors = json?.errors;
-        throw err;
-      }
-    } catch (networkError) {
-      console.warn(`[ApiClient.core] Primary ASP.NET backend error: ${options.method || 'GET'} ${url} -`, networkError.message || networkError);
-      if (options.fallback !== undefined) {
-        console.warn(`[ApiClient.core] Utilizing graceful offline mock fallback for ${url}`);
-        return options.fallback;
-      }
-      throw networkError;
-    }
+    const result = await this.request(endpoint, { ...options, service: 'auth' });
+    if (result?.success === false) return result;
+    return result?.data !== undefined ? result.data : result;
   },
 
-  /**
-   * AI & In-Store Spatial Backend Dispatcher (FastAPI / CONFIG.FASTAPI_BASE_URL).
-   * Handles standard JSON or direct FastAPI data returns.
-   * On Render spin-up delay or sleep, provides realistic offline mock fallback without unhandled rejections.
-   */
   async fastapi(endpoint, options = {}) {
-    const base = (typeof CONFIG !== 'undefined' && CONFIG.FASTAPI_BASE_URL)
-      ? CONFIG.FASTAPI_BASE_URL.replace(/\/+$/, '')
-      : (this.FASTAPI_BASE_URL || this.FASTAPI_BASE || "https://dawwer-backend-fastapi.onrender.com").replace(/\/+$/, '');
-
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
-    const url = cleanEndpoint.startsWith('http://') || cleanEndpoint.startsWith('https://')
-      ? cleanEndpoint
-      : `${base}${cleanEndpoint.startsWith('/api/v1') ? '' : '/api/v1'}${cleanEndpoint}`;
-
-    const headers = { ...(options.headers || {}) };
-    const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
-
-    // Attach Authorization: Bearer <token>
-    const token = this.getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    if (!isFormData) {
-      if (!Object.keys(headers).some(k => k.toLowerCase() === 'content-type')) {
-        headers['Content-Type'] = 'application/json';
-      }
-    } else {
-      Object.keys(headers).forEach(k => {
-        if (k.toLowerCase() === 'content-type') delete headers[k];
-      });
-    }
-
-    let requestBody = options.body;
-    if (!isFormData && requestBody !== undefined && requestBody !== null && typeof requestBody !== 'string') {
-      requestBody = JSON.stringify(requestBody);
-    }
-
-    const timeoutMs = (options.timeout !== undefined && options.timeout !== null)
-      ? Number(options.timeout)
-      : (typeof CONFIG !== 'undefined' && (CONFIG.REQUEST_TIMEOUT || CONFIG.TIMEOUT_MS) ? (CONFIG.REQUEST_TIMEOUT || CONFIG.TIMEOUT_MS) : 90000);
-
-    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    let timer = null;
-    if (controller && timeoutMs > 0) {
-      timer = setTimeout(() => controller.abort(), timeoutMs);
-    }
-
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers,
-        body: requestBody,
-        signal: controller ? controller.signal : undefined
-      }).finally(() => {
-        if (timer) clearTimeout(timer);
-      });
-
-      let json = null;
-      try {
-        json = await response.json();
-      } catch (e) {
-        json = null;
-      }
-
-      if (response.ok) {
-        return json;
-      } else {
-        const errMsg = json?.detail || json?.message || `FastAPI HTTP Error ${response.status}`;
-        const err = new Error(typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg));
-        err.status = response.status;
-        err.response = json;
-        throw err;
-      }
-    } catch (networkError) {
-      console.warn(`[ApiClient.fastapi] FastAPI Render service is sleeping or unreachable: ${options.method || 'GET'} ${url} -`, networkError.message || networkError);
-      if (options.fallback !== undefined) {
-        console.warn(`[ApiClient.fastapi] Utilizing graceful offline mock fallback for ${url}`);
-        return options.fallback;
-      }
-      if (options.throwOnError) {
-        throw networkError;
-      }
-      return null;
-    }
+    return this.request(endpoint, { ...options, service: 'fastapi' });
   },
 
   /**
@@ -532,6 +283,17 @@ const ApiClient = {
    * Sets the active store ID across all relevant storage keys.
    * Strictly prevents saving stringified "null" or "undefined".
    */
+  clearStoreCache() {
+    const keys = ['dawwer_merchant_catalog_products', 'dawwer_merchant_catalog_v2', 'dawwer_ai_extraction_jobs',
+      'dawwer_current_job', 'dawwer_active_job_id', 'dawwer_current_draft_products', 'dawwer_current_shelf_image',
+      'current_shelf_image', 'dawwer_deleted_job_ids', 'dawwer_merchant_app_id', 'storePermissions', 'dawwer_active_store',
+      'dawwer_inventory_audit_products_v3', 'dawwer_dashboard_summary_cache', 'dawwer_merchant_orders_queue_sprint3',
+      'dawwer_payment_reviews_v1', 'dawwer_store_profile', 'dawwer_merchant_audit_log',
+      'storeToken', 'store_token', 'dawwer_store_token', 'storeStatus', 'store_status', 'dawwer_store_status'];
+    keys.forEach(k => { localStorage.removeItem(k); sessionStorage.removeItem(k); });
+    ['current_shelf_job', 'dawwer_current_review_job'].forEach(k => sessionStorage.removeItem(k));
+  },
+
   setActiveStoreId(storeId) {
     if (!storeId || typeof storeId !== 'string') {
       this.clearInvalidStoreId(storeId);
@@ -544,6 +306,8 @@ const ApiClient = {
     }
 
     try {
+      const previous = localStorage.getItem('activeStoreId') || localStorage.getItem('storeId');
+      if (previous && previous !== clean) this.clearStoreCache();
       localStorage.setItem('activeStoreId', clean);
       localStorage.setItem('store_id', clean);
       localStorage.setItem('active_store_id', clean);
@@ -599,35 +363,13 @@ const ApiClient = {
    * Immediately clears all stored session credentials from localStorage and sessionStorage.
    */
   clearSession() {
-    try {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('userData');
-      localStorage.removeItem('storeToken');
-      localStorage.removeItem('activeStoreId');
-      localStorage.removeItem('dawwer_access_token');
-      localStorage.removeItem('dawwer_refresh_token');
-      localStorage.removeItem('dawwer_user_data');
-      localStorage.removeItem('token');
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('store_token');
-      localStorage.removeItem('dawwer_store_token');
-      localStorage.removeItem('store_id');
-      localStorage.removeItem('storeId');
-      localStorage.removeItem('active_store_id');
-      localStorage.removeItem('storeName');
-      localStorage.removeItem('store_name');
-      localStorage.removeItem('dawwer_store_name');
-      localStorage.removeItem('dawwer_active_store');
-      if (typeof CONFIG !== 'undefined') {
-        if (CONFIG.TOKEN_KEY) localStorage.removeItem(CONFIG.TOKEN_KEY);
-        if (CONFIG.REFRESH_TOKEN_KEY) localStorage.removeItem(CONFIG.REFRESH_TOKEN_KEY);
-        if (CONFIG.USER_KEY) localStorage.removeItem(CONFIG.USER_KEY);
-        if (CONFIG.STORE_TOKEN_KEY) localStorage.removeItem(CONFIG.STORE_TOKEN_KEY);
-        if (CONFIG.ACTIVE_STORE_KEY) localStorage.removeItem(CONFIG.ACTIVE_STORE_KEY);
-      }
-      sessionStorage.clear();
-    } catch (e) {}
+    if (typeof Auth !== 'undefined') { Auth.clearLocalSession(); return; }
+    const keys = ['accessToken', 'token', 'access_token', 'dawwer_access_token', 'refreshToken', 'refresh_token', 'dawwer_refresh_token',
+      'userData', 'dawwer_user_data', 'user', 'dawwer_user', 'userId', 'role', 'userRole', 'activeStoreId', 'storeId', 'store_id',
+      'active_store_id', 'dawwer_active_store_id', 'dawwer_store_id'];
+    keys.forEach(k => localStorage.removeItem(k));
+    this.clearStoreCache();
+    sessionStorage.clear();
   },
 
   /**
@@ -812,112 +554,18 @@ const ApiClient = {
    * Validates non-null string and checks against token expiration.
    */
   getAuthToken(forStore = false) {
-    try {
-      const storeToken = localStorage.getItem('storeToken') ||
-                         localStorage.getItem('store_token') ||
-                         localStorage.getItem('dawwer_store_token') ||
-                         (typeof CONFIG !== 'undefined' && CONFIG.STORE_TOKEN_KEY ? localStorage.getItem(CONFIG.STORE_TOKEN_KEY) : null);
-      if (storeToken && typeof storeToken === 'string') {
-        const clean = storeToken.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-        if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && !this.isTokenExpired(clean)) {
-          return clean;
-        }
+    const access = this.getRawAccessToken();
+    if (forStore) {
+      for (const key of ['storeToken', 'store_token', 'dawwer_store_token']) {
+        const token = localStorage.getItem(key)?.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
+        if (token && !this.isTokenExpired(token)) return token;
       }
-
-      const token = localStorage.getItem('accessToken') ||
-                    localStorage.getItem('token') ||
-                    localStorage.getItem('access_token') ||
-                    localStorage.getItem('dawwer_access_token') ||
-                    (typeof CONFIG !== 'undefined' && CONFIG.TOKEN_KEY ? localStorage.getItem(CONFIG.TOKEN_KEY) : null) ||
-                    localStorage.getItem('dawwer_token');
-
-      if (token && typeof token === 'string') {
-        const clean = token.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-        if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && !this.isTokenExpired(clean)) {
-          return clean;
-        }
-      }
-
-      const userDataRaw = localStorage.getItem('dawwer_user_data') ||
-                          (typeof CONFIG !== 'undefined' ? localStorage.getItem(CONFIG.USER_KEY) : null);
-      if (userDataRaw) {
-        const userData = JSON.parse(userDataRaw);
-        const st = userData?.storeToken;
-        if (st && typeof st === 'string') {
-          const clean = st.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-          if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && !this.isTokenExpired(clean)) return clean;
-        }
-        const at = userData?.accessToken || userData?.token;
-        if (at && typeof at === 'string') {
-          const clean = at.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-          if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && !this.isTokenExpired(clean)) return clean;
-        }
-      }
-      if (this.isLocalEnvironment()) {
-        return 'mock-dawwer-dev-token-local';
-      }
-    } catch (e) {}
-
-    return this.isLocalEnvironment() ? 'mock-dawwer-dev-token-local' : null;
+    }
+    return access && !this.isTokenExpired(access) ? access : null;
   },
 
-  /**
-   * Retrieves a valid unexpired bearer authorization token for file uploads (AI & CSV/Excel).
-   * Checks both 'storeToken' and 'accessToken' according to endpoint authentication rules:
-   * Prioritizes valid unexpired storeToken for store-scoped uploads, falls back to valid unexpired accessToken.
-   */
   getUploadAuthToken() {
-    try {
-      // 1. Check storeToken first (store-scoped operations)
-      const storeToken = localStorage.getItem('storeToken') ||
-                         localStorage.getItem('store_token') ||
-                         localStorage.getItem('dawwer_store_token') ||
-                         (typeof CONFIG !== 'undefined' ? localStorage.getItem(CONFIG.STORE_TOKEN_KEY) : null);
-      if (storeToken && typeof storeToken === 'string') {
-        const clean = storeToken.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-        if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && !this.isTokenExpired(clean)) {
-          return clean;
-        }
-      }
-
-      // 2. Check accessToken (user JWT bearer token)
-      const accessToken = localStorage.getItem('accessToken') ||
-                          localStorage.getItem('token') ||
-                          localStorage.getItem('dawwer_access_token') ||
-                          localStorage.getItem('access_token') ||
-                          (typeof CONFIG !== 'undefined' ? localStorage.getItem(CONFIG.TOKEN_KEY) : null);
-      if (accessToken && typeof accessToken === 'string') {
-        const clean = accessToken.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-        if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && !this.isTokenExpired(clean)) {
-          return clean;
-        }
-      }
-
-      // 3. Check user data object in storage
-      const userDataRaw = localStorage.getItem('dawwer_user_data') ||
-                          (typeof CONFIG !== 'undefined' ? localStorage.getItem(CONFIG.USER_KEY) : null);
-      if (userDataRaw) {
-        try {
-          const userData = JSON.parse(userDataRaw);
-          const st = userData?.storeToken;
-          if (st && typeof st === 'string') {
-            const clean = st.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-            if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && !this.isTokenExpired(clean)) return clean;
-          }
-          const at = userData?.accessToken || userData?.token;
-          if (at && typeof at === 'string') {
-            const clean = at.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-            if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && !this.isTokenExpired(clean)) return clean;
-          }
-        } catch (e) {}
-      }
-
-      if (this.isLocalEnvironment()) {
-        return 'mock-dawwer-dev-token-local';
-      }
-    } catch (e) {}
-
-    return this.isLocalEnvironment() ? 'mock-dawwer-dev-token-local' : null;
+    return this.getAuthToken(true);
   },
 
   /**
@@ -927,7 +575,7 @@ const ApiClient = {
   isTokenExpired(token) {
     if (!token || typeof token !== 'string') return true;
     const clean = token.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-    if (!clean || clean.toLowerCase() === 'null' || clean.toLowerCase() === 'undefined') return true;
+    if (!clean || /mock/i.test(clean) || clean.toLowerCase() === 'null' || clean.toLowerCase() === 'undefined') return true;
     try {
       const parts = clean.split('.');
       if (parts.length !== 3) return false;
@@ -1038,115 +686,57 @@ const ApiClient = {
    * Updates storage tokens and returns the fresh access token, or null if refresh fails.
    */
   async refreshAuthToken() {
-    if (this._refreshPromise) {
-      return this._refreshPromise;
-    }
-
-    this._refreshPromise = (async () => {
+    if (this._refreshPromise) return this._refreshPromise;
+    const originalRefreshToken = this.getRefreshToken();
+    if (!originalRefreshToken || /mock/i.test(originalRefreshToken)) return null;
+    const renew = async () => {
+      // Another tab may already have rotated the refresh token while we waited.
+      if (this.getRefreshToken() !== originalRefreshToken && this.getAuthToken(false)) {
+        return this.getAuthToken(false);
+      }
+      const base = this.AUTH_BASE.replace(/\/+$/, '');
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.DEFAULT_TIMEOUT_MS);
       try {
-        const refreshToken = this.getRefreshToken();
-        if (!refreshToken) {
-          console.warn('[ApiClient] Silent refresh skipped: No refreshToken found in storage.');
-          return null;
-        }
-
-        const accessToken = this.getRawAccessToken() || this.getToken() || '';
-        const baseUrl = (typeof CONFIG !== 'undefined' && CONFIG.AUTH_BASE_URL)
-          ? CONFIG.AUTH_BASE_URL
-          : (this.AUTH_BASE_URL || 'https://dawwer.runasp.net/api');
-        const refreshUrl = `${baseUrl.replace(/\/+$/, '')}/Auth/refresh-token`;
-
-        console.info('[ApiClient] Attempting silent token refresh via POST /Auth/refresh-token...');
-        const response = await fetch(refreshUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8'
-          },
-          body: JSON.stringify({
-            accessToken,
-            refreshToken
-          })
+        const response = await fetch(`${base}/Auth/refresh-token`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: controller.signal,
+          body: JSON.stringify({ accessToken: this.getRawAccessToken() || '', refreshToken: this.getRefreshToken() })
         });
-
-        if (!response.ok) {
-          console.warn(`[ApiClient] Silent refresh rejected with status HTTP ${response.status}`);
-          return null;
-        }
-
         const json = await response.json().catch(() => null);
+        if ([400, 401, 403].includes(response.status)) return null;
+        if (!response.ok) throw Object.assign(new Error(this.errorMessage(json, response.status)), { status: response.status });
         const data = json?.data || json;
-        const newAccessToken = data?.accessToken || data?.token;
-        const newRefreshToken = data?.refreshToken;
-        let newStoreToken = data?.storeToken;
-
-        if (newAccessToken) {
-          this.setTokens({
-            accessToken: newAccessToken,
-            refreshToken: newRefreshToken,
-            storeToken: newStoreToken
-          });
-          console.info('[ApiClient] Silent token refresh successful.');
-
-          // If active store exists but storeToken was not returned in refresh, re-fetch storeToken
-          const rawStoreVal = localStorage.getItem('activeStoreId') || localStorage.getItem('storeId') || localStorage.getItem('dawwer_active_store');
-          let activeStoreId = rawStoreVal;
-          if (rawStoreVal && typeof rawStoreVal === 'string' && rawStoreVal.trim().startsWith('{')) {
-            try {
-              const parsed = JSON.parse(rawStoreVal);
-              activeStoreId = parsed?.storeId || parsed?.id || parsed?.store_id || null;
-            } catch (e) {
-              activeStoreId = null;
-            }
-          }
-          if (typeof activeStoreId === 'string') {
-            activeStoreId = activeStoreId.trim();
-          }
-
-          const isValidGuid = typeof activeStoreId === 'string' &&
-            /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(activeStoreId) &&
-            activeStoreId !== '00000000-0000-0000-0000-000000000000';
-
-          if (isValidGuid) {
-            if (!newStoreToken) {
-              try {
-                const selRes = await fetch(`${baseUrl.replace(/\/+$/, '')}/Auth/select-store`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json; charset=utf-8',
-                    'Authorization': `Bearer ${newAccessToken}`
-                  },
-                  body: JSON.stringify({ storeId: activeStoreId })
-                });
-                if (selRes.ok) {
-                  const selJson = await selRes.json().catch(() => null);
-                  const selData = selJson?.data || selJson;
-                  if (selData?.storeToken) {
-                    this.setTokens({ storeToken: selData.storeToken });
-                  }
-                } else {
-                  console.warn(`[ApiClient] select-store returned HTTP ${selRes.status}. Skipping store token update.`);
-                }
-              } catch (selErr) {
-                console.warn('[ApiClient] Background store token renewal note:', selErr);
+        if (json?.success === false || !(data?.accessToken || data?.token)) return null;
+        // Never restore credentials after logout or replacement by another account.
+        if (this.getRefreshToken() !== originalRefreshToken) return this.getAuthToken(false);
+        this.setTokens({ accessToken: data.accessToken || data.token, refreshToken: data.refreshToken });
+        ['storeToken', 'store_token', 'dawwer_store_token'].forEach(k => localStorage.removeItem(k));
+        if (data.storeToken) this.setTokens({ storeToken: data.storeToken });
+        else {
+          const storeId = this.getActiveStoreId();
+          if (this.isValidStoreId(storeId)) {
+            const selected = await fetch(`${base}/Auth/select-store`, {
+              method: 'POST', signal: controller.signal,
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${data.accessToken || data.token}` },
+              body: JSON.stringify({ storeId })
+            });
+            const selection = await selected.json().catch(() => null);
+            if (selected.ok && selection?.success !== false && ((selection?.data || selection)?.storeToken || (selection?.data || selection)?.accessToken)) {
+              // Logout may happen while select-store is in flight.
+              if (this.getRawAccessToken() === (data.accessToken || data.token)) {
+                this.setTokens({ storeToken: (selection.data || selection).storeToken || (selection.data || selection).accessToken });
               }
             }
-          } else {
-            console.warn('[ApiClient] Skipping select-store: No valid store GUID set yet.');
           }
-
-          return newAccessToken;
         }
-
-        return null;
-      } catch (err) {
-        console.error('[ApiClient] Silent refresh error:', err);
-        return null;
-      } finally {
-        this._refreshPromise = null;
-      }
-    })();
-
-    return this._refreshPromise;
+        return this.getRawAccessToken();
+      } finally { clearTimeout(timer); }
+    };
+    const operation = (typeof navigator !== 'undefined' && navigator.locks?.request)
+      ? navigator.locks.request('dawwer-token-refresh', renew) : renew();
+    this._refreshPromise = operation;
+    try { return await operation; }
+    finally { this._refreshPromise = null; }
   },
 
   /**
@@ -1206,22 +796,6 @@ const ApiClient = {
     const message = customMessage || "انتهت صلاحية جلسة العمل، يرجى تسجيل الدخول مجدداً للمتابعة.";
     console.warn(`[ApiClient] Authentication required: ${message}`);
 
-    // If running in local testing / development, do NOT purge session or redirect to avoid breaking tests
-    if (this.isLocalEnvironment()) {
-      console.warn(`[ApiClient Dev Notice] Local testing detected: suppressed auto-logout and redirect. Message: ${message}`);
-      if (typeof window !== 'undefined' && window.DawwerNotification && typeof window.DawwerNotification.show === 'function') {
-        window.DawwerNotification.show({
-          title: 'تنبيه المصادقة (وضع التطوير)',
-          message: message,
-          type: 'warning'
-        });
-      }
-      setTimeout(() => {
-        this._reauthPromptActive = false;
-      }, 2000);
-      return;
-    }
-
     this.clearSession();
 
     if (typeof window !== 'undefined') {
@@ -1257,48 +831,15 @@ const ApiClient = {
    * and cleanly prompts the user.
    */
   async validateUploadContext(targetStoreId = null) {
-    // 1. Check Store Context
     const storeId = targetStoreId || this.getActiveStoreId();
-    if (!this.isValidStoreId(storeId)) {
-      console.warn(`[ApiClient] Upload aborted: storeId is missing, null, or invalid ("${storeId}").`);
-      this.handleStoreVerification404(storeId);
-      return {
-        valid: false,
-        errorType: 'STORE_INVALID',
-        message: 'معرّف المتجر غير متوفر أو غير صالح. يرجى اختيار المتجر أولاً.'
-      };
-    }
-
-    // 2. Check Token (storeToken or accessToken)
-    let token = this.getUploadAuthToken() || this.getToken();
-
-    // If token is missing or expired, attempt silent refresh if refreshToken is available
+    if (!this.isValidStoreId(storeId)) return { valid: false, errorType: 'STORE_INVALID', message: 'يرجى اختيار متجر أولاً.' };
+    let token = this.getAuthToken(true);
     if (!token && this.getRefreshToken()) {
-      console.info('[ApiClient] Upload context: token expired or missing, attempting silent refresh before upload...');
       await this.refreshAuthToken();
-      token = this.getUploadAuthToken() || this.getToken();
+      token = this.getAuthToken(true);
     }
-
-    if (!token || token === 'null' || token === 'undefined' || (this.isTokenExpired(token) && !this.isLocalEnvironment())) {
-      if (this.isLocalEnvironment()) {
-        token = 'mock-dawwer-dev-token-local';
-        console.info('[ApiClient.validateUploadContext] Local testing: Applied safe fallback upload token.');
-      } else {
-        console.warn('[ApiClient] Upload aborted: No valid, unexpired token found.');
-        this.promptReauthentication('انتهت صلاحية جلسة العمل أو يلزم تسجيل الدخول مجدداً لمتابعة رفع البيانات.');
-        return {
-          valid: false,
-          errorType: 'AUTH_INVALID',
-          message: 'جلسة العمل منتهية أو غير مسجلة. يرجى تسجيل الدخول مجدداً للمتابعة.'
-        };
-      }
-    }
-
-    return {
-      valid: true,
-      storeId,
-      token
-    };
+    return token ? { valid: true, storeId, token }
+      : { valid: false, errorType: 'AUTH_INVALID', message: 'يرجى تسجيل الدخول مجدداً للمتابعة.' };
   },
 
   /**
@@ -1533,575 +1074,141 @@ const ApiClient = {
    * - Safe 404 handling: prompts user to re-select active store without crashing.
    * - Envelope parsing: unwraps ApiResponse ({ success, data, errors, message }) for AUTH_BASE; returns raw JSON for FASTAPI_BASE.
    */
+  errorMessage(body, status) {
+    const errors = body?.errors;
+    if (Array.isArray(errors) && errors.length) return errors.map(e => typeof e === 'string' ? e : e.msg || JSON.stringify(e)).join(' | ');
+    if (errors && typeof errors === 'object') return Object.values(errors).flat().join(' | ');
+    let detail = body?.detail || body?.message || body?.error;
+    if (detail && typeof detail === 'object' && !Array.isArray(detail)) detail = detail.message || detail.detail || detail.title;
+    if (Array.isArray(detail)) return detail.map(e => `${(e.loc || []).join('.')}: ${e.msg || JSON.stringify(e)}`).join(' | ');
+    return typeof detail === 'string' ? detail : `تعذر إتمام الطلب (${status}).`;
+  },
+
   async request(endpoint, options = {}) {
     const url = this.resolveUrl(endpoint, options);
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
-    const lower = cleanEndpoint.toLowerCase();
-    const service = this.resolveService(cleanEndpoint, options);
-    const isFastApi = (service === 'fastapi');
+    const path = new URL(url).pathname.toLowerCase();
+    const service = this.resolveService(endpoint, options);
+    const isFastApi = service === 'fastapi';
+    const isPublic = /\/auth\/(login|register|forgot-password|reset-password|verify-code|resend-code|refresh-token)$/.test(path)
+      || /\/health$/.test(path);
+    const forStore = isFastApi || (/\/stores\/[^/]+\/(staff|roles|delivery-zones)/.test(path));
     const method = (options.method || 'GET').toUpperCase();
-
     const headers = { ...(options.headers || {}) };
-
-    // Determine upload / multipart
-    const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
-    const isUploadEndpoint = lower.includes('/shelf-jobs') || lower.includes('/bulk-import') || lower.includes('/documents');
-    const isFileUpload = isFormData || options.isUpload || (isUploadEndpoint && options.body && typeof options.body !== 'string');
-
-    // Check if target is FastAPI backend (onrender.com) or /shelf-jobs
-    const isFastApiTarget = isFastApi ||
-                            url.includes('dawwer-backend-fastapi.onrender.com') ||
-                            url.includes('onrender.com') ||
-                            lower.includes('onrender.com') ||
-                            lower.includes('/shelf-jobs') ||
-                            cleanEndpoint.toLowerCase().includes('/shelf-jobs');
-
-    // =========================================================================
-    // Determine and strictly attach Authorization Bearer token (Requirement 1 & 2)
-    // =========================================================================
-    // Endpoint classification
-    const cleanLower = lower.startsWith('/api/') ? lower.slice(4) : lower;
-
-    // Public authentication / health endpoints exempt from mandatory auth token
-    const isPublicAuthEndpoint = cleanLower.startsWith('/auth/login') ||
-                                 cleanLower.startsWith('/auth/register') ||
-                                 cleanLower.startsWith('/auth/forgot-password') ||
-                                 cleanLower.startsWith('/auth/reset-password') ||
-                                 cleanLower.startsWith('/auth/verify-code') ||
-                                 cleanLower.startsWith('/auth/resend-code') ||
-                                 cleanLower.startsWith('/auth/resend-verification-code') ||
-                                 cleanLower.startsWith('/auth/refresh-token') ||
-                                 cleanLower.includes('/health');
-
-    const isAdminEndpoint = options.isAdmin === true ||
-                            options.service === 'admin' ||
-                            cleanLower.startsWith('/admin');
-
-    const isMerchantEndpoint = options.isMerchant === true ||
-                               options.service === 'merchant' ||
-                               cleanLower.startsWith('/merchant');
-
-    let token = null;
-
-    // 1. Check if Authorization was explicitly provided in options.headers
-    const existingAuthKey = Object.keys(headers).find(k => k.toLowerCase() === 'authorization');
-    if (existingAuthKey) {
-      const explicitVal = String(headers[existingAuthKey] || '').replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '').trim();
-      if (explicitVal && explicitVal !== 'null' && explicitVal !== 'undefined') {
-        token = explicitVal;
-      }
-    }
-
-    // 2. Check if token was provided in options
-    if (!token && options.token) {
-      token = String(options.token).trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-    }
-
-    // 3. Retrieve token via unified getToken() and helpers if not a public auth endpoint
-    if (!token && !isPublicAuthEndpoint) {
-      if (isUploadEndpoint) {
-        token = this.getUploadAuthToken() || this.getToken();
-      } else if (isAdminEndpoint) {
-        token = (typeof this.getAdminToken === 'function' ? this.getAdminToken() : null) || this.getToken();
-      } else if (isMerchantEndpoint) {
-        token = (typeof this.getMerchantToken === 'function' ? this.getMerchantToken() : null) || this.getToken();
-      } else {
-        token = this.getToken();
-      }
-    }
-
-    // 4. Pre-flight check: If token is missing or expired, attempt silent refresh before dispatching
-    if (!isPublicAuthEndpoint) {
-      const isMissingOrExpired = !token || token === 'null' || token === 'undefined' || token.trim() === '' || this.isTokenExpired(token);
-      if (isMissingOrExpired && typeof this.getRefreshToken === 'function' && this.getRefreshToken()) {
-        console.info(`[ApiClient] Pre-flight token check: Token is ${token ? 'expired' : 'missing'}. Attempting proactive silent refresh for "${method} ${cleanEndpoint}"...`);
-        const refreshedToken = typeof this.refreshAuthToken === 'function' ? await this.refreshAuthToken() : null;
-        if (refreshedToken) {
-          token = (typeof this.getUploadAuthToken === 'function' ? this.getUploadAuthToken() : null) || refreshedToken;
-        }
-      }
-
-      if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
-        const isLocal = this.isLocalEnvironment();
-        if (isLocal) {
-          token = 'mock-dawwer-dev-token-local';
-          console.info(`[ApiClient] Local testing: Applied safe fallback auth token for "${method} ${cleanEndpoint}".`);
-        } else {
-          console.warn(`[ApiClient] Token Attachment Check failed: Missing Authorization Bearer token for "${method} ${cleanEndpoint}".`);
-          const unauthMsg = "جلسة العمل منتهية أو غير مسجلة. يرجى تسجيل الدخول للمتابعة.";
-          if (!options.suppressAuthPrompt && typeof this.promptReauthentication === 'function') {
-            this.promptReauthentication(unauthMsg);
-          }
-          const unauthResult = {
-            success: false,
-            status: 401,
-            error: "Unauthorized",
-            message: unauthMsg
-          };
-          if (options.throwOnError) {
-            const err = new Error(unauthMsg);
-            err.status = 401;
-            err.response = unauthResult;
-            throw err;
-          }
-          return unauthResult;
-        }
-      }
-    }
-
-    // Ensure the headers object strictly includes: 'Authorization': `Bearer ${token}`
-    if (token) {
-      const cleanTok = String(token).trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-      if (cleanTok && cleanTok !== 'null' && cleanTok !== 'undefined') {
-        Object.keys(headers).forEach(k => {
-          if (k.toLowerCase() === 'authorization') delete headers[k];
-        });
-        headers['Authorization'] = `Bearer ${cleanTok}`;
-      }
-    }
-
-    // Content-Type & FormData Header Injection Rules:
-    // When uploading images via FormData, do NOT remove or omit the 'Authorization' header.
-    // Keep 'Authorization': `Bearer ${token}` while leaving Content-Type unset so the browser sets the boundary automatically.
-    if (isFileUpload) {
-      Object.keys(headers).forEach(k => {
-        if (k.toLowerCase() === 'content-type') {
-          delete headers[k];
-        }
-      });
-      // Verify Authorization header is strictly present on FormData
-      if (token) {
-        const cleanTok = String(token).trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-        if (cleanTok && !headers['Authorization']) {
-          headers['Authorization'] = `Bearer ${cleanTok}`;
-        }
-      }
-    } else {
-      const hasContentType = Object.keys(headers).some(k => k.toLowerCase() === 'content-type');
-      if (!hasContentType) {
-        headers["Content-Type"] = "application/json; charset=utf-8";
-      }
-    }
-
-    // Format body
-    let requestBody = options.body;
-    if (!isFileUpload && requestBody !== undefined && requestBody !== null && typeof requestBody !== 'string') {
-      requestBody = JSON.stringify(requestBody);
-    }
-
-    const config = {
-      ...options,
-      headers,
-      body: requestBody
+    const form = typeof FormData !== 'undefined' && options.body instanceof FormData;
+    const explicit = Object.keys(headers).find(k => k.toLowerCase() === 'authorization');
+    let token = isPublic ? null : (options.token || (explicit ? String(headers[explicit]).replace(/^Bearer\s+/i, '') : null) || this.getAuthToken(forStore));
+    const fail = (message, status, response = null) => {
+      const error = Object.assign(new Error(message), { status, statusCode: status, response, errors: response?.errors });
+      if (options.throwOnError !== false) throw error;
+      return { success: false, status, message, errors: response?.errors, data: null };
     };
-
-    const isMutation = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method);
-
-    // Request Timeout: Set the AbortController timeout threshold to 90000ms (90 seconds).
-    // This allows sufficient time for the FastAPI backend on Render to wake up from idle/sleep state without aborting.
-    const timeoutMs = (options.timeout !== undefined && options.timeout !== null)
-      ? Number(options.timeout)
-      : DEFAULT_TIMEOUT_MS;
-
-    // =========================================================================
-    // Guard: Prevent 404 on Missing Store Context
-    // Before dispatching requests targeting /api/v1/stores/{store_id}, verify that store_id is a valid non-null string.
-    // If store_id is missing, null, or empty, halt the request and prompt the user to select an active store, avoiding broken GET requests.
-    // =========================================================================
-    const fastApiStoreMatch = cleanEndpoint.match(/^\/api\/v1\/stores(?:\/([^\/?#]*))?(?:[\/?#]|$)/i);
-    if (fastApiStoreMatch) {
-      const storeIdParam = fastApiStoreMatch[1];
-      if (!this.isValidStoreId(storeIdParam)) {
-        console.warn(`[ApiClient] Guard: Aborting request targeting "${cleanEndpoint}" because store_id is missing, null, or empty ("${storeIdParam}").`);
-        this.handleStoreVerification404(storeIdParam);
-        const missingStoreResult = {
-          success: false,
-          status: 404,
-          error_code: "STORE_ID_MISSING",
-          message: "معرّف المتجر غير صالح أو غير محدد. يرجى اختيار متجر نشط للمتابعة.",
-          error: "معرّف المتجر غير صالح أو غير محدد. يرجى اختيار متجر نشط للمتابعة.",
-          errors: ["معرّف المتجر غير صالح أو غير محدد. يرجى اختيار متجر نشط للمتابعة."],
-          data: null
-        };
-        if (options.throwOnError) {
-          const err = new Error(missingStoreResult.message);
-          err.status = 404;
-          err.code = "STORE_ID_MISSING";
-          throw err;
-        }
-        return missingStoreResult;
-      }
-    }
-
-    const aspNetScopedMatch = cleanEndpoint.match(/^\/stores\/([^\/?#]+)\/(staff|roles)/i);
-    if (aspNetScopedMatch) {
-      const storeIdParam = aspNetScopedMatch[1];
-      if (!this.isValidStoreId(storeIdParam)) {
-        console.warn(`[ApiClient] Guard: Aborting request targeting "${cleanEndpoint}" because storeId is missing, null, or empty ("${storeIdParam}").`);
-        this.handleStoreVerification404(storeIdParam);
-        const missingStoreResult = {
-          success: false,
-          status: 404,
-          error_code: "STORE_ID_MISSING",
-          message: "معرّف المتجر غير صالح أو غير محدد. يرجى اختيار متجر نشط للمتابعة.",
-          error: "معرّف المتجر غير صالح أو غير محدد. يرجى اختيار متجر نشط للمتابعة.",
-          errors: ["معرّف المتجر غير صالح أو غير محدد. يرجى اختيار متجر نشط للمتابعة."],
-          data: null
-        };
-        if (options.throwOnError) {
-          const err = new Error(missingStoreResult.message);
-          err.status = 404;
-          err.code = "STORE_ID_MISSING";
-          throw err;
-        }
-        return missingStoreResult;
-      }
-    }
-
-    let response = null;
-    let networkError = null;
-
     try {
-      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      let timer = null;
-
-      if (controller && timeoutMs > 0) {
-        config.signal = controller.signal;
-        timer = setTimeout(() => {
-          console.warn(`[ApiClient Timeout] Reached ${timeoutMs}ms limit for ${method} ${url}. Aborting request.`);
-          controller.abort();
-        }, timeoutMs);
+      if (!isPublic && (!token || this.isTokenExpired(token)) && this.getRefreshToken()) {
+        await this.refreshAuthToken();
+        token = this.getAuthToken(forStore);
       }
-
-      response = await fetch(url, config).finally(() => {
-        if (timer) clearTimeout(timer);
+      if (!isPublic && !token) {
+        if (!options.suppressAuthPrompt && !options.silentAuthFailure) this.promptReauthentication();
+        return fail('جلسة العمل منتهية أو غير مسجلة. يرجى تسجيل الدخول.', 401);
+      }
+      const store = path.match(/\/api\/v1\/stores\/([^/]+)/);
+      if (store && !this.isValidStoreId(decodeURIComponent(store[1]))) return fail('يرجى اختيار متجر صالح للمتابعة.', 400);
+      Object.keys(headers).forEach(k => {
+        if (k.toLowerCase() === 'authorization' || (form && k.toLowerCase() === 'content-type')) delete headers[k];
       });
-    } catch (err) {
-      networkError = err;
-    }
-
-    // =========================================================================
-    // 1. Safe 401 Unauthorized Handling & Silent Token Refresh (Requirement 3)
-    // =========================================================================
-    if (response && response.status === 401) {
-      console.warn(`[ApiClient 401 Unauthorized] ${method} ${url}`);
-
-      // 3. Verify Backend Secret Sync Diagnostic Alert:
-      if (isFastApiTarget) {
-        console.warn(`[Backend Secret Sync Diagnostic] Received 401 Unauthorized on FastAPI Render endpoint: ${method} ${url}.`);
-        console.warn('[Backend Secret Sync Diagnostic] Alert: Verify that JWT_SECRET_KEY, Issuer, and Audience match exactly between the ASP.NET Core auth server and the FastAPI Render deployment.');
-      }
-
-      // Check if this request explicitly suppresses the global auth prompt/loop (e.g. background job history fetch)
-      if (options.suppressAuthPrompt || options.silentAuthFailure) {
-        console.warn(`[ApiClient] Suppressing global auth prompt/loop for background request: ${method} ${cleanEndpoint}`);
-        const unauthResult = {
-          success: false,
-          status: 401,
-          error: "Unauthorized",
-          message: "Unauthorized on background request"
-        };
-        if (options.throwOnError) {
-          const err = new Error("Unauthorized on background request");
-          err.status = 401;
-          err.statusCode = 401;
-          err.response = unauthResult;
-          throw err;
-        }
-        return unauthResult;
-      }
-
-      // Check if a silent refresh flow is available before terminating session immediately:
-      const isAuthEndpoint = lower.includes('/auth/refresh-token') || lower.includes('/auth/login') || lower.includes('/auth/register');
-      if (!options._isRetry && !isAuthEndpoint && this.getRefreshToken()) {
-        console.info('[ApiClient] 401 intercepted. Attempting silent token refresh & request retry...');
-        const newAccessToken = await this.refreshAuthToken();
-        if (newAccessToken) {
-          const isStoreScoped = isFastApi || (lower.includes('/stores/') && !lower.includes('/admin/stores') && !lower.includes('/merchant/stores'));
-          const retryToken = isUploadEndpoint
-            ? (this.getUploadAuthToken() || newAccessToken)
-            : (this.getAuthToken(isStoreScoped) || newAccessToken);
-
-          const retryHeaders = { ...(options.headers || {}) };
-          retryHeaders["Authorization"] = `Bearer ${retryToken}`;
-          if (isFileUpload) {
-            Object.keys(retryHeaders).forEach(k => {
-              if (k.toLowerCase() === 'content-type') delete retryHeaders[k];
-            });
-          }
-
-          return await this.request(endpoint, {
-            ...options,
-            headers: retryHeaders,
-            _isRetry: true
-          });
-        }
-      }
-
-      // If refresh not available, refresh failed, or retried request still returned 401:
-      // CRITICAL: A 401 from secondary FastAPI/Render services must NEVER purge the user's primary session!
-      if (isFastApiTarget) {
-        console.warn(`[ApiClient] 401 on secondary FastAPI endpoint: "${method} ${cleanEndpoint}". Suppressing global session purge.`);
-        return {
-          success: false,
-          status: 401,
-          error: "Unauthorized",
-          message: "تعذر الاتصال بخدمة الذكاء الاصطناعي أو انتهت صلاحية المصادقة معها."
-        };
-      }
-
-      const isMerchantReq = lower.startsWith('/merchant') || lower.startsWith('/api/merchant');
-      const unauthMsg = isMerchantReq
-        ? "يرجى تسجيل الدخول بحساب تاجر مفعل للمتابعة."
-        : "انتهت صلاحية الجلسة. يرجى تسجيل الدخول مجدداً للمتابعة.";
-
-      if (!options.suppressAuthPrompt) {
-        this.promptReauthentication(unauthMsg);
-      }
-
-      const unauthResult = {
-        success: false,
-        status: 401,
-        error: "Unauthorized",
-        message: unauthMsg
-      };
-
-      if (options.throwOnError && !this.isLocalEnvironment()) {
-        const err = new Error(unauthMsg);
-        err.status = 401;
-        err.response = unauthResult;
-        throw err;
-      }
-      return unauthResult;
-    }
-
-    // =========================================================================
-    // 2. Safe 404 Store Verification Handling
-    // =========================================================================
-    if (response && response.status === 404) {
-      const isStoreVerify = (isFastApi || lower.startsWith('/stores/')) &&
-        (cleanEndpoint.match(/^\/api\/v1\/stores\/([a-zA-Z0-9\-_]+)$/i) || cleanEndpoint.match(/^\/stores\/([a-zA-Z0-9\-_]+)$/i));
-
-      if (method === 'GET' && isStoreVerify) {
-        const invalidStoreId = isStoreVerify[1];
-        this.handleStoreVerification404(invalidStoreId);
-        return {
-          success: false,
-          error_code: "STORE_NOT_FOUND",
-          message: "Store not found. Please re-select an active store from the store selector.",
-          data: null
-        };
-      }
-    }
-
-    // =========================================================================
-    // 3. Successful Response Handling (200-299)
-    // =========================================================================
-    if (response && response.ok) {
-      let rawJson = null;
+      if (token) headers.Authorization = `Bearer ${token}`;
+      if (!form && options.body != null && !Object.keys(headers).some(k => k.toLowerCase() === 'content-type')) headers['Content-Type'] = 'application/json';
+      const controller = new AbortController();
+      const abort = () => controller.abort();
+      if (options.signal?.aborted) abort();
+      options.signal?.addEventListener('abort', abort, { once: true });
+      const timeout = options.timeout ?? this.DEFAULT_TIMEOUT_MS;
+      const timer = timeout > 0 ? setTimeout(abort, timeout) : null;
+      let response, rawResponse, json;
       try {
-        rawJson = await response.json();
-      } catch (parseErr) {
-        rawJson = null;
-      }
-
-      // FASTAPI_BASE: Return the parsed JSON response directly
-      if (isFastApi) {
-        // Sync live products to local catalog cache if products array returned
-        if (lower.includes('/products') && Array.isArray(rawJson) && rawJson.length > 0) {
-          this._syncProductsToStorage(rawJson);
+        response = await fetch(url, {
+          method, headers, signal: controller.signal,
+          body: options.body == null || form || typeof options.body === 'string' ? options.body : JSON.stringify(options.body)
+        });
+        rawResponse = options._returnResponse ? response.clone() : null;
+        const body = await response.text();
+        try { json = body ? JSON.parse(body) : null; }
+        catch {
+          if (response.ok) return fail('استجابة الخادم غير صالحة. يرجى إعادة تحميل البيانات.', response.status);
+          json = null;
         }
-        return rawJson;
+      } finally {
+        if (timer) clearTimeout(timer);
+        options.signal?.removeEventListener('abort', abort);
       }
-
-      // AUTH_BASE: Unwrap the ApiResponse wrapper ({ success, data, errors, message })
-      if (rawJson && typeof rawJson === 'object' && ('success' in rawJson || 'data' in rawJson)) {
-        if (rawJson.success === false) {
-          const errMessage = (Array.isArray(rawJson.errors) && rawJson.errors.length > 0)
-            ? rawJson.errors.join(' | ')
-            : (rawJson.message || 'فشلت العملية في الخادم.');
-
-          console.error(`[ApiClient Auth Error] ${method} ${url}:`, errMessage);
-
-          const errObj = {
-            success: false,
-            data: rawJson.data || null,
-            errors: rawJson.errors || [errMessage],
-            message: errMessage
-          };
-
-          if (options.throwOnError) {
-            const err = new Error(errMessage);
-            err.status = response.status;
-            err.response = errObj;
-            throw err;
+      if (response.status === 401 && !isPublic) {
+        if (!options._isRetry && this.getRefreshToken()) {
+          // Reuse a refresh already completed by a concurrent request.
+          let fresh = this.getAuthToken(forStore);
+          if (!fresh || fresh === token) {
+            await this.refreshAuthToken();
+            fresh = this.getAuthToken(forStore);
           }
-          return errObj;
-        }
-
-        const unwrapped = {
-          success: rawJson.success !== false,
-          data: rawJson.data !== undefined ? rawJson.data : rawJson,
-          errors: rawJson.errors || null,
-          message: rawJson.message || ""
-        };
-
-        // If data payload is an array, attach elements for seamless array indexing and iteration
-        if (Array.isArray(rawJson.data)) {
-          rawJson.data.forEach((item, idx) => {
-            unwrapped[idx] = item;
-          });
-          Object.defineProperty(unwrapped, 'length', {
-            value: rawJson.data.length,
-            writable: false,
-            enumerable: false
-          });
-          unwrapped[Symbol.iterator] = function* () {
-            yield* rawJson.data;
-          };
-        }
-
-        return unwrapped;
-      }
-
-      return {
-        success: true,
-        data: rawJson,
-        errors: null,
-        message: ""
-      };
-    }
-
-    // =========================================================================
-    // 4. HTTP Error Handling (!response.ok)
-    // =========================================================================
-    if (response && !response.ok) {
-      let errorBody = null;
-      try {
-        errorBody = await response.json();
-      } catch (e) {
-        errorBody = { message: response.statusText || `HTTP ${response.status}` };
-      }
-
-      console.error(`[ApiClient Error ${response.status}] ${method} ${url}:`, errorBody);
-
-      // 403 Forbidden handling
-      if (response.status === 403) {
-        const forbiddenMsg = "صلاحيات مدير النظام مطلوبة للوصول إلى هذا المورد (Admin privileges required).";
-        console.warn(`[ApiClient 403 Forbidden] ${method} ${url}: Admin privileges required.`);
-        if (typeof window !== 'undefined' && typeof window.showToast === 'function') {
-          window.showToast({
-            title: 'صلاحيات غير كافية (403 Forbidden)',
-            message: forbiddenMsg,
-            type: 'error',
-            duration: 6000
-          });
-        }
-        try {
-          window.dispatchEvent(new CustomEvent('dawwer:forbidden', { detail: { endpoint, status: 403 } }));
-        } catch (e) {}
-      }
-
-      if (isFastApi || isFastApiTarget) {
-        if (response.status >= 500) {
-          console.warn(`[ApiClient] FastAPI returned HTTP ${response.status} (${method} ${url}). Service may be starting up on Render. Gracefully handling fallback.`);
-          if (options.fallback !== undefined) {
-            return options.fallback;
+          if (fresh && fresh !== token) {
+            const retryHeaders = { ...headers };
+            delete retryHeaders.Authorization;
+            return this.request(endpoint, { ...options, headers: retryHeaders, token: fresh, _isRetry: true });
           }
-          return {
-            success: false,
-            status: response.status,
-            message: `FastAPI service temporarily unavailable (${response.status})`,
-            data: null
-          };
         }
-        if (options.throwOnError && response.status < 500) {
-          const msg = errorBody?.detail || errorBody?.message || `FastAPI error (${response.status})`;
-          const err = new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
-          err.status = response.status;
-          err.response = errorBody;
-          throw err;
-        }
-        return errorBody;
-      } else {
-        const errMessage = (errorBody && Array.isArray(errorBody.errors) && errorBody.errors.length > 0)
-          ? errorBody.errors.join(' | ')
-          : (errorBody?.message || errorBody?.detail || `حدث خطأ في الخادم (${response.status})`);
-
-        const errObj = {
-          success: false,
-          status: response.status,
-          message: errMessage,
-          data: errorBody?.data || null,
-          errors: Array.isArray(errorBody?.errors) ? errorBody.errors : [errMessage]
-        };
-
-        if (options.throwOnError) {
-          const err = new Error(errMessage);
-          err.status = response.status;
-          err.response = errObj;
-          err.errors = errObj.errors;
-          throw err;
-        }
-        return errObj;
+        if (!isFastApi && !options.suppressAuthPrompt && !options.silentAuthFailure) this.promptReauthentication();
       }
+      if (options._returnResponse) return rawResponse;
+      if (!response.ok || json?.success === false) return fail(this.errorMessage(json, response.status), response.status, json);
+      if (isFastApi) return json ?? { success: true };
+      return json && ('success' in Object(json) || 'data' in Object(json))
+        ? { ...json, success: true, data: json.data !== undefined ? json.data : json }
+        : { success: true, data: json, message: '' };
+    } catch (error) {
+      if (error.status !== undefined) {
+        if (options.throwOnError !== false) throw error;
+        return { success: false, status: error.status, message: error.message, data: null };
+      }
+      const timeout = error.name === 'AbortError';
+      return fail(timeout ? 'انتهت مهلة الاتصال. تحقق من حالة العملية قبل إعادة إرسالها.' : 'تعذر الاتصال بالخادم. تحقق من اتصال الإنترنت وحاول مجدداً.', timeout ? 408 : 0);
     }
-
-    // =========================================================================
-    // 5. Network / Timeout Failure Handling
-    // =========================================================================
-    if (networkError) {
-      const isTimeout = networkError.name === 'AbortError' || networkError.isTimeout;
-      const errMsg = isTimeout
-        ? `انتهت مهلة الاتصال بالخادم (${Math.round(timeoutMs / 1000)} ثانية)، يرجى المحاولة مجدداً.`
-        : 'تعذر الاتصال بالخادم الحي، يرجى التحقق من اتصال الإنترنت.';
-
-      if (isFastApiTarget || isFastApi) {
-        console.warn(`[ApiClient] FastAPI service unreachable (${method} ${url}):`, networkError.message || networkError);
-        if (options.fallback !== undefined) {
-          return options.fallback;
-        }
-        return {
-          success: false,
-          status: isTimeout ? 408 : 0,
-          isTimeout,
-          isNetworkError: true,
-          message: 'FastAPI service temporarily unreachable',
-          data: null
-        };
-      }
-
-      console.error(`[ApiClient Network Error] ${method} ${url}:`, networkError.message);
-
-      const errorObj = {
-        success: false,
-        status: isTimeout ? 408 : 0,
-        isTimeout,
-        isNetworkError: true,
-        message: errMsg,
-        error: errMsg,
-        errors: [errMsg],
-        data: null
-      };
-
-      if (options.throwOnError) {
-        const err = new Error(errMsg);
-        err.status = isTimeout ? 408 : 0;
-        err.isTimeout = isTimeout;
-        err.isNetworkError = true;
-        err.originalError = networkError;
-        throw err;
-      }
-
-      return errorObj;
-    }
-
-    return {
-      success: false,
-      error: "Unknown error occurred",
-      message: "Unknown error occurred"
-    };
   },
+
+  fetchResponse(url, options = {}) {
+    const target = new URL(url, window.location.href);
+    const service = target.origin === new URL(this.FASTAPI_BASE).origin ? 'fastapi' : 'auth';
+    return this.request(url, { ...options, service, _returnResponse: true });
+  },
+
+  // Fetch every page; UI pagination must not truncate the server's catalog/drafts.
+  async listAll(endpoint, params = {}, options = {}) {
+    const items = [], seen = new Set();
+    const limit = 100;
+    let skip = 0;
+    for (;;) {
+      const query = new URLSearchParams({ ...params, skip, limit });
+      if (skip > 100000) throw new Error('تجاوزت القائمة الحد الآمن للتحميل. يرجى تضييق نطاق البحث.');
+      const response = await this.fastapi(`${endpoint}?${query}`, { ...options, throwOnError: true });
+      const data = response?.data ?? response;
+      const page = Array.isArray(data) ? data : data?.items || data?.products || data?.draft_products || data?.jobs;
+      if (!Array.isArray(page)) throw new Error('صيغة قائمة البيانات غير متوقعة من الخادم.');
+      let added = 0;
+      for (const item of page) {
+        const id = item.id ?? item.draft_id ?? item.job_id;
+        if (id == null || !seen.has(String(id))) {
+          items.push(item); added++;
+          if (id != null) seen.add(String(id));
+        }
+      }
+      if (!page.length) return items;
+      if (!added) throw new Error('تعذر تحميل بقية الصفحات: الخادم أعاد نفس الصفحة.');
+      skip += page.length;
+      const total = response?.total ?? data?.total ?? response?.total_count ?? data?.total_count;
+      if (total != null && skip >= Number(total)) return items;
+      // Some servers cap limit below our requested value. Continue to an empty page.
+    }
+  },
+
+
 
   get(endpoint, headers = {}, options = {}) {
     return this.request(endpoint, { method: "GET", headers, ...options });
@@ -2124,65 +1231,7 @@ const ApiClient = {
   },
 
   upload(endpoint, formData, headers = {}, options = {}) {
-    const cleanHeaders = { ...(headers || {}) };
-    Object.keys(cleanHeaders).forEach(k => {
-      if (k.toLowerCase() === 'content-type') {
-        delete cleanHeaders[k];
-      }
-    });
-
-    // 1. Check existing Authorization header
-    let token = null;
-    const existingAuthKey = Object.keys(cleanHeaders).find(k => k.toLowerCase() === 'authorization');
-    if (existingAuthKey && cleanHeaders[existingAuthKey]) {
-      const explicitVal = String(cleanHeaders[existingAuthKey]).trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-      if (explicitVal && explicitVal.toLowerCase() !== 'null' && explicitVal.toLowerCase() !== 'undefined') {
-        token = explicitVal;
-      }
-    }
-
-    // 2. Retrieve token: storeToken prioritized, then accessToken, then unified helpers
-    if (!token) {
-      token = this.getUploadAuthToken() || this.getToken();
-    }
-
-    // 3. Fallback for local testing / development
-    if (!token && this.isLocalEnvironment()) {
-      token = 'mock-dawwer-dev-token-local';
-    }
-
-    // Verify before sending that token is non-empty. If token is missing, stop the request immediately and notify user to log in.
-    if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
-      console.warn(`[ApiClient.upload] Stop upload immediately: Token is missing for "${endpoint}". Notifying user to log in.`);
-      const unauthMsg = "جلسة العمل منتهية أو غير مسجلة. يرجى تسجيل الدخول للمتابعة.";
-      if (!options.suppressAuthPrompt) {
-        this.promptReauthentication(unauthMsg);
-      }
-      const unauthResult = {
-        success: false,
-        status: 401,
-        error: "Unauthorized",
-        message: unauthMsg
-      };
-      if (options.throwOnError && !this.isLocalEnvironment()) {
-        const err = new Error(unauthMsg);
-        err.status = 401;
-        err.response = unauthResult;
-        throw err;
-      }
-      return Promise.resolve(unauthResult);
-    }
-
-    // Keep 'Authorization': `Bearer ${token}` while leaving Content-Type unset so the browser sets boundary automatically
-    cleanHeaders['Authorization'] = `Bearer ${token}`;
-
-    return this.request(endpoint, {
-      method: "POST",
-      headers: cleanHeaders,
-      body: formData,
-      isUpload: true,
-      ...options
-    });
+    return this.request(endpoint, { method: 'POST', body: formData, headers, ...options });
   },
 
   /**
@@ -2296,10 +1345,11 @@ const ApiClient = {
       const res = await ApiClient.post('/Auth/select-store', { storeId: cleanStoreId }, {}, { service: 'auth', throwOnError: false });
       if (res && res.success && res.data) {
         const storeName = res.data.storeName;
-        const storeToken = res.data.storeToken;
+        const storeToken = res.data.storeToken || res.data.accessToken;
         const activeStoreId = res.data.storeId || cleanStoreId;
         const roleName = res.data.roleName;
 
+        ApiClient.setActiveStoreId(activeStoreId);
         if (storeName) {
           localStorage.setItem('storeName', storeName);
           localStorage.setItem('store_name', storeName);
@@ -2324,7 +1374,7 @@ const ApiClient = {
           storeId: activeStoreId,
           storeName: storeName,
           roleName: roleName,
-          permissions: res.data.permissions || []
+          permissions: res.data.effectivePermissions || res.data.permissions || []
         };
         localStorage.setItem('dawwer_active_store', JSON.stringify(activeStoreData));
 
@@ -2571,204 +1621,47 @@ const ApiClient = {
   // AI Shelf Capture Jobs - Gemini Vision (FastAPI on Render: FASTAPI_BASE)
   // =========================================================================
   shelfJobs: {
-    /**
-     * 1. Shelf Image Upload / Job Creation:
-     * Call POST /shelf-jobs (or /api/shelf-jobs / /api/v1/stores/{store_id}/shelf-jobs) with multipart/form-data.
-     */
-    async create(storeIdOrFormData, maybeFormData = null, options = {}) {
-      let id, formData, opts;
-      if (storeIdOrFormData instanceof FormData) {
-        id = ApiClient.getActiveStoreId();
-        formData = storeIdOrFormData;
-        opts = maybeFormData || options || {};
-      } else {
-        id = storeIdOrFormData || ApiClient.getActiveStoreId();
-        formData = maybeFormData;
-        opts = options || {};
-      }
-
-      if (!ApiClient.isValidStoreId(id)) {
-        ApiClient.handleStoreVerification404(id);
-        const err = new Error("معرّف المتجر غير صالح أو غير محدد. يرجى اختيار متجر نشط للمتابعة.");
-        err.status = 404;
-        return Promise.reject(err);
-      }
-
-      // Retrieve the unified token (prioritizing upload token with local dev fallback):
-      let token = ApiClient.getUploadAuthToken() || ApiClient.getToken();
-      if (!token && ApiClient.isLocalEnvironment()) {
-        token = 'mock-dawwer-dev-token-local';
-      }
-
-      // Verify before sending that token is non-empty. If token is missing, stop the request immediately.
-      if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
-        console.warn(`[ApiClient.shelfJobs.create] Stop upload immediately: Token is missing. Notifying user to log in.`);
-        const unauthMsg = "جلسة العمل منتهية أو غير مسجلة. يرجى تسجيل الدخول للمتابعة.";
-        if (!opts.suppressAuthPrompt) {
-          ApiClient.promptReauthentication(unauthMsg);
-        }
-        if (ApiClient.isLocalEnvironment()) {
-          return Promise.resolve({ success: false, status: 401, error: "Unauthorized", message: unauthMsg });
-        }
-        const err = new Error(unauthMsg);
-        err.status = 401;
-        return Promise.reject(err);
-      }
-
-      // Ensure headers include 'Authorization': `Bearer ${token}` while leaving Content-Type unset
-      const uploadHeaders = {
-        ...(opts.headers || {}),
-        'Authorization': `Bearer ${token}`
-      };
-      delete uploadHeaders['Content-Type'];
-      delete uploadHeaders['content-type'];
-      delete uploadHeaders['Content-type'];
-      delete uploadHeaders['CONTENT-TYPE'];
-
-      const endpoint = `/api/v1/stores/${encodeURIComponent(id)}/shelf-jobs`;
-      return ApiClient.upload(endpoint, formData, uploadHeaders, {
-        service: 'fastapi',
-        throwOnError: !ApiClient.isLocalEnvironment() && (opts.throwOnError !== false),
-        ...opts
-      });
-    },
-
-    /**
-     * Convenience alias for shelf image upload
-     */
-    upload(formData, options = {}) {
-      return this.create(null, formData, options);
-    },
-
-    /**
-     * 2. Fetching Shelf Job Status & Extracted Items:
-     * Call GET /shelf-jobs/{jobId} (or /api/shelf-jobs/{jobId} / /api/v1/stores/{store_id}/shelf-jobs/{job_id})
-     * to poll or retrieve extracted items and detection coordinates.
-     */
-    get(storeIdOrJobId, maybeJobId = null, options = {}) {
-      let id, jobId, opts;
-      if (maybeJobId && typeof maybeJobId === 'string') {
-        id = storeIdOrJobId || ApiClient.getActiveStoreId();
-        jobId = maybeJobId;
-        opts = options || {};
-      } else {
-        id = ApiClient.getActiveStoreId();
-        jobId = storeIdOrJobId;
-        opts = maybeJobId || options || {};
-      }
-
-      if (!jobId) return Promise.reject(new Error("Missing job_id"));
-
-      let token = ApiClient.getUploadAuthToken() || ApiClient.getToken();
-      if (!token && ApiClient.isLocalEnvironment()) {
-        token = 'mock-dawwer-dev-token-local';
-      }
-
-      if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
-        console.warn(`[ApiClient.shelfJobs.get] Stop request immediately: Token is missing. Notifying user to log in.`);
-        const unauthMsg = "جلسة العمل منتهية أو غير مسجلة. يرجى تسجيل الدخول للمتابعة.";
-        if (!opts.suppressAuthPrompt) {
-          ApiClient.promptReauthentication(unauthMsg);
-        }
-        if (ApiClient.isLocalEnvironment()) {
-          return Promise.resolve({ success: false, status: 401, error: "Unauthorized", message: unauthMsg });
-        }
-        return Promise.reject(new Error(unauthMsg));
-      }
-
-      const reqHeaders = {
-        ...(opts.headers || {}),
-        'Authorization': `Bearer ${token}`
-      };
-
-      const endpoint = (id && ApiClient.isValidStoreId(id))
-        ? `/api/v1/stores/${encodeURIComponent(id)}/shelf-jobs/${encodeURIComponent(jobId)}`
-        : `/api/v1/shelf-jobs/${encodeURIComponent(jobId)}`;
-
-      return ApiClient.get(endpoint, {}, {
-        service: 'fastapi',
-        ...opts,
-        headers: reqHeaders
-      });
-    },
-
-    /**
-     * Dedicated method to poll job processing status
-     */
-    getStatus(jobId, storeId = null, options = {}) {
-      return this.get(storeId, jobId, options);
-    },
-
-    /**
-     * Dedicated method to fetch extracted products and bounding box detection coordinates
-     */
-    async getExtractedItems(jobId, storeId = null, options = {}) {
-      const res = await this.get(storeId, jobId, options);
-      const data = res?.data || res;
-      const candidateArrays = [
-        data?.extracted_items,
-        data?.draft_products,
-        data?.products,
-        data?.items,
-        data?.extracted_drafts,
-        Array.isArray(data) ? data : null
-      ];
-      for (const cand of candidateArrays) {
-        if (Array.isArray(cand) && cand.length > 0) return cand;
-      }
-      return [];
-    },
-
-    list(storeId = null, { skip = 0, limit = 50 } = {}, options = {}) {
+    create(storeId, formData, options = {}) {
+      if (storeId instanceof FormData) { options = formData || {}; formData = storeId; storeId = ApiClient.getActiveStoreId(); }
       const id = storeId || ApiClient.getActiveStoreId();
-      if (!ApiClient.isValidStoreId(id)) {
-        ApiClient.handleStoreVerification404(id);
-        return Promise.resolve({ success: false, status: 404, message: "Missing store_id", data: [] });
-      }
-
-      let token = ApiClient.getUploadAuthToken() || ApiClient.getToken();
-      if (!token && ApiClient.isLocalEnvironment()) {
-        token = 'mock-dawwer-dev-token-local';
-      }
-
-      if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
-        console.warn(`[ApiClient.shelfJobs.list] Stop request immediately: Token is missing. Notifying user to log in.`);
-        const unauthMsg = "جلسة العمل منتهية أو غير مسجلة. يرجى تسجيل الدخول للمتابعة.";
-        if (!options.suppressAuthPrompt) {
-          ApiClient.promptReauthentication(unauthMsg);
-        }
-        return Promise.resolve({ success: false, status: 401, error: "Unauthorized", message: unauthMsg, data: [] });
-      }
-
-      const reqHeaders = {
-        ...(options.headers || {}),
-        'Authorization': `Bearer ${token}`
-      };
-
-      return ApiClient.get(`/api/v1/stores/${encodeURIComponent(id)}/shelf-jobs?skip=${skip}&limit=${limit}`, {}, {
-        service: 'fastapi',
-        ...options,
-        headers: reqHeaders
-      });
+      if (!ApiClient.isValidStoreId(id)) return Promise.reject(new Error('يرجى اختيار متجر أولاً.'));
+      return ApiClient.upload(`/api/v1/stores/${encodeURIComponent(id)}/shelf-jobs`, formData, {}, { ...options, service: 'fastapi', throwOnError: true });
     },
-
-    /**
-     * Delete Shelf Session: DELETE /api/v1/stores/{store_id}/shelf-jobs/{job_id}
-     * Fallback: /api/v1/shelf/sessions/{job_id}
-     */
-    async delete(storeId = null, jobId, options = {}) {
+    get(storeId, jobId, options = {}) {
       const id = storeId || ApiClient.getActiveStoreId();
-      if (!jobId) return Promise.reject(new Error("Missing job_id"));
-
-      const primaryEndpoint = `/api/v1/stores/${encodeURIComponent(id)}/shelf-jobs/${encodeURIComponent(jobId)}`;
-      try {
-        const res = await ApiClient.fastapi(primaryEndpoint, { method: 'DELETE', ...options });
-        if (res && res.status !== 404) return res;
-      } catch (e) {
-        console.warn('[ApiClient.shelfJobs.delete] Primary endpoint failed, attempting fallback:', e && e.message ? e.message : e);
+      if (!ApiClient.isValidStoreId(id) || !jobId) return Promise.reject(new Error('معرّف المتجر أو عملية التصوير مفقود.'));
+      return ApiClient.fastapi(`/stores/${encodeURIComponent(id)}/shelf-jobs/${encodeURIComponent(jobId)}`, { ...options, throwOnError: true });
+    },
+    list(storeId, { skip = 0, limit = 50 } = {}, options = {}) {
+      const id = storeId || ApiClient.getActiveStoreId();
+      if (!ApiClient.isValidStoreId(id)) return Promise.reject(new Error('يرجى اختيار متجر أولاً.'));
+      return ApiClient.fastapi(`/stores/${encodeURIComponent(id)}/shelf-jobs?skip=${skip}&limit=${limit}`, options);
+    },
+    delete(storeId, jobId, options = {}) {
+      return ApiClient.delete(`/api/v1/stores/${encodeURIComponent(storeId)}/shelf-jobs/${encodeURIComponent(jobId)}`, {}, { ...options, service: 'fastapi', throwOnError: true });
+    },
+    async waitForReview(storeId, job, options = {}) {
+      job = job?.data || job;
+      const id = job?.id || job?.job_id;
+      if (!id) throw new Error('لم يُرجع الخادم معرّفاً لعملية التصوير.');
+      const started = Date.now();
+      const complete = status => ['completed', 'review_required', 'review required', 'succeeded', 'success'].includes(status);
+      for (;;) {
+        const status = String(job.status || '').toLowerCase();
+        if (['failed', 'error', 'cancelled'].includes(status)) throw new Error(job.error_message || job.error || 'فشل تحليل الصورة في الخادم.');
+        // Wait for terminal status, even if intermediate detections have arrived.
+        if (complete(status)) {
+          const items = await ApiClient.listAll(`/stores/${encodeURIComponent(storeId)}/draft-products`, { shelf_job_id: id });
+          return { ...job, extractedItems: items };
+        }
+        if (Date.now() - started >= (options.pollTimeout ?? 180000)) {
+          throw Object.assign(new Error('لا يزال تحليل الصورة قيد التنفيذ. يمكنك متابعة العملية من سجل التصوير دون رفعها مجدداً.'), { jobId: id, pending: true });
+        }
+        await new Promise(resolve => setTimeout(resolve, options.pollInterval ?? 1500));
+        const result = await ApiClient.shelfJobs.get(storeId, id);
+        job = result?.data || result;
+        options.onProgress?.(job);
       }
-
-      return ApiClient.fastapi(`/api/v1/shelf/sessions/${encodeURIComponent(jobId)}`, { method: 'DELETE', ...options });
     }
   },
 
@@ -2849,41 +1742,14 @@ const ApiClient = {
      */
     async list(storeId = null, params = {}, options = {}) {
       const id = storeId || ApiClient.getActiveStoreId();
-      const queryParams = { ...params };
-      if (id && ApiClient.isValidStoreId(id)) {
-        queryParams.storeId = id;
-      }
-      const qs = new URLSearchParams(queryParams).toString();
-      const endpoint = `/Orders${qs ? '?' + qs : ''}`;
-
-      try {
-        const res = await ApiClient.core(endpoint, {
-          method: 'GET',
-          ...options
-        });
-        if (res) {
-          const list = Array.isArray(res) ? res : (Array.isArray(res.data) ? res.data : null);
-          if (list) return list;
-        }
-      } catch (err) {
-        console.warn('[ApiClient.orders.list] Primary /api/Orders fetch note:', err && err.message ? err.message : err);
-      }
-
-      if (options.fallback !== undefined) return options.fallback;
-      try {
-        const cached = localStorage.getItem('dawwer_merchant_orders_queue_sprint3');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-      } catch (e) {}
-
-      return [];
+      if (!ApiClient.isValidStoreId(id)) throw new Error('يرجى اختيار متجر أولاً.');
+      const query = new URLSearchParams({ ...params, storeId: id });
+      const data = await ApiClient.core(`/Orders?${query}`, { ...options, throwOnError: true });
+      const list = Array.isArray(data) ? data : data?.items || data?.orders;
+      if (!Array.isArray(list)) throw new Error('صيغة قائمة الطلبات غير متوقعة.');
+      return list;
     },
 
-    /**
-     * Order Details: GET /api/Orders/{id}
-     */
     get(orderId, options = {}) {
       if (!orderId) return Promise.reject(new Error("Missing orderId"));
       return ApiClient.core(`/Orders/${encodeURIComponent(orderId)}`, {

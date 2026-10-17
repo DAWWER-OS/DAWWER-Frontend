@@ -205,9 +205,9 @@ function renderApprovedStoreProfile(store) {
       `;
     }
 
-    if (crEl) crEl.textContent = store?.commercialRegistrationNumber || store?.crNumber || store?.cr || localStorage.getItem('storeCR') || '1010123456';
-    if (taxEl) taxEl.textContent = store?.taxNumber || store?.tax || localStorage.getItem('storeTax') || '300012345600003';
-    if (addrEl) addrEl.textContent = store?.address ? `${store?.city || 'الرياض'} - ${store?.address}` : (store?.city || 'الرياض - الفرع الرئيسي');
+    if (crEl) crEl.textContent = store?.commercialRegistrationNumber || store?.crNumber || store?.cr || localStorage.getItem('storeCR') || '—';
+    if (taxEl) taxEl.textContent = store?.taxNumber || store?.tax || localStorage.getItem('storeTax') || '—';
+    if (addrEl) addrEl.textContent = store?.address ? `${store?.city || 'الرياض'} - ${store?.address}` : (store?.city || '—');
   }
 }
 
@@ -235,7 +235,7 @@ function isTokenExpired(token) {
  */
 function ensureValidMerchantSession() {
   const token = getMerchantToken();
-  if (!token || isTokenExpired(token)) {
+  if ((!token || isTokenExpired(token)) && !ApiClient.getRefreshToken()) {
     const warningMsg = "يرجى تسجيل الدخول بحساب تاجر مفعل للمتابعة.";
     showAlert(`
       <div class="flex items-center justify-between">
@@ -578,32 +578,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 1. Check Store Status on Load:
-  const storeStatus = (localStorage.getItem('storeStatus') || localStorage.getItem('store_status') || 'pending').toLowerCase();
-  const isApproved = storeStatus === 'active' || storeStatus === 'approved';
-
-  if (isApproved) {
-    const prefill = getPreFilledStoreName();
-    const activeId = localStorage.getItem('activeStoreId') || localStorage.getItem('storeId') || localStorage.getItem('store_id');
-    const storeObj = { id: activeId, name: prefill, status: 'active' };
-
-    // Synchronize store context & render Approved Store Profile view (no redirect)
-    handleStoreApprovedAndRedirect(storeObj);
-    renderApprovedStoreProfile(storeObj);
-  } else {
-    // Keep form for unregistered / pending stores
-    const profileContainer = document.getElementById('approved-store-profile');
-    if (profileContainer) profileContainer.classList.add('hidden');
-    const formCard = document.getElementById('application-form-card');
-    if (formCard) formCard.classList.remove('hidden');
-  }
-
+  // Approval is taken from the server response for this account.
+  document.getElementById('approved-store-profile')?.classList.add('hidden');
   loadApplications();
 });
 
 async function loadApplications() {
   const token = getMerchantToken();
-  if (!token || isTokenExpired(token)) {
+  if ((!token || isTokenExpired(token)) && !ApiClient.getRefreshToken()) {
     showAlert(`
       <div class="flex items-center justify-between">
         <span>يرجى تسجيل الدخول بحساب تاجر مفعل للمتابعة.</span>
@@ -627,7 +609,9 @@ async function loadApplications() {
     if (storesData) {
       const stores = Array.isArray(storesData) ? storesData : [storesData];
       if (stores.length > 0) {
-        currentStore = stores[0];
+        const preferred = getApplicationId() || ApiClient.getActiveStoreId();
+        currentStore = stores.find(store => String(store.id) === String(preferred)) || stores[0];
+        document.getElementById('alert-banner')?.classList.add('hidden');
         populateForm(currentStore);
         renderStatusCard(currentStore);
         if (currentStore.id) {

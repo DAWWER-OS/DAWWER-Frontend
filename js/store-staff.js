@@ -1,10 +1,7 @@
 let activeStoreId = null;
 let rolesList = [];
 
-const defaultStaff = [
-  { id: "st-1", fullName: "أحمد سليم (المالك)", email: "owner@market.com", phoneNumber: "+966501112233", roleName: "مدير المتجر", isActive: true },
-  { id: "st-2", fullName: "خالد عبد الرحيم", email: "khalid@market.com", phoneNumber: "+966552233445", roleName: "أمين الصندوق والطلبات", isActive: true }
-];
+const defaultStaff = [];
 
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof Auth !== 'undefined' && Auth.requireAuth) {

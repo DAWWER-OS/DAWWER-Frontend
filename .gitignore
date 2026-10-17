@@ -5,6 +5,8 @@ scratch/
 
 # Dependencies
 node_modules/
+test-results/
+playwright-report/
 
 # OS metadata
 .DS_Store
@@ -14,4 +16,4 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
- 
+

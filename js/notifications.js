@@ -1,4 +1,7 @@
 const DawwerNotification = {
+  escapeText(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+  },
   containerId: 'dawwer-toast-container',
 
   getOrCreateContainer() {
@@ -82,8 +85,8 @@ const DawwerNotification = {
     toast.innerHTML = `
       ${iconHtml}
       <div class="flex-1 min-w-0 pr-1">
-        ${title ? `<div class="font-bold text-sm leading-tight mb-0.5">${title}</div>` : ''}
-        ${msg ? `<div class="text-xs text-slate-600 leading-relaxed font-medium">${msg}</div>` : ''}
+        ${title ? `<div class="font-bold text-sm leading-tight mb-0.5">${this.escapeText(title)}</div>` : ''}
+        ${msg ? `<div class="text-xs text-slate-600 leading-relaxed font-medium">${this.escapeText(msg)}</div>` : ''}
       </div>
       <button type="button" class="toast-close-btn p-1 -mr-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition active:scale-95" aria-label="إغلاق">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>

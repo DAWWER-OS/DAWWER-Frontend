@@ -5,7 +5,7 @@ var FASTAPI_BASE_URL = (typeof window !== 'undefined' && window.CONFIG && window
 function getStoreId() {
   return localStorage.getItem('activeStoreId') ||
          localStorage.getItem('storeId') ||
-         '3fa85f64-5717-4562-b3fc-2c963f66afa6';
+         null;
 }
 
 const CATALOG_STORAGE_KEY = 'dawwer_merchant_catalog_products';
@@ -20,61 +20,9 @@ const AUDIT_STORAGE_KEY = 'dawwer_merchant_audit_log';
     let auditPeriodFilter = 'ALL';
     let auditSearchQuery = '';
 
-    const DEFAULT_PRODUCTS = [
-      { id: 'prod-001', name: 'أفوكادو هاس عضوي (عبوة 4 حبات)', sku: 'GRO-AVO-001', category: 'منتجات طازجة', price: 4.99, quantity: 4, lowStockThreshold: 5, isAvailable: true, location: { zone: 'المنطقة أ', aisle: 'ممر 02', rack: 'R1', shelf: 'رف 2 - مستوى العين' }, status: 'Published', updatedAt: '2026-09-22 10:30' },
-      { id: 'prod-002', name: 'حليب المراعي طازج كامل الدسم (2 لتر)', sku: 'GRO-DAI-042', category: 'ألبان وأجبان', price: 2.75, quantity: 28, lowStockThreshold: 10, isAvailable: true, location: { zone: 'المنطقة ب', aisle: 'ممر 04', rack: 'R1', shelf: 'رف 1 - علوي' }, status: 'Published', updatedAt: '2026-09-22 08:15' },
-      { id: 'prod-003', name: 'رغيف ساوردو حرفي بالخميرة الطبيعية', sku: 'GRO-BAK-109', category: 'مخبوزات', price: 3.50, quantity: 0, lowStockThreshold: 6, isAvailable: false, location: { zone: 'المنطقة أ', aisle: 'ممر 01', rack: 'R2', shelf: 'رف 2 - مستوى العين' }, status: 'Draft', updatedAt: '2026-09-20 16:45' },
-      { id: 'prod-004', name: 'زيت زيتون بكر ممتاز يوناني (750 مل)', sku: 'GRO-PAN-881', category: 'زيوت ومؤونة', price: 11.20, quantity: 18, lowStockThreshold: 5, isAvailable: true, location: { zone: 'المنطقة أ', aisle: 'ممر 02', rack: 'R2', shelf: 'رف 3 - أوسط' }, status: 'Published', updatedAt: '2026-09-19 14:20' },
-      { id: 'prod-005', name: 'قهوة كولد برو بريميوم منقوعة (330 مل)', sku: 'GRO-BEV-312', category: 'مشروبات', price: 3.85, quantity: 3, lowStockThreshold: 8, isAvailable: true, location: { zone: 'المنطقة ج', aisle: 'ممر 07', rack: 'R2', shelf: 'رف 2 - مستوى العين' }, status: 'Published', updatedAt: '2026-09-22 09:00' },
-      { id: 'prod-006', name: 'فيليه سلمون أطلسي طازج (400 غرام)', sku: 'GRO-SEA-554', category: 'لحوم ومأكولات بحرية', price: 14.50, quantity: 1, lowStockThreshold: 5, isAvailable: false, location: { zone: 'المنطقة د', aisle: 'ثلاجة 1', rack: 'R1', shelf: 'رف 2 - رئيسي' }, status: 'Inactive', updatedAt: '2026-09-18 11:10' }
-    ];
+    const DEFAULT_PRODUCTS = [];
 
-    const DEFAULT_AUDIT_LOGS = [
-      {
-        id: 'LOG-1094',
-        timestamp: Date.now() - 1800000,
-        formattedTime: 'اليوم، 04:30 م',
-        actionType: 'Stock Adjustment',
-        target: 'حليب المراعي طازج كامل الدسم (2 لتر)',
-        targetSku: 'GRO-DAI-042',
-        performedBy: 'أحمد الشمري (مدير المتجر)',
-        changeDelta: 'المخزون: 8 ➔ 28 (+20 وحدة)',
-        details: 'استلام شحنة بضاعة جديدة (Restock) وتحديث المخزون الفعلي بالرف'
-      },
-      {
-        id: 'LOG-1090',
-        timestamp: Date.now() - 7200000,
-        formattedTime: 'اليوم، 03:00 م',
-        actionType: 'Catalog Publication',
-        target: 'رف A-02 استخراج (11 صنف)',
-        targetSku: 'JOB-8942',
-        performedBy: 'نظام الذكاء الاصطناعي (Dawwer Vision)',
-        changeDelta: 'نشر 11 منتج جديد وتسكينها بالرف',
-        details: 'اعتماد نتائج الفحص البصري ونقل الأصناف من مسودة إلى منشورة بالكتالوج'
-      },
-      {
-        id: 'LOG-1085',
-        timestamp: Date.now() - 86400000,
-        formattedTime: 'أمس، 02:15 م',
-        actionType: 'Price Update',
-        target: 'زيت زيتون بكر ممتاز يوناني (750 مل)',
-        targetSku: 'GRO-PAN-881',
-        performedBy: 'سارة العتيبي (مسؤول المخزون)',
-        changeDelta: 'السعر: 12.50 ➔ 11.20 ₪ (-1.30 ₪)',
-        details: 'تحديث العرض الترويجي للزيوت والمؤونة'
-      },
-      {
-        id: 'LOG-1080',
-        timestamp: Date.now() - 172800000,
-        formattedTime: 'قبل يومين، 11:00 ص',
-        actionType: 'Excel Bulk Import',
-        target: 'استيراد كتالوج ملف (dawwer_products.csv)',
-        targetSku: 'BATCH-CSV-01',
-        performedBy: 'أحمد الشمري (مدير المتجر)',
-        changeDelta: 'إدراج 24 صنفاً دفعة واحدة',
-        details: 'معالجة ومطابقة أعمدة ملف الإكسل وإدراج الأصناف بنجاح'
-      }
-    ];
+    const DEFAULT_AUDIT_LOGS = [];
 
     function loadData() {
       try {
@@ -83,7 +31,7 @@ const AUDIT_STORAGE_KEY = 'dawwer_merchant_audit_log';
           productsList = JSON.parse(storedProducts);
           productsList = productsList.map(p => ({
             ...p,
-            quantity: typeof p.quantity === 'number' ? p.quantity : 10,
+            quantity: typeof p.quantity === 'number' ? p.quantity : 0,
             lowStockThreshold: typeof p.lowStockThreshold === 'number' ? p.lowStockThreshold : 5
           }));
         } else {
@@ -107,45 +55,16 @@ const AUDIT_STORAGE_KEY = 'dawwer_merchant_audit_log';
       }
 
       const storeId = getStoreId();
-      const token = localStorage.getItem('storeToken') || localStorage.getItem('accessToken') || '';
-      fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        }
-      }).then(r => r.ok ? r.json() : null).then(items => {
-        const liveItems = Array.isArray(items) ? items : (items?.data || null);
-        if (Array.isArray(liveItems) && liveItems.length > 0) {
-          const idMap = new Map();
-          productsList.forEach(p => idMap.set(String(p.id), p));
-          let hasNew = false;
-          liveItems.forEach(it => {
-            const k = String(it.id || it.store_sku || it.sku);
-            if (!idMap.has(k)) {
-              idMap.set(k, {
-                id: k,
-                name: it.product_name || it.name,
-                sku: it.store_sku || it.sku,
-                category: it.category || 'عام',
-                price: it.price || 0,
-                quantity: it.quantity || 10,
-                lowStockThreshold: 5,
-                isAvailable: it.quantity > 0,
-                location: { zone: it.zone || 'المنطقة أ', aisle: it.aisle || 'ممر 01', rack: it.rack || 'R1', shelf: it.shelf || 'رف 1' }
-              });
-              hasNew = true;
-            }
-          });
-          if (hasNew) {
-            productsList = Array.from(idMap.values());
-            saveProducts();
-            renderAll();
-          }
-        }
-      }).catch(e => {
-        console.warn('[Inventory Live Fetch Note]:', e);
-      });
+      if (!storeId) return;
+      ApiClient.listAll(`/stores/${encodeURIComponent(storeId)}/products`).then(items => {
+        productsList = items.map(it => ({
+          id: String(it.id), name: it.product_name || it.name, sku: it.store_sku || it.sku || '', category: it.category || 'عام',
+          price: Number(it.price) || 0, quantity: Number(it.quantity ?? it.stock_quantity ?? 0), lowStockThreshold: 5,
+          isAvailable: it.stock_status !== 'OUT_OF_STOCK',
+          location: { zone: it.zone, aisle: it.aisle, rack: it.rack, shelf: it.shelf }
+        }));
+        saveProducts(); renderAll();
+      }).catch(error => showToast('تعذر تحديث المخزون', error.message, 'warning'));
     }
 
     function saveProducts() {
@@ -415,7 +334,12 @@ const AUDIT_STORAGE_KEY = 'dawwer_merchant_audit_log';
       }).join('');
     }
 
-    function inlineAdjustStock(productId, delta) {
+    async function persistStock(product, quantity) {
+      if (!Number.isInteger(quantity) || quantity < 0) throw new Error('يرجى إدخال كمية صحيحة لا تقل عن صفر.');
+      await ApiClient.products.update(getStoreId(), product.id, { quantity, stock_status: quantity > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK' });
+    }
+
+    async function inlineAdjustStock(productId, delta) {
       const p = productsList.find(x => x.id === productId);
       if (!p) return;
 
@@ -423,6 +347,8 @@ const AUDIT_STORAGE_KEY = 'dawwer_merchant_audit_log';
       const newQty = Math.max(0, oldQty + delta);
       if (oldQty === newQty) return;
 
+      try { await persistStock(p, newQty); }
+      catch (error) { showToast('تعذر حفظ المخزون', error.message, 'error'); renderAll(); return; }
       p.quantity = newQty;
       p.updatedAt = new Date().toISOString().slice(0, 16).replace('T', ' ');
       saveProducts();
@@ -440,7 +366,7 @@ const AUDIT_STORAGE_KEY = 'dawwer_merchant_audit_log';
       showToast('تم تحديث المخزون', `الكمية الجديدة لـ "${p.name}": ${newQty} وحدة`, 'success');
     }
 
-    function inlineSetStock(productId, value) {
+    async function inlineSetStock(productId, value) {
       const p = productsList.find(x => x.id === productId);
       if (!p) return;
 
@@ -448,6 +374,8 @@ const AUDIT_STORAGE_KEY = 'dawwer_merchant_audit_log';
       const newQty = Math.max(0, parseInt(value) || 0);
       if (oldQty === newQty) return;
 
+      try { await persistStock(p, newQty); }
+      catch (error) { showToast('تعذر حفظ المخزون', error.message, 'error'); renderAll(); return; }
       p.quantity = newQty;
       p.updatedAt = new Date().toISOString().slice(0, 16).replace('T', ' ');
       saveProducts();
@@ -516,7 +444,7 @@ const AUDIT_STORAGE_KEY = 'dawwer_merchant_audit_log';
       input.value = currentVal + addAmount;
     }
 
-    function handleStockModalSubmit(e) {
+    async function handleStockModalSubmit(e) {
       e.preventDefault();
       const productId = document.getElementById('modal-product-id').value;
       const newQty = parseInt(document.getElementById('modal-new-qty').value) || 0;
@@ -527,6 +455,8 @@ const AUDIT_STORAGE_KEY = 'dawwer_merchant_audit_log';
       if (!p) return;
 
       const oldQty = p.quantity || 0;
+      try { await persistStock(p, newQty); }
+      catch (error) { showToast('تعذر حفظ المخزون', error.message, 'error'); renderAll(); return; }
       p.quantity = newQty;
       p.lowStockThreshold = threshold;
       p.updatedAt = new Date().toISOString().slice(0, 16).replace('T', ' ');
@@ -541,28 +471,6 @@ const AUDIT_STORAGE_KEY = 'dawwer_merchant_audit_log';
         `المخزون: ${oldQty} ➔ ${newQty} (${sign} وحدة)`,
         `سبب التعديل: ${reason}`
       );
-
-      const storeId = getStoreId();
-      const token = localStorage.getItem('storeToken') || localStorage.getItem('accessToken') || '';
-      if (p.id && !String(p.id).startsWith('prod-')) {
-        try {
-          fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products/${encodeURIComponent(p.id)}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-            },
-            body: JSON.stringify({
-              quantity: newQty,
-              stock_status: newQty > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK'
-            })
-          }).catch(err => {
-            console.warn('[Inventory Live Sync Warning]:', err);
-          });
-        } catch (e) {
-          console.warn('[Inventory Live Sync Error]:', e);
-        }
-      }
 
       closeStockModal();
       renderAll();

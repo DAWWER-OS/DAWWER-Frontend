@@ -20,7 +20,7 @@ async function handleForgotPassword(event) {
   if (!email || !emailRegex.test(email)) {
     const errorMsg = 'يرجى إدخال بريد إلكتروني صحيح (مثال: example@dawwer.com).';
     if (alertBox) {
-      alertBox.innerHTML = errorMsg;
+      alertBox.textContent = errorMsg;
       alertBox.className = 'mb-4 p-3.5 rounded-xl text-sm font-bold bg-amber-50 border border-amber-200 text-amber-800 block';
     }
     if (typeof showToast === 'function') {
@@ -41,7 +41,7 @@ async function handleForgotPassword(event) {
 
     const successMsg = response.message || 'تم إرسال رمز التحقق إلى بريدك الإلكتروني بنجاح.';
     if (alertBox) {
-      alertBox.innerHTML = successMsg;
+      alertBox.textContent = successMsg;
       alertBox.className = 'mb-4 p-3.5 rounded-xl text-sm font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 block';
     }
     if (typeof showToast === 'function') {
@@ -54,7 +54,7 @@ async function handleForgotPassword(event) {
   } catch (err) {
     const errorMsg = err.message || 'حدث خطأ أثناء إرسال رمز الاستعادة.';
     if (alertBox) {
-      alertBox.innerHTML = errorMsg;
+      alertBox.textContent = errorMsg;
       alertBox.className = 'mb-4 p-3.5 rounded-xl text-sm font-bold bg-red-50 border border-red-200 text-red-700 block';
     }
     if (typeof showToast === 'function') {

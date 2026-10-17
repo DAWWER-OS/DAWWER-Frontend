@@ -16,387 +16,7 @@
   // =========================================================================
   // 1. Rich Realistic Mock Orders (5 Diverse Scenarios)
   // =========================================================================
-  const SEED_ORDERS = [
-    {
-      id: 'ORD-2048',
-      orderNumber: '2048',
-      customerName: 'سارة عبد الله الشمري',
-      customerPhone: '+966 54 812 3456',
-      createdAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(), // 6 mins ago
-      status: 'pending', // جديد
-      fulfillmentType: 'delivery', // توصيل منزلي
-      fulfillmentAddress: 'الرياض - حي النرجس - شارع التخصصي - عمارة 12 شقة 4',
-      fulfillmentTiming: 'توصيل فوري خلال 30 دقيقة',
-      paymentMethod: 'تحويل بنكي / محفظة إلكترونية',
-      paymentStatus: 'verification_pending', // بانتظار تدقيق الإشعار
-      paymentSlip: {
-        senderName: 'سارة عبد الله الشمري',
-        bankName: 'مصرف الراجحي (حساب رقم ...8492)',
-        referenceNumber: 'TXN-98421094',
-        amountSent: 145.00,
-        requiredAmount: 145.00,
-        uploadTime: 'منذ 6 دقائق',
-        verified: false,
-        rejectionReason: null,
-        rejectionNotes: ''
-      },
-      customerNotes: 'يرجى التأكد من صلاحية المنتجات وسلامة التغليف قبل الإرسال.',
-      subtotal: 113.04,
-      vat: 16.96,
-      deliveryFee: 15.00,
-      total: 145.00,
-      items: [
-        {
-          id: 'item-2048-1',
-          name: 'زيت زيتون بكر ممتاز الجوف 500 مل',
-          sku: 'SKU-OIL-006',
-          barcode: '628100678901',
-          category: 'تموين ومؤن',
-          shelfLocation: 'المنطقة د › ممر 04 › رف 3',
-          zone: 'د',
-          aisle: '04',
-          shelf: '3',
-          stockAllocated: true,
-          stockStatus: 'reserved',
-          quantity: 2,
-          unitPrice: 34.00,
-          totalPrice: 68.00,
-          image: ''
-        },
-        {
-          id: 'item-2048-2',
-          name: 'أرز باب الهند بسمتي عنبر 5 كجم',
-          sku: 'SKU-RIC-IND',
-          barcode: '628100111010',
-          category: 'أغذية جافة',
-          shelfLocation: 'المنطقة د › ممر 02 › رف 1',
-          zone: 'د',
-          aisle: '02',
-          shelf: '1',
-          stockAllocated: true,
-          stockStatus: 'reserved',
-          quantity: 1,
-          unitPrice: 48.00,
-          totalPrice: 48.00,
-          image: ''
-        },
-        {
-          id: 'item-2048-3',
-          name: 'حليب كامل الدسم المراعي 2 لتر',
-          sku: 'SKU-MLK-004',
-          barcode: '628100456789',
-          category: 'ألبان',
-          shelfLocation: 'المنطقة ب › ممر 02 › ثلاجة 3',
-          zone: 'ب',
-          aisle: '02',
-          shelf: 'ثلاجة 3',
-          stockAllocated: true,
-          stockStatus: 'reserved',
-          quantity: 1,
-          unitPrice: 14.00,
-          totalPrice: 14.00,
-          image: ''
-        }
-      ]
-    },
-    {
-      id: 'ORD-2047',
-      orderNumber: '2047',
-      customerName: 'عبد العزيز بن فهد التميمي',
-      customerPhone: '+966 50 443 2190',
-      createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(), // 15 mins ago
-      status: 'preparing', // قيد التجهيز
-      fulfillmentType: 'pickup', // استلام من الفرع
-      fulfillmentAddress: 'استلام ذاتي من فرع المتجر الرئيسي (كاونتر الاستلام السريع)',
-      fulfillmentTiming: 'نافذة الاستلام: اليوم بين 4:30 - 5:30 مساءً',
-      paymentMethod: 'مدى (مدفوع إلكترونياً)',
-      paymentStatus: 'paid',
-      customerNotes: 'سأمر بالسيارة بعد نصف ساعة لاستلام الطلب جاهزاً.',
-      subtotal: 93.91,
-      vat: 14.09,
-      deliveryFee: 0.00,
-      total: 108.00,
-      items: [
-        {
-          id: 'item-2047-1',
-          name: 'قهوة عربي خولاني فاخرة بالهيل 500 جم',
-          sku: 'SKU-COF-009',
-          barcode: '628100901234',
-          category: 'قهوة وشاي',
-          shelfLocation: 'المنطقة أ › ممر 04 › رف 1',
-          zone: 'أ',
-          aisle: '04',
-          shelf: '1',
-          stockAllocated: true,
-          stockStatus: 'reserved',
-          quantity: 1,
-          unitPrice: 42.00,
-          totalPrice: 42.00,
-          image: ''
-        },
-        {
-          id: 'item-2047-2',
-          name: 'أرز الشعلان عنبر كلاسيك 5 كجم',
-          sku: 'SKU-RIC-SHA',
-          barcode: '628100111009',
-          category: 'أغذية جافة',
-          shelfLocation: 'المنطقة د › ممر 02 › رف 2',
-          zone: 'د',
-          aisle: '02',
-          shelf: '2',
-          stockAllocated: false,
-          stockStatus: 'insufficient', // عجز مخزون لاختبار البديل
-          quantity: 1,
-          unitPrice: 44.00,
-          totalPrice: 44.00,
-          image: ''
-        },
-        {
-          id: 'item-2047-3',
-          name: 'حليب كامل الدسم المراعي 2 لتر',
-          sku: 'SKU-MLK-004',
-          barcode: '628100456789',
-          category: 'ألبان',
-          shelfLocation: 'المنطقة ب › ممر 02 › ثلاجة 3',
-          zone: 'ب',
-          aisle: '02',
-          shelf: 'ثلاجة 3',
-          stockAllocated: true,
-          stockStatus: 'reserved',
-          quantity: 2,
-          unitPrice: 11.00,
-          totalPrice: 22.00,
-          image: ''
-        }
-      ]
-    },
-    {
-      id: 'ORD-2046',
-      orderNumber: '2046',
-      customerName: 'نورة بنت فيصل السديري',
-      customerPhone: '+966 56 778 9012',
-      createdAt: new Date(Date.now() - 25 * 60 * 1000).toISOString(), // 25 mins ago
-      status: 'awaiting_approval', // بانتظار موافقة العميل
-      fulfillmentType: 'delivery',
-      fulfillmentAddress: 'الرياض - حي الملقا - شارع وادي حنيفة - فيلا 18',
-      fulfillmentTiming: 'توصيل مبرمج: اليوم 6:00 م',
-      paymentMethod: 'أبل باي (مدفوع)',
-      paymentStatus: 'paid',
-      customerNotes: 'يرجى ترك الطلب عند الباب والاتصال بي.',
-      subtotal: 60.43,
-      vat: 9.07,
-      deliveryFee: 15.00,
-      total: 84.50,
-      originalTotal: 87.50,
-      priceDifference: -3.00,
-      hasSubstitutions: true,
-      substitutions: [
-        {
-          originalItemId: 'item-2046-1',
-          originalItemName: 'أفوكادو هاس مكسيكي طازج',
-          originalQuantity: 2,
-          originalUnitPrice: 14.50,
-          substituteProductId: 'prod-004',
-          substituteProductName: 'أفوكادو هاس كيني طازج (درجة أولى)',
-          substituteQuantity: 2,
-          substituteUnitPrice: 13.00,
-          substituteTotalPrice: 26.00,
-          priceDifference: -3.00
-        }
-      ],
-      revisedTotal: 84.50,
-      items: [
-        {
-          id: 'item-2046-1',
-          name: 'أفوكادو هاس مكسيكي طازج',
-          sku: 'SKU-AVO-001',
-          barcode: '628100123456',
-          category: 'خضار وفواكه',
-          shelfLocation: 'المنطقة أ › ممر 01 › رف 2',
-          zone: 'أ',
-          aisle: '01',
-          shelf: '2',
-          stockAllocated: false,
-          stockStatus: 'insufficient',
-          quantity: 2,
-          unitPrice: 14.50,
-          totalPrice: 29.00,
-          image: '',
-          substitutedBy: {
-            productId: 'prod-004',
-            name: 'أفوكادو هاس كيني طازج (درجة أولى)',
-            sku: 'SKU-AVO-KEN',
-            category: 'خضار وفواكه',
-            quantity: 2,
-            unitPrice: 13.00,
-            totalPrice: 26.00,
-            stock: 24,
-            priceDiff: -3.00,
-            merchantNote: 'نفد الأفوكادو المكسيكي، نقترح كيني درجة أولى ممتاز وبسعر أوفر.'
-          }
-        },
-        {
-          id: 'item-2046-2',
-          name: 'جبنة فيتا يونانية أصلية 200جم',
-          sku: 'SKU-CH-FET',
-          barcode: '628100111007',
-          category: 'ألبان وأجبان',
-          shelfLocation: 'المنطقة ب › ممر 03 › ثلاجة 1',
-          zone: 'ب',
-          aisle: '03',
-          shelf: 'ثلاجة 1',
-          stockAllocated: true,
-          stockStatus: 'reserved',
-          quantity: 2,
-          unitPrice: 11.50,
-          totalPrice: 23.00,
-          image: ''
-        },
-        {
-          id: 'item-2046-3',
-          name: 'خبز لوزين توست أبيض فاخر 600جم',
-          sku: 'SKU-BRD-LUZ',
-          barcode: '628100111008',
-          category: 'مخبوزات',
-          shelfLocation: 'المنطقة ج › ممر 02 › رف 1',
-          zone: 'ج',
-          aisle: '02',
-          shelf: '1',
-          stockAllocated: true,
-          stockStatus: 'reserved',
-          quantity: 2,
-          unitPrice: 10.25,
-          totalPrice: 20.50,
-          image: ''
-        }
-      ]
-    },
-    {
-      id: 'ORD-2043',
-      orderNumber: '2043',
-      customerName: 'خالد إبراهيم المنصور',
-      customerPhone: '+966 55 123 7890',
-      createdAt: new Date(Date.now() - 48 * 60 * 1000).toISOString(), // 48 mins ago
-      status: 'ready', // جاهز للاستلام / خرج للتوصيل
-      fulfillmentType: 'delivery',
-      fulfillmentAddress: 'الرياض - حي الياسمين - شارع القادسية - عمارة الروضة',
-      fulfillmentTiming: 'مع مندوب التوصيل حالياً في الطريق للعميل',
-      paymentMethod: 'دفع عند الاستلام (كاش)',
-      paymentStatus: 'cash_on_delivery',
-      customerNotes: 'يرجى إحضار فكة 100 ₪.',
-      subtotal: 64.78,
-      vat: 9.72,
-      deliveryFee: 15.00,
-      total: 89.50,
-      items: [
-        {
-          id: 'item-2043-1',
-          name: 'منظف ديتول متعدد الاستعمالات 1 لتر',
-          sku: 'SKU-CLN-011',
-          barcode: '628100112233',
-          category: 'عناية ومنظفات',
-          shelfLocation: 'المنطقة و › ممر 06 › رف 2',
-          zone: 'و',
-          aisle: '06',
-          shelf: '2',
-          stockAllocated: true,
-          stockStatus: 'reserved',
-          quantity: 1,
-          unitPrice: 26.50,
-          totalPrice: 26.50,
-          image: ''
-        },
-        {
-          id: 'item-2043-2',
-          name: 'مناديل فاين كلاسيك معقمة 10 علب',
-          sku: 'SKU-TIS-012',
-          barcode: '628100223344',
-          category: 'عناية ومنظفات',
-          shelfLocation: 'المنطقة و › ممر 06 › رف 4',
-          zone: 'و',
-          aisle: '06',
-          shelf: '4',
-          stockAllocated: true,
-          stockStatus: 'reserved',
-          quantity: 1,
-          unitPrice: 48.00,
-          totalPrice: 48.00,
-          image: ''
-        }
-      ]
-    },
-    {
-      id: 'ORD-2038',
-      orderNumber: '2038',
-      customerName: 'محمد سلطان القحطاني',
-      customerPhone: '+966 53 321 4567',
-      createdAt: new Date(Date.now() - 95 * 60 * 1000).toISOString(), // 95 mins ago
-      status: 'completed', // تم التسليم (مكتمل)
-      fulfillmentType: 'pickup',
-      fulfillmentAddress: 'استلام ذاتي من كاونتر المتجر الرئيسي',
-      fulfillmentTiming: 'تم التسليم اليوم 2:15 م',
-      paymentMethod: 'فيزا (مدفوع)',
-      paymentStatus: 'paid',
-      customerNotes: 'تم الاستلام بنجاح.',
-      subtotal: 133.91,
-      vat: 20.09,
-      deliveryFee: 0.00,
-      total: 154.00,
-      items: [
-        {
-          id: 'item-2038-1',
-          name: 'تمور سكري مفتل فاخر كرتون 1 كجم',
-          sku: 'SKU-DAT-010',
-          barcode: '628100012345',
-          category: 'تمور ومكسرات',
-          shelfLocation: 'المنطقة أ › ممر 04 › رف 3',
-          zone: 'أ',
-          aisle: '04',
-          shelf: '3',
-          stockAllocated: true,
-          stockStatus: 'reserved',
-          quantity: 2,
-          unitPrice: 35.00,
-          totalPrice: 70.00,
-          image: ''
-        },
-        {
-          id: 'item-2038-2',
-          name: 'شاي ربيع أوراق كاملة كرتون 400 جم',
-          sku: 'SKU-TEA-008',
-          barcode: '628100890123',
-          category: 'مشروبات ساخنة',
-          shelfLocation: 'المنطقة أ › ممر 03 › رف 2',
-          zone: 'أ',
-          aisle: '03',
-          shelf: '2',
-          stockAllocated: true,
-          stockStatus: 'reserved',
-          quantity: 2,
-          unitPrice: 21.00,
-          totalPrice: 42.00,
-          image: ''
-        },
-        {
-          id: 'item-2038-3',
-          name: 'مياه صفا مكة كرتون 40×330مل',
-          sku: 'SKU-WAT-007',
-          barcode: '628100789012',
-          category: 'مشروبات ومياه',
-          shelfLocation: 'المنطقة هـ › ممر 05 › منصة 1',
-          zone: 'هـ',
-          aisle: '05',
-          shelf: 'منصة 1',
-          stockAllocated: true,
-          stockStatus: 'reserved',
-          quantity: 2,
-          unitPrice: 21.00,
-          totalPrice: 42.00,
-          image: ''
-        }
-      ]
-    }
-  ];
+  const SEED_ORDERS = [];
 
   // =========================================================================
   // 2. Catalog Products for Substitution Selector
@@ -512,7 +132,7 @@
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch(endpoint, {
+      const response = await ApiClient.fetchResponse(endpoint, {
         method: 'GET',
         headers
       });
@@ -1729,7 +1349,7 @@
       reason: "Updated by merchant"
     };
 
-    fetch(`${baseUrl}/Orders/${encodeURIComponent(orderId)}/status`, {
+    ApiClient.fetchResponse(`${baseUrl}/Orders/${encodeURIComponent(orderId)}/status`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -2082,7 +1702,7 @@
       ]
     };
 
-    fetch(`${baseUrl}/Orders/${encodeURIComponent(order.id)}/amendments`, {
+    ApiClient.fetchResponse(`${baseUrl}/Orders/${encodeURIComponent(order.id)}/amendments`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -2171,7 +1791,7 @@
         console.warn('[Orders] Backend proposeSubstitution note:', e && e.message ? e.message : e);
       });
     } else {
-      fetch(`${baseUrl}/Orders/${encodeURIComponent(orderId)}/amendments`, {
+      ApiClient.fetchResponse(`${baseUrl}/Orders/${encodeURIComponent(orderId)}/amendments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -2479,7 +2099,7 @@
       reviewerNotes: "Approved"
     };
 
-    fetch(`${baseUrl}/orders/${encodeURIComponent(orderId)}/receipts/${encodeURIComponent(receiptId)}/verify`, {
+    ApiClient.fetchResponse(`${baseUrl}/orders/${encodeURIComponent(orderId)}/receipts/${encodeURIComponent(receiptId)}/verify`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -2566,7 +2186,7 @@
       rejectionReason: reasonText
     };
 
-    fetch(`${baseUrl}/orders/${encodeURIComponent(orderId)}/receipts/${encodeURIComponent(receiptId)}/verify`, {
+    ApiClient.fetchResponse(`${baseUrl}/orders/${encodeURIComponent(orderId)}/receipts/${encodeURIComponent(receiptId)}/verify`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -2856,7 +2476,7 @@
       : 'https://dawwer.runasp.net/api';
     const selectedReason = [order.rejectionReason, order.rejectionNotes].filter(Boolean).join(' - ') || 'Cancelled by merchant';
 
-    fetch(`${baseUrl}/Orders/${encodeURIComponent(orderId)}/cancel`, {
+    ApiClient.fetchResponse(`${baseUrl}/Orders/${encodeURIComponent(orderId)}/cancel`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

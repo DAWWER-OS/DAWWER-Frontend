@@ -155,7 +155,7 @@
     const endpoint = `${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(state.storeId)}/fulfillment-settings`;
 
     try {
-      const response = await fetch(endpoint, {
+      const response = await ApiClient.fetchResponse(endpoint, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -321,7 +321,7 @@
     console.log('[Fulfillment] Submitting PUT request payload to:', endpoint, bodyPayload);
 
     try {
-      const response = await fetch(endpoint, {
+      const response = await ApiClient.fetchResponse(endpoint, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -329,14 +329,6 @@
         },
         body: JSON.stringify(bodyPayload)
       });
-
-      if (response.status === 401) {
-        console.warn('[Fulfillment] HTTP 401 Unauthorized during save. Clearing tokens and redirecting to login.html...');
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('storeToken');
-        window.location.href = 'login.html';
-        return;
-      }
 
       if (response.status === 422) {
         let errData = null;
@@ -369,19 +361,12 @@
       } else {
         const errorText = await response.text();
         console.warn(`[Fulfillment] Backend returned status ${response.status}:`, errorText);
-        // Fallback save locally
-        state.originalSettingsJSON = JSON.stringify(state.settings);
-        state.hasUnsavedChanges = false;
-        saveLocalCache(state.settings);
-        showFloatingEmeraldToast('تم تحديث إعدادات التوصيل والاستلام بنجاح');
+        throw new Error(`تعذر حفظ إعدادات التوصيل (${response.status}).`);
       }
     } catch (networkErr) {
-      console.warn('[Fulfillment] Network exception during save:', networkErr);
-      // Offline fallback
-      state.originalSettingsJSON = JSON.stringify(state.settings);
-      state.hasUnsavedChanges = false;
-      saveLocalCache(state.settings);
-      showFloatingEmeraldToast('تم حفظ التغييرات بنجاح في الذاكرة المحلية');
+      console.warn('[Fulfillment] Save failed:', networkErr);
+      state.hasUnsavedChanges = true;
+      if (typeof showToast === 'function') showToast({ title: 'تعذر الحفظ', message: networkErr.message, type: 'error' });
     } finally {
       state.isSaving = false;
       updateSaveButtonState();

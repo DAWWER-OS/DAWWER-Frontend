@@ -1,14 +1,7 @@
 const STORAGE_KEY_CATALOG = 'dawwer_merchant_catalog_products';
 const STORAGE_KEY_AUDIT = 'dawwer_merchant_audit_log';
 
-const defaultProducts = [
-  { id: 1, name: "عصير برتقال طبيعي 1ل", sku: "JUC-ORG-100", category: "مشروبات", price: 12.5, quantity: 4, stock: 4, threshold: 5, shelf: "A-02", available: true },
-  { id: 2, name: "لبنة بلدية 500غ", sku: "DY-LBN-500", category: "ألبان وأجبان", price: 18.0, quantity: 2, stock: 2, threshold: 5, shelf: "B-01", available: true },
-  { id: 3, name: "مناديل ورقية فاخرة", sku: "CLN-TIS-001", category: "منظفات وعناية", price: 8.0, quantity: 0, stock: 0, threshold: 10, shelf: "C-04", available: false },
-  { id: 4, name: "زيت زيتون بكر ممتاز 1ل", sku: "OIL-OLV-100", category: "زيوت ومؤن", price: 45.0, quantity: 24, stock: 24, threshold: 8, shelf: "A-05", available: true },
-  { id: 5, name: "أرز بسمتي فاخر 5كغ", sku: "GRN-RIC-500", category: "حبوب ومعلبات", price: 38.0, quantity: 15, stock: 15, threshold: 5, shelf: "D-01", available: true },
-  { id: 6, name: "حليب كامل الدسم 1ل", sku: "DY-MLK-100", category: "ألبان وأجبان", price: 7.5, quantity: 30, stock: 30, threshold: 10, shelf: "B-03", available: true }
-];
+const defaultProducts = [];
 
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof Auth !== 'undefined' && Auth.requireAuth) {

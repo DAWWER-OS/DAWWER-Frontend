@@ -1,125 +1,22 @@
 /**
  * Login Controller - دوّر (Dawwer)
- * Bypasses email OTP verification screen for testing and redirects immediately to dashboard.html.
+ * Uses the server session and server verification status.
  */
 
-// Direct role-based redirection if already authenticated
-if (typeof Auth !== 'undefined' && Auth.isAuthenticated && Auth.isAuthenticated()) {
-  const urlParams = new URLSearchParams(window.location.search);
-  const redirect = urlParams.get('redirect');
-  const user = Auth.getUser();
-  const isAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
-    ? Auth.isAdmin(user)
-    : (function(r) {
-        if (!r) return false;
-        if (Array.isArray(r)) return r.some(x => /admin|superadmin/i.test(String(x)));
-        return r === 4 || r === '4' || /admin|superadmin/i.test(String(r));
-      })(user?.role);
-
-  if (isAdmin) {
-    window.location.href = (redirect && redirect.includes('admin') && !redirect.includes('login.html')) ? redirect : 'admin-dashboard.html';
-  } else if (redirect && !redirect.includes('login.html') && !redirect.includes('register.html') && !redirect.includes('index.html') && !redirect.includes('landing.html')) {
-    window.location.href = redirect;
-  } else {
-    window.location.href = 'dashboard.html';
-  }
-}
+// An existing session may need a refresh before choosing a destination.
+(async () => {
+  if (!Auth.isAuthenticated()) return;
+  try {
+    if (!ApiClient.getAuthToken(false) && !await ApiClient.refreshAuthToken()) return;
+    window.location.replace(Auth.getLoginDestination(new URLSearchParams(window.location.search).get('redirect')));
+  } catch (err) { /* Keep login available when the authentication service is unavailable. */ }
+})();
 
 function escapeHtml(str) {
   if (!str) return '';
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
-}
-
-function persistMockMerchantSession({ email, fullName, storeName }) {
-  const finalEmail = (email && email.trim()) || 'merchant@dawwer.com';
-  const finalName = (fullName && fullName.trim()) || 'تاجر دوّر المعتمد';
-  const finalStoreName = (storeName && storeName.trim()) || 'سوبر ماركت الأمل';
-  const finalUserId = 'merchant-test-id-101';
-  const finalStoreId = '3fa85f64-5717-4562-b3fc-2c963f66afa6';
-
-  const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-  const payloadObj = {
-    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier": finalUserId,
-    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name": finalName,
-    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress": finalEmail,
-    "http://schemas.microsoft.com/ws/2008/06/identity/claims/role": "Merchant",
-    "role": 2,
-    "storeId": finalStoreId,
-    "storeName": finalStoreName,
-    "exp": Math.floor(Date.now() / 1000) + 86400 * 30
-  };
-  const payloadB64 = btoa(unescape(encodeURIComponent(JSON.stringify(payloadObj)))).replace(/=/g, '');
-  const mockToken = `${header}.${payloadB64}.mocksignaturedawwer2026`;
-
-  const userObj = {
-    userId: finalUserId,
-    fullName: finalName,
-    email: finalEmail,
-    phoneNumber: '0599000000',
-    role: 2,
-    storeId: finalStoreId,
-    storeName: finalStoreName
-  };
-
-  localStorage.setItem('token', mockToken);
-  localStorage.setItem('accessToken', mockToken);
-  localStorage.setItem('access_token', mockToken);
-  localStorage.setItem('dawwer_access_token', mockToken);
-  localStorage.setItem('refreshToken', 'mock-refresh-token-dawwer');
-  localStorage.setItem('dawwer_refresh_token', 'mock-refresh-token-dawwer');
-  localStorage.setItem('userId', finalUserId);
-  localStorage.setItem('role', '2');
-  localStorage.setItem('userRole', '2');
-  localStorage.setItem('storeToken', mockToken);
-  localStorage.setItem('store_token', mockToken);
-  localStorage.setItem('dawwer_store_token', mockToken);
-  localStorage.setItem('activeStoreId', finalStoreId);
-  localStorage.setItem('store_id', finalStoreId);
-  localStorage.setItem('storeId', finalStoreId);
-  localStorage.setItem('active_store_id', finalStoreId);
-  localStorage.setItem('dawwer_active_store_id', finalStoreId);
-  localStorage.setItem('dawwer_store_id', finalStoreId);
-  localStorage.setItem('storeName', finalStoreName);
-  localStorage.setItem('store_name', finalStoreName);
-  localStorage.setItem('dawwer_store_name', finalStoreName);
-  localStorage.setItem('userData', JSON.stringify(userObj));
-  localStorage.setItem('user', JSON.stringify(userObj));
-  localStorage.setItem('dawwer_user', JSON.stringify(userObj));
-  localStorage.setItem('dawwer_user_data', JSON.stringify(userObj));
-  localStorage.setItem('dawwer_active_store', JSON.stringify({
-    id: finalStoreId,
-    name: finalStoreName,
-    storeName: finalStoreName,
-    roleName: 'تاجر معتمد',
-    status: 'Approved'
-  }));
-  localStorage.setItem('dawwer_store_status', 'Approved');
-  sessionStorage.setItem('email', finalEmail);
-  sessionStorage.setItem('dawwer_registered_email', finalEmail);
-
-  if (typeof Auth !== 'undefined' && typeof Auth.saveSession === 'function') {
-    try {
-      Auth.saveSession({
-        accessToken: mockToken,
-        refreshToken: 'mock-refresh-token-dawwer',
-        userId: finalUserId,
-        fullName: finalName,
-        email: finalEmail,
-        role: 2,
-        storeId: finalStoreId,
-        storeName: finalStoreName,
-        storeToken: mockToken
-      });
-    } catch (e) {}
-  }
-
-  if (typeof ApiClient !== 'undefined' && typeof ApiClient.setActiveStoreId === 'function') {
-    try {
-      ApiClient.setActiveStoreId(finalStoreId);
-    } catch (e) {}
-  }
 }
 
 function initLoginForm() {
@@ -214,7 +111,7 @@ async function handleLogin(event) {
   const errorBox = document.getElementById('error-message');
   const btn = document.getElementById('submit-btn');
 
-  if (!emailInput || !passwordInput) return;
+  if (!emailInput || !passwordInput || btn?.disabled) return;
 
   const email = emailInput.value.trim();
   const password = passwordInput.value;
@@ -268,46 +165,26 @@ async function handleLogin(event) {
     btn.disabled = true;
   }
 
-  // Check if admin login requested
-  const isAdminEmail = /admin@dawwer\.com/i.test(email);
-
-  // Optional background API call
   try {
-    const client = (typeof window !== 'undefined' && window.ApiClient) || (typeof ApiClient !== 'undefined' ? ApiClient : null);
-    if (client && typeof client.core === 'function') {
-      await client.core('/Auth/login', { method: 'POST', body: { email, password } }).catch(() => null);
-    } else if (client && typeof client.post === 'function') {
-      await client.post('/Auth/login', { email, password }).catch(() => null);
+    const data = await ApiClient.auth.login({ email, password });
+    if (data?.requiresVerification) {
+      sessionStorage.setItem('dawwer_registered_email', email);
+      window.location.replace(`verify-account.html?email=${encodeURIComponent(email)}`);
+      return;
     }
-  } catch (e) {}
-
-  // Bypass verification step and persist session into storage
-  if (isAdminEmail) {
-    // Admin routing
-    localStorage.setItem('role', '4');
-    localStorage.setItem('userRole', 'Admin');
-    if (typeof showToast === 'function') {
-      showToast({ title: 'مرحباً بك', message: 'جاري نقلك إلى لوحة الإدارة المركزية...', type: 'success' });
+    if (!data?.accessToken) throw new Error('لم يُرجع الخادم جلسة دخول صالحة.');
+    Auth.clearLocalSession();
+    Auth.saveSession(data);
+    const redirect = new URLSearchParams(window.location.search).get('redirect');
+    window.location.replace(Auth.getLoginDestination(redirect));
+  } catch (err) {
+    const message = err.message || 'تعذر تسجيل الدخول. يرجى المحاولة مجدداً.';
+    if (errorBox) {
+      errorBox.textContent = message;
+      errorBox.className = 'mb-4 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-bold block';
     }
-    setTimeout(() => {
-      window.location.replace('admin-dashboard.html');
-    }, 300);
-    return;
+    if (typeof showToast === 'function') showToast({ title: 'تعذر تسجيل الدخول', message, type: 'error' });
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerText = 'تسجيل الدخول'; }
   }
-
-  // Merchant session
-  persistMockMerchantSession({ email });
-
-  if (typeof showToast === 'function') {
-    showToast({ title: 'تسجيل دخول ناجح', message: 'مرحباً بك في دوّر! جاري نقلك للوحة التحكم...', type: 'success' });
-  }
-
-  // Redirect immediately to dashboard.html bypassing verification
-  setTimeout(() => {
-    window.location.replace('dashboard.html');
-  }, 350);
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { handleLogin, escapeHtml, persistMockMerchantSession };
 }

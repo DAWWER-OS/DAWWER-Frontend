@@ -1,12 +1,4 @@
-const defaultAisles = [
-  { id: 1, name: "الممر 1", category: "خضار وفواكه", count: 22, shelves: ["F1", "F2", "E1"] },
-  { id: 2, name: "الممر 2", category: "الألبان والأجبان", count: 18, shelves: ["H1", "H2"] },
-  { id: 3, name: "الممر 3", category: "المشروبات", count: 35, shelves: ["A1", "A2", "A3"] },
-  { id: 4, name: "الممر 4", category: "المنظفات", count: 14, shelves: ["B1", "B2", "B3"] },
-  { id: 5, name: "الممر 5", category: "حبوب ومؤن", count: 26, shelves: ["C4", "C3"] },
-  { id: 6, name: "الممر 6", category: "خضار وفواكه", count: 22, shelves: ["F1", "F2", "E1"] },
-  { id: 7, name: "الممر 9", category: "مخبوزات", count: 19, shelves: ["D1", "D2", "D3"] }
-];
+const defaultAisles = [];
 
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof Auth !== 'undefined' && Auth.requireAuth) {

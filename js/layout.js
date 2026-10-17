@@ -1125,7 +1125,7 @@ const DawwerLayout = {
       if (!btn) return;
 
       // 1. Explicit coming soon indicators or known incomplete feature buttons
-      if (btn.matches('[data-feature="coming-soon"], [data-status="upcoming"], .coming-soon-btn, .feature-coming-soon, #btn-import-catalog, #btn-export-audit-csv')) {
+      if (btn.matches('[data-feature="coming-soon"], [data-status="upcoming"], .coming-soon-btn, .feature-coming-soon')) {
         e.preventDefault();
         e.stopPropagation();
         const featureName = btn.getAttribute('data-feature-name') || btn.textContent.trim().replace(/^[\+\s]+/, '') || 'الميزة';
@@ -1171,7 +1171,7 @@ const DawwerLayout = {
 
     // Clean old hardcoded mock references to clean fallback
     if (cleaned === 'سوبرماركت النخبة' || cleaned === 'سوبر ماركت النخبة' || cleaned === 'النخبة') {
-      return 'سوبر ماركت الأمل';
+      return 'المتجر';
     }
 
     return cleaned;
@@ -1248,7 +1248,7 @@ const DawwerLayout = {
     const isSuperAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
       ? Auth.isAdmin()
       : (typeof Auth !== 'undefined' && Auth.getUser && Auth.getUser() && (Auth.getUser().role === 'Admin' || Auth.getUser().role === 4 || /admin|superadmin/i.test(String(Auth.getUser().role))));
-    const fallbackName = isSuperAdmin ? "الإدارة العامة لمنظومة دوّر" : "سوبر ماركت الأمل";
+    const fallbackName = isSuperAdmin ? "الإدارة العامة لمنظومة دوّر" : "المتجر";
 
     const currentStoreName = this.getStoredStoreName() || fallbackName;
 
@@ -1284,7 +1284,7 @@ const DawwerLayout = {
     const isSuperAdmin = (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function')
       ? Auth.isAdmin()
       : (typeof Auth !== 'undefined' && Auth.getUser && Auth.getUser() && (Auth.getUser().role === 'Admin' || Auth.getUser().role === 4 || /admin|superadmin/i.test(String(Auth.getUser().role))));
-    const fallbackName = isSuperAdmin ? "الإدارة العامة لمنظومة دوّر" : "سوبر ماركت الأمل";
+    const fallbackName = isSuperAdmin ? "الإدارة العامة لمنظومة دوّر" : "المتجر";
     const cleaned = this.cleanStoreName(storeName);
     const finalName = cleaned || fallbackName;
 
@@ -1297,7 +1297,7 @@ const DawwerLayout = {
       el.textContent = finalName;
     });
 
-    this.setupUserInfo();
+
 
     if (finalName && finalName !== fallbackName) {
       try {

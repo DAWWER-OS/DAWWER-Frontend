@@ -1,6 +1,6 @@
 /**
  * Registration Controller - دوّر (Dawwer)
- * Bypasses email OTP verification screen and persists mock merchant session into storage.
+ * Registers the account and continues to server email verification.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -11,100 +11,10 @@ document.addEventListener('DOMContentLoaded', () => {
   initTermsModal();
 });
 
-function persistMockMerchantSession({ email, fullName, storeName, phoneNumber }) {
-  const finalEmail = (email && email.trim()) || 'merchant@dawwer.com';
-  const finalName = (fullName && fullName.trim()) || 'تاجر دوّر المعتمد';
-  const finalStoreName = (storeName && storeName.trim()) || 'سوبر ماركت الأمل';
-  const finalPhone = (phoneNumber && phoneNumber.trim()) || '0599000000';
-  const finalUserId = 'merchant-test-id-101';
-  const finalStoreId = '3fa85f64-5717-4562-b3fc-2c963f66afa6';
-
-  const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-  const payloadObj = {
-    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier": finalUserId,
-    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name": finalName,
-    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress": finalEmail,
-    "http://schemas.microsoft.com/ws/2008/06/identity/claims/role": "Merchant",
-    "role": 2,
-    "storeId": finalStoreId,
-    "storeName": finalStoreName,
-    "exp": Math.floor(Date.now() / 1000) + 86400 * 30
-  };
-  const payloadB64 = btoa(unescape(encodeURIComponent(JSON.stringify(payloadObj)))).replace(/=/g, '');
-  const mockToken = `${header}.${payloadB64}.mocksignaturedawwer2026`;
-
-  const userObj = {
-    userId: finalUserId,
-    fullName: finalName,
-    email: finalEmail,
-    phoneNumber: finalPhone,
-    role: 2,
-    storeId: finalStoreId,
-    storeName: finalStoreName
-  };
-
-  localStorage.setItem('token', mockToken);
-  localStorage.setItem('accessToken', mockToken);
-  localStorage.setItem('access_token', mockToken);
-  localStorage.setItem('dawwer_access_token', mockToken);
-  localStorage.setItem('refreshToken', 'mock-refresh-token-dawwer');
-  localStorage.setItem('dawwer_refresh_token', 'mock-refresh-token-dawwer');
-  localStorage.setItem('userId', finalUserId);
-  localStorage.setItem('role', '2');
-  localStorage.setItem('userRole', '2');
-  localStorage.setItem('storeToken', mockToken);
-  localStorage.setItem('store_token', mockToken);
-  localStorage.setItem('dawwer_store_token', mockToken);
-  localStorage.setItem('activeStoreId', finalStoreId);
-  localStorage.setItem('store_id', finalStoreId);
-  localStorage.setItem('storeId', finalStoreId);
-  localStorage.setItem('active_store_id', finalStoreId);
-  localStorage.setItem('dawwer_active_store_id', finalStoreId);
-  localStorage.setItem('dawwer_store_id', finalStoreId);
-  localStorage.setItem('storeName', finalStoreName);
-  localStorage.setItem('store_name', finalStoreName);
-  localStorage.setItem('dawwer_store_name', finalStoreName);
-  localStorage.setItem('userData', JSON.stringify(userObj));
-  localStorage.setItem('user', JSON.stringify(userObj));
-  localStorage.setItem('dawwer_user', JSON.stringify(userObj));
-  localStorage.setItem('dawwer_user_data', JSON.stringify(userObj));
-  localStorage.setItem('dawwer_active_store', JSON.stringify({
-    id: finalStoreId,
-    name: finalStoreName,
-    storeName: finalStoreName,
-    roleName: 'تاجر معتمد',
-    status: 'Approved'
-  }));
-  localStorage.setItem('dawwer_store_status', 'Approved');
-  sessionStorage.setItem('email', finalEmail);
-  sessionStorage.setItem('dawwer_registered_email', finalEmail);
-
-  if (typeof Auth !== 'undefined' && typeof Auth.saveSession === 'function') {
-    try {
-      Auth.saveSession({
-        accessToken: mockToken,
-        refreshToken: 'mock-refresh-token-dawwer',
-        userId: finalUserId,
-        fullName: finalName,
-        email: finalEmail,
-        phoneNumber: finalPhone,
-        role: 2,
-        storeId: finalStoreId,
-        storeName: finalStoreName,
-        storeToken: mockToken
-      });
-    } catch (e) {}
-  }
-
-  if (typeof ApiClient !== 'undefined' && typeof ApiClient.setActiveStoreId === 'function') {
-    try {
-      ApiClient.setActiveStoreId(finalStoreId);
-    } catch (e) {}
-  }
-}
 
 async function handleRegister(event) {
   event.preventDefault();
+  if (document.getElementById('submit-btn')?.disabled) return;
 
   const storeInput = document.getElementById('store-name-input');
   const ownerInput = document.getElementById('owner-name-input');
@@ -155,8 +65,8 @@ async function handleRegister(event) {
     return;
   }
 
-  if (password.length < 8) {
-    const errorMsg = 'كلمة المرور يجب أن تتكون من 8 خانات على الأقل وتحتوي على حرف ورقم.';
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(password)) {
+    const errorMsg = 'كلمة المرور يجب أن تتكون من 8 خانات على الأقل وتحتوي على حرف كبير وصغير ورقم ورمز.';
     if (msgBox) {
       msgBox.textContent = errorMsg;
       msgBox.className = 'mb-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-bold block';
@@ -283,9 +193,6 @@ async function handleRegister(event) {
   }
 }
 
-// =========================================================================
-// Glassmorphism Terms of Service & Privacy Policy Modal Controller
-// =========================================================================
 function initTermsModal() {
   const modal = document.getElementById('terms-modal');
   const modalCard = document.getElementById('terms-modal-card');

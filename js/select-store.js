@@ -127,7 +127,7 @@ async function loadStores() {
       const baseUrl = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL)
         ? CONFIG.API_BASE_URL.replace(/\/+$/, '')
         : 'https://dawwer.runasp.net/api';
-      const response = await fetch(`${baseUrl}/merchant/stores`, {
+      const response = await ApiClient.fetchResponse(`${baseUrl}/merchant/stores`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -258,7 +258,7 @@ async function handleSelectStore(storeId, storeName, cardElement) {
       const baseUrl = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL)
         ? CONFIG.API_BASE_URL.replace(/\/+$/, '')
         : 'https://dawwer.runasp.net/api';
-      const response = await fetch(`${baseUrl}/Auth/select-store`, {
+      const response = await ApiClient.fetchResponse(`${baseUrl}/Auth/select-store`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
@@ -279,7 +279,11 @@ async function handleSelectStore(storeId, storeName, cardElement) {
       selectedStoreName = DawwerLayout.cleanStoreName(selectedStoreName);
     }
     const storeToken = resData?.storeToken || resData?.accessToken || resData?.token;
-    const permissions = resData?.permissions || [];
+    const permissions = resData?.effectivePermissions || resData?.permissions || [];
+
+    if (!storeToken) throw new Error('لم يُرجع الخادم جلسة صالحة للمتجر.');
+    ApiClient.setActiveStoreId(selectedStoreId);
+    localStorage.setItem('dawwer_active_store', JSON.stringify({ storeId: selectedStoreId, storeName: selectedStoreName, roleName: resData?.roleName, permissions }));
 
     // Save tokens and selected store identity in localStorage
     if (storeToken) {

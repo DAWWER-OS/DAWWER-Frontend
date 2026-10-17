@@ -1,5 +1,20 @@
 const Auth = {
+  getLoginDestination(redirect = null) {
+    const isAdmin = this.isAdmin();
+    if (redirect) {
+      try {
+        const target = new URL(redirect, window.location.href);
+        const page = target.pathname.split('/').pop();
+        const allowed = isAdmin ? ['admin-dashboard.html', 'profile.html']
+          : ['dashboard.html', 'catalog.html', 'ai-capture.html', 'review-drafts.html', 'merchant-application.html', 'select-store.html', 'orders.html', 'profile.html', 'shelves.html', 'store-staff.html', 'inventory-audit.html', 'payment-review.html', 'delivery-settings.html'];
+        if (target.origin === window.location.origin && allowed.includes(page)) return target.pathname + target.search + target.hash;
+      } catch (e) {}
+    }
+    return isAdmin ? 'admin-dashboard.html' : 'select-store.html';
+  },
+
   saveSession(authData) {
+    authData = { ...(authData.user || {}), ...authData };
     if (authData.accessToken) {
       localStorage.setItem("token", authData.accessToken);
       localStorage.setItem("accessToken", authData.accessToken);
@@ -154,25 +169,13 @@ const Auth = {
       } catch (e) {}
     }
 
-    // 2. Pass 2: Fall back to raw candidate token if unexpired check was unavailable
-    for (const key of candidateKeys) {
-      try {
-        const raw = localStorage.getItem(key);
-        if (raw && typeof raw === 'string') {
-          const clean = raw.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-          if (clean && clean.toLowerCase() !== 'null' && clean.toLowerCase() !== 'undefined' && clean !== '') {
-            return clean;
-          }
-        }
-      } catch (e) {}
-    }
     return null;
   },
 
   isTokenExpired(token) {
     if (!token || typeof token !== 'string') return true;
     const clean = token.trim().replace(/^Bearer\s+/i, '').replace(/^"|"$/g, '');
-    if (!clean || clean.toLowerCase() === 'null' || clean.toLowerCase() === 'undefined') return true;
+    if (!clean || /mock/i.test(clean) || clean.toLowerCase() === 'null' || clean.toLowerCase() === 'undefined') return true;
     try {
       const parts = clean.split('.');
       if (parts.length !== 3) return false;
@@ -191,11 +194,15 @@ const Auth = {
   },
 
   clearLocalSession() {
+    if (typeof ApiClient !== 'undefined') ApiClient.clearStoreCache();
     const keys = [
       'token', 'accessToken', 'access_token', 'dawwer_access_token',
       'storeToken', 'store_token', 'dawwer_store_token',
       'refreshToken', 'refresh_token', 'dawwer_refresh_token',
-      'userId', 'userData', 'dawwer_user_data', 'user',
+      'userId', 'userData', 'dawwer_user_data', 'dawwer_user', 'user', 'role', 'userRole', 'dawwer_token',
+      'dawwer_merchant_app_id', 'dawwer_store_status', 'storeApprovedDate', 'storeCR', 'storeTax', 'storePhone', 'store_phone', 'ownerName',
+      'dawwer_merchant_catalog_products', 'dawwer_merchant_catalog_v2', 'dawwer_ai_extraction_jobs', 'dawwer_merchant_audit_log',
+      'dawwer_current_job', 'dawwer_active_job_id', 'dawwer_current_draft_products', 'dawwer_current_shelf_image', 'current_shelf_image',
       'storeId', 'store_id', 'activeStoreId', 'active_store_id', 'dawwer_active_store_id', 'dawwer_store_id',
       'storeName', 'store_name', 'dawwer_store_name', 'dawwer_active_store'
     ];
@@ -213,6 +220,8 @@ const Auth = {
   },
 
   isAuthenticated() {
+    const oldToken = localStorage.getItem('accessToken') || localStorage.getItem('token');
+    if (oldToken && /mock/i.test(oldToken)) { this.clearLocalSession(); return false; }
     const token = this.getToken();
     const refreshToken = (typeof ApiClient !== 'undefined' && typeof ApiClient.getRefreshToken === 'function')
       ? ApiClient.getRefreshToken()
@@ -233,7 +242,7 @@ const Auth = {
     // DO NOT purge the session! Preserve session and trigger silent refresh
     if (refreshToken && typeof refreshToken === 'string' && refreshToken.trim() !== '' && refreshToken !== 'null' && refreshToken !== 'undefined') {
       if (typeof ApiClient !== 'undefined' && typeof ApiClient.refreshAuthToken === 'function') {
-        ApiClient.refreshAuthToken().catch(err => {
+        ApiClient.refreshAuthToken().then(token => { if (!token) ApiClient.promptReauthentication(); }).catch(err => {
           console.warn('[Auth] Background silent token refresh attempt note:', err);
         });
       }
@@ -276,12 +285,12 @@ const Auth = {
           localStorage.setItem('store_name', res.data.storeName);
           localStorage.setItem('dawwer_store_name', res.data.storeName);
         }
-        if (res.data.storeToken) {
-          localStorage.setItem('storeToken', res.data.storeToken);
-          localStorage.setItem('store_token', res.data.storeToken);
-          localStorage.setItem('dawwer_store_token', res.data.storeToken);
+        if (res.data.storeToken || res.data.accessToken) {
+          localStorage.setItem('storeToken', (res.data.storeToken || res.data.accessToken));
+          localStorage.setItem('store_token', (res.data.storeToken || res.data.accessToken));
+          localStorage.setItem('dawwer_store_token', (res.data.storeToken || res.data.accessToken));
           if (typeof CONFIG !== 'undefined' && CONFIG.STORE_TOKEN_KEY) {
-            localStorage.setItem(CONFIG.STORE_TOKEN_KEY, res.data.storeToken);
+            localStorage.setItem(CONFIG.STORE_TOKEN_KEY, (res.data.storeToken || res.data.accessToken));
           }
         }
         const assignedStoreId = res.data.storeId || cleanStoreId;
@@ -302,14 +311,14 @@ const Auth = {
           storeId: assignedStoreId,
           storeName: res.data.storeName,
           roleName: res.data.roleName,
-          permissions: res.data.permissions || []
+          permissions: res.data.effectivePermissions || res.data.permissions || []
         };
 
         localStorage.setItem('dawwer_active_store', JSON.stringify(activeData));
 
         const activeName = (res.data.storeName && typeof DawwerLayout !== 'undefined' && typeof DawwerLayout.cleanStoreName === 'function')
           ? DawwerLayout.cleanStoreName(res.data.storeName)
-          : (res.data.storeName || 'سوبر ماركت الأمل');
+          : (res.data.storeName || 'المتجر');
 
         document.querySelectorAll('#current-store-name, [data-store-name], #store-name-text').forEach(el => {
           el.textContent = activeName;
@@ -331,7 +340,7 @@ const Auth = {
   getActiveStore() {
     try {
       const activeStoreKey = (typeof CONFIG !== 'undefined' && CONFIG.ACTIVE_STORE_KEY) ? CONFIG.ACTIVE_STORE_KEY : "dawwer_active_store";
-      const raw = localStorage.getItem(activeStoreKey) || localStorage.getItem("dawwer_active_store");
+      const raw = localStorage.getItem("dawwer_active_store") || localStorage.getItem(activeStoreKey);
       let activeObj = null;
       if (raw) {
         try {
@@ -358,7 +367,7 @@ const Auth = {
         storeName = DawwerLayout.cleanStoreName(storeName);
       }
       if (!storeName || storeName === 'null' || storeName === 'undefined') {
-        storeName = 'سوبر ماركت الأمل';
+        storeName = 'المتجر';
       }
 
       if (activeStoreId && activeStoreId !== 'null' && activeStoreId !== 'undefined') {
@@ -468,38 +477,7 @@ const Auth = {
       ? ApiClient.getRefreshToken()
       : (localStorage.getItem('refreshToken') || localStorage.getItem('refresh_token'));
 
-    // 1. Immediate Client-Side Cleanup (Fail-Safe Logout):
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('userData');
-    localStorage.removeItem('storeToken');
-    localStorage.removeItem('activeStoreId');
-    localStorage.removeItem('dawwer_access_token');
-    localStorage.removeItem('dawwer_refresh_token');
-    localStorage.removeItem('dawwer_user_data');
-    localStorage.removeItem('token');
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('store_token');
-    localStorage.removeItem('dawwer_store_token');
-    localStorage.removeItem('store_id');
-    localStorage.removeItem('storeId');
-    localStorage.removeItem('active_store_id');
-    localStorage.removeItem('storeName');
-    localStorage.removeItem('store_name');
-    localStorage.removeItem('dawwer_store_name');
-    localStorage.removeItem('dawwer_active_store');
-    if (typeof CONFIG !== 'undefined') {
-      if (CONFIG.TOKEN_KEY) localStorage.removeItem(CONFIG.TOKEN_KEY);
-      if (CONFIG.REFRESH_TOKEN_KEY) localStorage.removeItem(CONFIG.REFRESH_TOKEN_KEY);
-      if (CONFIG.USER_KEY) localStorage.removeItem(CONFIG.USER_KEY);
-      if (CONFIG.STORE_TOKEN_KEY) localStorage.removeItem(CONFIG.STORE_TOKEN_KEY);
-      if (CONFIG.ACTIVE_STORE_KEY) localStorage.removeItem(CONFIG.ACTIVE_STORE_KEY);
-    }
-    sessionStorage.clear();
-
-    if (typeof ApiClient !== 'undefined' && typeof ApiClient.clearSession === 'function') {
-      try { ApiClient.clearSession(); } catch (e) {}
-    }
+    this.clearLocalSession();
 
     // 2. Fire-and-Forget Server Notification:
     try {
@@ -521,9 +499,6 @@ const Auth = {
   },
 
   requireAuth(allowedRoles = []) {
-    // Run authentication check once per page mount to prevent circular re-checks
-    if (this._authChecked) return true;
-    this._authChecked = true;
 
     const currentPath = (window.location.pathname.split("/").pop() || 'login.html').toLowerCase();
     const loginTarget = 'login.html';
@@ -578,21 +553,6 @@ const Auth = {
 
 // Universal event binding for logout buttons
 if (typeof document !== 'undefined') {
-  const bindLogoutButtons = () => {
-    document.querySelectorAll('[data-action="logout"], #logout-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        Auth.logout();
-      });
-    });
-  };
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindLogoutButtons);
-  } else {
-    bindLogoutButtons();
-  }
-
   // Delegated click listener as fail-safe for dynamically rendered elements
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-action="logout"], #logout-btn, .logout-btn');

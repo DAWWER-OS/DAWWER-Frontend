@@ -254,7 +254,7 @@
               </svg>
               <span>مسح الرف بالذكاء الاصطناعي</span>
             </button>
-            <button id="btn-import-catalog" type="button" data-feature="coming-soon" data-feature-name="استيراد الكتالوج CSV / Excel" class="relative z-10 pointer-events-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-[#153f2d] bg-white hover:bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs transition cursor-pointer dark:bg-slate-900 dark:border-slate-800">
+            <button id="btn-import-catalog" type="button" class="relative z-10 pointer-events-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-[#153f2d] bg-white hover:bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs transition cursor-pointer dark:bg-slate-900 dark:border-slate-800">
               <svg class="w-4 h-4 text-[#153f2d] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
@@ -705,7 +705,7 @@
               <select id="map-name" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d] dark:bg-slate-900 dark:border-slate-800"></select>
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">رمز الباركود / SKU <span class="text-rose-500">*</span></label>
+              <label class="block text-xs font-bold text-slate-700 mb-1">رمز الباركود / SKU (اختياري)</label>
               <select id="map-sku" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d] dark:bg-slate-900 dark:border-slate-800"></select>
             </div>
             <div>
@@ -723,6 +723,10 @@
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">الممر والرف (Aisle)</label>
               <select id="map-aisle" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d] dark:bg-slate-900 dark:border-slate-800"></select>
+            </div>
+            <div>
+              <label for="map-quantity" class="block text-xs font-bold text-slate-700 mb-1">الكمية (اختياري، الافتراضي صفر)</label>
+              <select id="map-quantity" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#153f2d] dark:bg-slate-900 dark:border-slate-800"></select>
             </div>
           </div>
 
@@ -895,11 +899,11 @@
             </div>
             <div>
               <label for="form-price" class="block text-xs font-bold text-slate-700 mb-1.5">السعر (₪) <span class="text-rose-500">*</span></label>
-              <input type="number" step="0.01" min="0.01" id="form-price" placeholder="0.00" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:border-[#153f2d]">
+              <input type="number" step="0.01" min="0" id="form-price" placeholder="0.00" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:border-[#153f2d]">
             </div>
             <div>
               <label for="form-quantity" class="block text-xs font-bold text-slate-700 mb-1.5">الكمية المتوفرة بالمخزون</label>
-              <input type="number" step="1" min="0" id="form-quantity" placeholder="10" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:border-[#153f2d]">
+              <input type="number" step="1" min="0" id="form-quantity" placeholder="0" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:border-[#153f2d]">
             </div>
             <div class="sm:col-span-2">
               <label for="form-status" class="block text-xs font-bold text-slate-700 mb-1.5">حالة النشر</label>
@@ -1088,6 +1092,8 @@
   <script src="js/layout.js" defer></script>
   <script src="js/notifications.js" defer></script>
   <script src="js/main.js" defer></script>
+  <script src="assets/vendor/sheetjs/xlsx.full.min.js" defer></script>
+  <script src="js/catalog-import.js" defer></script>
   <script src="js/catalog.js" defer></script>
 </body>
 </html>

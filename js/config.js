@@ -22,7 +22,7 @@ const CONFIG = {
   REFRESH_TOKEN_FALLBACK_KEY: "dawwer_refresh_token",
   USER_KEY: "userData",
   USER_FALLBACK_KEY: "dawwer_user_data",
-  DEFAULT_STORE_ID: "a0000000-0000-0000-0000-000000000001",
+  DEFAULT_STORE_ID: null,
 
   // Storage helper methods
   getToken() {
@@ -146,7 +146,7 @@ const CONFIG = {
    * Formats any image URL ensuring relative backend paths (like /uploads/...)
    * prepend the backend host rather than assuming a local frontend path.
    */
-  resolveImageUrl(url) {
+  resolveImageUrl(url, service = 'auth') {
     if (!url || typeof url !== 'string') return '';
     const trimmed = url.trim();
     if (!trimmed || trimmed === 'null' || trimmed === 'undefined' || trimmed.startsWith('JOB-') || /^JOB[-_]/i.test(trimmed)) {
@@ -165,7 +165,7 @@ const CONFIG = {
       return trimmed.startsWith('./') ? trimmed.slice(2) : (trimmed.startsWith('/') ? trimmed.slice(1) : trimmed);
     }
     // Relative backend upload or static paths
-    const backendHost = this.getBackendBaseUrl();
+    const backendHost = service === 'fastapi' ? this.FASTAPI_BASE_URL.replace(/\/+$/, '') : this.getBackendBaseUrl();
     const cleanPath = trimmed.replace(/^\/+/, '');
     return `${backendHost}/${cleanPath}`;
   }

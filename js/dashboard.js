@@ -36,14 +36,14 @@
    * Universal Store Context & Auth Helper
    */
   function getStoreContext() {
-    let storeId = '3fa85f64-5717-4562-b3fc-2c963f66afa6';
+    let storeId = null;
     let token = '';
 
     try {
       storeId = localStorage.getItem('activeStoreId') ||
                 localStorage.getItem('storeId') ||
                 localStorage.getItem('active_store_id') ||
-                (typeof CONFIG !== 'undefined' ? CONFIG.getActiveStoreId() : '3fa85f64-5717-4562-b3fc-2c963f66afa6');
+                (typeof CONFIG !== 'undefined' ? CONFIG.getActiveStoreId() : null);
 
       token = localStorage.getItem('storeToken') ||
               localStorage.getItem('accessToken') ||
@@ -299,11 +299,12 @@
       // 2. Products list
       // 3. Shelf AI extraction jobs
       // 4. Store details (to ensure store name is current)
-      const [summaryRes, productsRes, shelfJobsRes, storeRes] = await Promise.allSettled([
-        fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/dashboard/summary`, { headers }),
-        fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products`, { headers }),
-        fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/shelf-jobs`, { headers }),
-        fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}`, { headers })
+      const [summaryRes, productsRes, shelfJobsRes, storeRes, ordersRes] = await Promise.allSettled([
+        ApiClient.fetchResponse(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/dashboard/summary`, { headers }),
+        ApiClient.listAll(`/stores/${encodeURIComponent(storeId)}/products`).then(data => ({ ok: true, json: async () => data })),
+        ApiClient.listAll(`/stores/${encodeURIComponent(storeId)}/shelf-jobs`).then(data => ({ ok: true, json: async () => data })),
+        ApiClient.fetchResponse(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}`, { headers }),
+        ApiClient.orders.list(storeId)
       ]);
 
       // 1. Process Store Info
@@ -334,7 +335,7 @@
       if (productsRes.status === 'fulfilled' && productsRes.value.ok) {
         const rawProducts = await productsRes.value.json().catch(() => null);
         const pList = Array.isArray(rawProducts) ? rawProducts : (rawProducts?.data || []);
-        if (Array.isArray(pList) && pList.length > 0) {
+        if (Array.isArray(pList)) {
           state.products = normalizeProducts(pList);
           localStorage.setItem(STORAGE_KEY_PRODUCTS_CACHE, JSON.stringify(state.products));
         }
@@ -350,8 +351,13 @@
         }
       }
 
+      if (ordersRes.status === 'fulfilled' && Array.isArray(ordersRes.value)) {
+        state.orders = ordersRes.value;
+        localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(state.orders));
+      }
+
       // 5. Fallback Default Enrichment if server returned empty (e.g. brand new store)
-      enrichStateWithDefaultsIfEmpty();
+
 
       // 6. Re-render UI with fresh figures
       renderAll();
@@ -359,7 +365,7 @@
     } catch (err) {
       console.warn('[Dashboard Fetch Metrics Notice]:', err);
       // Fallback gracefully on error to local cached data
-      enrichStateWithDefaultsIfEmpty();
+
       renderAll();
     } finally {
       setLoadingState(false);
@@ -399,64 +405,6 @@
   /**
    * Enrich state with realistic operational seeds if completely empty
    */
-  function enrichStateWithDefaultsIfEmpty() {
-    if (state.products.length === 0) {
-      state.products = [
-        { id: 'p-1', name: 'حليب نادك كامل الدسم 1 لتر', category: 'ألبان وأجبان', price: 6.50, quantity: 42, aisle: '01', shelf: 'رف 2', hasShelfMapping: true },
-        { id: 'p-2', name: 'أرز بسمتي الشعلان 5 كجم', category: 'معلبات وتموين', price: 44.00, quantity: 18, aisle: '03', shelf: 'رف 1', hasShelfMapping: true },
-        { id: 'p-3', name: 'زيت دوار الشمس عافية 1.5 لتر', category: 'معلبات وتموين', price: 19.50, quantity: 3, aisle: '03', shelf: 'رف 3', hasShelfMapping: true },
-        { id: 'p-4', name: 'عصير برتقال طبيعي المراعي 1 لتر', category: 'مشروبات وعصائر', price: 9.00, quantity: 4, aisle: '02', shelf: 'ثلاجة 1', hasShelfMapping: true },
-        { id: 'p-5', name: 'لبنة تركية أولكر 500 جم', category: 'ألبان وأجبان', price: 14.25, quantity: 2, aisle: '01', shelf: 'رف 4', hasShelfMapping: true },
-        { id: 'p-6', name: 'شاي ليبتون العلامة الصفراء 100 كيس', category: 'مشروبات وعصائر', price: 17.50, quantity: 28, aisle: '04', shelf: 'رف 2', hasShelfMapping: true },
-        { id: 'p-7', name: 'معجون طماطم لونا 8x135 جم', category: 'معلبات وتموين', price: 12.00, quantity: 1, aisle: '03', shelf: 'رف 2', hasShelfMapping: true },
-        { id: 'p-8', name: 'مناديل فاين كلاسيك 10 عبوات', category: 'نظافة وعناية', price: 26.00, quantity: 35, aisle: '05', shelf: 'رف 1', hasShelfMapping: true },
-        { id: 'p-9', name: 'مسحوق غسيل تايد أوتوماتيك 2.5 كجم', category: 'نظافة وعناية', price: 34.00, quantity: 12, aisle: '05', shelf: 'رف 3', hasShelfMapping: true },
-        { id: 'p-10', name: 'تونة خفيفة تريفا بالزيت 170 جم', category: 'معلبات وتموين', price: 5.75, quantity: 5, aisle: '03', shelf: 'رف 4', hasShelfMapping: true }
-      ];
-    }
-
-    if (state.shelfJobs.length === 0) {
-      state.shelfJobs = [
-        {
-          id: 'job-9842',
-          job_id: 'job-9842',
-          shelf_label: 'ممر 01 › قسم الألبان والأجبان',
-          status: 'COMPLETED',
-          extracted_count: 24,
-          created_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-          image_url: 'assets/images/shelf-sample.jpg'
-        },
-        {
-          id: 'job-9841',
-          job_id: 'job-9841',
-          shelf_label: 'ممر 03 › قسم الزيوت والتموين',
-          status: 'COMPLETED',
-          extracted_count: 36,
-          created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-          image_url: 'assets/images/shelf-sample.jpg'
-        },
-        {
-          id: 'job-9840',
-          job_id: 'job-9840',
-          shelf_label: 'ممر 02 › رفوف المشروبات والعصائر',
-          status: 'COMPLETED',
-          extracted_count: 19,
-          created_at: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
-          image_url: 'assets/images/shelf-sample.jpg'
-        },
-        {
-          id: 'job-9839',
-          job_id: 'job-9839',
-          shelf_label: 'ممر 05 › المنظفات والعناية المنزلية',
-          status: 'COMPLETED',
-          extracted_count: 28,
-          created_at: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
-          image_url: 'assets/images/shelf-sample.jpg'
-        }
-      ];
-    }
-  }
-
   // =========================================================================
   // Render Orchestrator
   // =========================================================================
@@ -506,21 +454,16 @@
 
     // Card 3: Sales & Orders
     // Dynamic multiplier based on period filter
-    let salesTotal = 1840.00;
-    let ordersCount = 27;
-
-    if (state.orders.length > 0) {
-      ordersCount = state.orders.length;
-      salesTotal = state.orders.reduce((acc, o) => acc + (parseFloat(o.total || o.amount || 0) || 0), 0) || (ordersCount * 68);
-    }
-
-    if (state.period === 'week') {
-      salesTotal = salesTotal * 6.8;
-      ordersCount = Math.round(ordersCount * 6.5);
-    } else if (state.period === 'month') {
-      salesTotal = salesTotal * 28.5;
-      ordersCount = Math.round(ordersCount * 27);
-    }
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    if (state.period === 'week') start.setDate(start.getDate() - 6);
+    else if (state.period === 'month') start.setDate(1);
+    const periodOrders = state.orders.filter(order => {
+      const created = new Date(order.createdAt || order.created_at || order.orderDate || 0);
+      return created >= start && !['cancelled', 'canceled', 'ملغي'].includes(String(order.status).toLowerCase());
+    });
+    const ordersCount = periodOrders.length;
+    const salesTotal = periodOrders.reduce((total, order) => total + Number(order.totalAmount ?? order.total ?? order.amount ?? 0), 0);
 
     const salesTotalEl = document.getElementById('kpi-sales-total');
     if (salesTotalEl) {
@@ -559,7 +502,7 @@
   // =========================================================================
   function renderSalesAndOrdersChart() {
     const canvas = document.getElementById('sales-orders-chart');
-    if (!canvas) return;
+    if (!canvas || typeof Chart === 'undefined') return;
 
     // Destroy existing instance to prevent overlapping canvases
     if (state.salesChart) {
@@ -575,8 +518,9 @@
 
     // Realistic baseline figures scaled by period
     const multiplier = state.period === 'month' ? 4.2 : (state.period === 'today' ? 1.0 : 1.15);
-    const salesData = [1420, 2150, 1680, 2490, 3100, 2850, 1940].map(v => Math.round(v * multiplier));
-    const ordersData = [18, 28, 22, 34, 41, 38, 25].map(v => Math.round(v * multiplier));
+    const daily = Array.isArray(state.summary?.daily_sales) ? state.summary.daily_sales : [];
+    const salesData = labels.map((_, index) => Number(daily[index]?.sales || 0));
+    const ordersData = labels.map((_, index) => Number(daily[index]?.orders || 0));
 
     // Update total weekly summary badge
     const totalWeeklySales = salesData.reduce((a, b) => a + b, 0);
@@ -700,32 +644,11 @@
     });
   }
 
-  function updateSalesChart() {
-    if (!state.salesChart) {
-      renderSalesAndOrdersChart();
-      return;
-    }
-    const multiplier = state.period === 'month' ? 4.2 : (state.period === 'today' ? 1.0 : 1.15);
-    const baseSales = [1420, 2150, 1680, 2490, 3100, 2850, 1940];
-    const baseOrders = [18, 28, 22, 34, 41, 38, 25];
+  function updateSalesChart() { renderSalesAndOrdersChart(); }
 
-    state.salesChart.data.datasets[0].data = baseSales.map(v => Math.round(v * multiplier));
-    state.salesChart.data.datasets[1].data = baseOrders.map(v => Math.round(v * multiplier));
-    state.salesChart.update();
-
-    const totalWeeklySales = state.salesChart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-    const weeklyTotalEl = document.getElementById('chart-sales-weekly-total');
-    if (weeklyTotalEl) {
-      weeklyTotalEl.textContent = `₪ ${totalWeeklySales.toLocaleString('en-US')}`;
-    }
-  }
-
-  // =========================================================================
-  // 3. Middle Chart B: Categories Distribution Donut Chart
-  // =========================================================================
   function renderCategoriesDonutChart() {
     const canvas = document.getElementById('categories-donut-chart');
-    if (!canvas) return;
+    if (!canvas || typeof Chart === 'undefined') return;
 
     if (state.donutChart) {
       state.donutChart.destroy();
@@ -747,8 +670,8 @@
 
     // Fallback categories if empty
     if (catLabels.length === 0) {
-      catLabels = ['ألبان وأجبان', 'معلبات وتموين', 'مشروبات وعصائر', 'نظافة وعناية', 'خضار وفواكه'];
-      catValues = [32, 28, 18, 14, 8];
+      catLabels = ['لا توجد بيانات'];
+      catValues = [0];
     }
 
     const colorPalette = [
@@ -1059,11 +982,7 @@
         stock: newQty
       };
 
-      await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}/products/${encodeURIComponent(product.id)}`, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify(payload)
-      }).catch(err => console.warn('[Stock PUT API notice]:', err));
+      await ApiClient.products.update(storeId, product.id, { quantity: newQty, stock_status: newQty > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK' });
 
       // 2. Local State & Cache Update
       product.quantity = newQty;

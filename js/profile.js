@@ -42,14 +42,14 @@ document.addEventListener('DOMContentLoaded', () => {
  * Universal Store & Token Context Helper
  */
 function getStoreContext() {
-  let storeId = '3fa85f64-5717-4562-b3fc-2c963f66afa6';
+  let storeId = null;
   let token = '';
 
   try {
     storeId = localStorage.getItem('activeStoreId') ||
               localStorage.getItem('storeId') ||
               localStorage.getItem('active_store_id') ||
-              '3fa85f64-5717-4562-b3fc-2c963f66afa6';
+              null;
     token = localStorage.getItem('storeToken') ||
             localStorage.getItem('accessToken') ||
             localStorage.getItem('token') ||
@@ -222,23 +222,16 @@ function initOperatingToggle() {
 
   toggleInput.addEventListener('change', async (e) => {
     const isOpen = e.target.checked;
-    updateStoreStatusUI(isOpen);
-    localStorage.setItem('storeOperatingStatus', isOpen ? 'open' : 'closed');
-
     // Save to backend API & localStorage
     const { storeId, token } = getStoreContext();
     try {
-      await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ is_open: isOpen })
-      });
+      await ApiClient.fastapi(`/stores/${encodeURIComponent(storeId)}`, { method: 'PATCH', body: { is_open: isOpen } });
+      updateStoreStatusUI(isOpen);
+      localStorage.setItem('storeOperatingStatus', isOpen ? 'open' : 'closed');
       notify(isOpen ? 'تم فتح المتجر لاستقبال الطلبات' : 'تم إغلاق المتجر مؤقتاً', 'حالة تشغيل المتجر', 'info');
     } catch (err) {
-      console.error('Failed to update store open state:', err);
+      e.target.checked = !isOpen;
+      notify(err.message, 'تعذر تحديث حالة المتجر', 'error');
     }
   });
 }
@@ -442,7 +435,7 @@ async function loadProfileData() {
     let freshStore = null;
     if (storeId && typeof FASTAPI_BASE_URL !== 'undefined') {
       try {
-        const res = await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}`, { headers });
+        const res = await ApiClient.fetchResponse(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}`, { headers });
         if (res.ok) {
           const data = await res.json();
           freshStore = data?.data || data;
@@ -527,6 +520,11 @@ async function handleUpdateStoreInfo(event) {
   if (btnText) btnText.textContent = 'جاري الحفظ...';
 
   try {
+    const { storeId } = getStoreContext();
+    if (!storeId) throw new Error('يرجى اختيار متجر أولاً.');
+    const current = await ApiClient.stores.getApplication(storeId);
+    const previous = current?.data || current;
+    await ApiClient.stores.updateApplication(storeId, { ...previous, name: storeName, city, address: district });
     // 1. Save locally
     localStorage.setItem('storeName', storeName);
     localStorage.setItem('store_name', storeName);
@@ -553,28 +551,6 @@ async function handleUpdateStoreInfo(event) {
 
     if (typeof DawwerLayout !== 'undefined' && typeof DawwerLayout.updateStoreIdentity === 'function') {
       DawwerLayout.updateStoreIdentity(storeName);
-    }
-
-    // 3. Backend Call to sync store data
-    const { storeId, token } = getStoreContext();
-    if (storeId && typeof FASTAPI_BASE_URL !== 'undefined') {
-      try {
-        await fetch(`${FASTAPI_BASE_URL}/api/v1/stores/${encodeURIComponent(storeId)}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-          },
-          body: JSON.stringify({
-            name: storeName,
-            city,
-            address: district,
-            is_active: isOpen
-          })
-        });
-      } catch (backendErr) {
-        console.warn('[Profile] Backend store patch note:', backendErr);
-      }
     }
 
     notify('تم حفظ وتحديث بيانات المتجر بنجاح!', 'تم الحفظ', 'success');
@@ -682,8 +658,8 @@ async function handleChangePassword(event) {
     return;
   }
 
-  if (newPassword.length < 8) {
-    notify('يجب ألا تقل كلمة المرور الجديدة عن 8 خانات.', 'كلمة مرور ضعيفة', 'warning');
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,100}$/.test(newPassword)) {
+    notify('يجب أن تحتوي كلمة المرور على 8 إلى 100 خانة وحرف كبير وصغير ورقم ورمز.', 'كلمة مرور ضعيفة', 'warning');
     return;
   }
 
