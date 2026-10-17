@@ -364,3 +364,47 @@ test('scope edits stay open on missing server confirmation and on forbidden upda
   await page.setViewportSize({width:390,height:844});
   await page.screenshot({path:'test-results/staff-scope-mobile.png',fullPage:true});
 });
+
+test('map editor and shopper follow the site theme without reloading or losing the layout', async ({page})=>{
+  await setup(page,{products:[{id:'theme-product',product_name:'حليب',store_sku:'MILK'}]});
+  await page.addInitScript(store=>{
+    localStorage.setItem('theme','light');
+    localStorage.setItem(`dawwer-map:${store}:layout`,JSON.stringify({id:store,name:'متجر الاختبار',floors:[{id:'floor-1',width:1200,height:720}],entrance:{x:600,y:585},products:[],locations:[],elements:[
+      {id:'theme-wall',type:'wall',x:100,y:100,w:1000,h:9,rotation:0},
+      {id:'theme-shelf',type:'shelf',shelfId:'S-01',aisle:'01',x:400,y:200,w:42,h:180,rotation:0,sections:4,levels:5,label:'الرف S-01'},
+      {id:'theme-entrance',type:'entrance',x:550,y:593,w:100,h:27,rotation:0,label:'المدخل'}
+    ]}));
+  },store);
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.setViewportSize({width:1440,height:1000});
+  await page.goto('/store-map.html');
+  const map=page.frameLocator('#store-map-frame');
+  await expect(map.locator('#appShell')).toBeVisible();
+  await expect(map.locator('html')).not.toHaveClass(/dark/);
+  await expect(map.locator('.left-panel')).toHaveCSS('background-color','rgb(255, 255, 255)');
+  await expect(map.locator('.map-object.shelf')).toHaveCSS('background-color','rgb(34, 85, 61)');
+  const frame=page.frames().find(frame=>frame.url().includes('/assets/store-map/index.html'));
+  await frame.evaluate(()=>window.themeTestMarker='preserved');
+  await page.screenshot({path:'test-results/map-theme-light.png',fullPage:true});
+  await page.locator('#theme-toggle-btn').click();
+  await expect(map.locator('html')).toHaveClass(/dark/);
+  await expect(map.locator('.left-panel')).toHaveCSS('background-color','rgb(15, 23, 42)');
+  await expect(map.locator('.map-surface')).toHaveCSS('background-color','rgb(17, 28, 46)');
+  expect(await frame.evaluate(()=>window.themeTestMarker)).toBe('preserved');
+  expect(await frame.evaluate(()=>window.DawerEditor.getStore().elements.find(el=>el.id==='theme-shelf').shelfId)).toBe('S-01');
+  await page.screenshot({path:'test-results/map-theme-dark.png',fullPage:true});
+  await map.locator('.map-object.shelf').focus();
+  await map.locator('.map-object.shelf').press('Enter');
+  await expect(map.locator('#shelfWorkspace')).toBeVisible();
+  await expect(map.locator('.position-slot').first()).toHaveCSS('background-color','rgb(15, 23, 42)');
+  await map.locator('#backToPlanButton').click();
+  await map.locator('#customerPreview').click();
+  await expect(map.locator('#shopper')).toBeVisible();
+  await expect(map.locator('#shopper')).toHaveCSS('background-color','rgb(2, 6, 23)');
+  await expect(map.locator('#shopMap > rect').first()).toHaveCSS('fill','rgb(17, 28, 46)');
+  await page.screenshot({path:'test-results/map-shopper-dark.png',fullPage:true});
+  await page.locator('#theme-toggle-btn').click();
+  await expect(map.locator('html')).not.toHaveClass(/dark/);
+  await expect(map.locator('#shopMap > rect').first()).toHaveCSS('fill','rgb(255, 255, 255)');
+  await page.screenshot({path:'test-results/map-shopper-light.png',fullPage:true});
+});
