@@ -283,7 +283,7 @@ async function handleSelectStore(storeId, storeName, cardElement) {
 
     if (!storeToken) throw new Error('لم يُرجع الخادم جلسة صالحة للمتجر.');
     ApiClient.setActiveStoreId(selectedStoreId);
-    localStorage.setItem('dawwer_active_store', JSON.stringify({ storeId: selectedStoreId, storeName: selectedStoreName, roleName: resData?.roleName, permissions }));
+    localStorage.setItem('dawwer_active_store', JSON.stringify({ storeId: selectedStoreId, storeName: selectedStoreName, roleName: resData?.roleName, permissions, accessScope: resData?.accessScope || null, zoneIds: Array.isArray(resData?.zoneIds) ? resData.zoneIds : [] }));
 
     // Save tokens and selected store identity in localStorage
     if (storeToken) {

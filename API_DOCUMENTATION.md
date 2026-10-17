@@ -4,6 +4,8 @@ Comprehensive, structured API reference designed for AI Agents, LLM tools, and c
 
 ---
 
+> Future staff zone-scope contract (frontend implemented; backend pending): [STAFF_ZONE_API_CONTRACT.md](STAFF_ZONE_API_CONTRACT.md).
+
 ## 1. System Overview & Core Specifications
 
 - **Protocol**: `HTTPS` (Strict. Never send preflight or POST requests over plain `HTTP` to avoid preflight redirect errors).

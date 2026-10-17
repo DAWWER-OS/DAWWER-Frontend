@@ -24,8 +24,8 @@
   <!-- Theme Script (Early FOUC prevention) -->
   <script src="js/theme.js"></script>
 
-  <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Pinned local Chart.js: keeps dashboard charts available without a CDN -->
+  <script src="assets/vendor/chartjs/chart.umd.js"></script>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased min-h-screen flex flex-col font-sans mr-0 md:mr-20 transition-colors duration-200" dir="rtl">
 
@@ -216,110 +216,38 @@
   <!-- MAIN DASHBOARD CONTENT -->
   <main id="dashboard-main-container" class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 md:p-8 space-y-6 transition-opacity duration-300">
 
-    <!-- KPI METRICS GRID (4 Sleek Executive Cards) -->
-    <div id="kpi-metrics-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-      
-      <!-- Card 1: إجمالي الكتالوج والمنتجات -->
-      <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs hover:shadow-md transition-all duration-200 group">
-        <div class="flex items-center justify-between mb-3">
-          <span class="text-xs font-bold text-slate-500 dark:text-slate-400">إجمالي الكتالوج والمنتجات</span>
-          <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-[#1c5335] dark:text-emerald-400 flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-          </div>
-        </div>
-        <div class="flex items-baseline gap-2 mb-2">
-          <span id="kpi-total-products" class="text-3xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight">--</span>
-          <span class="text-xs text-slate-400 font-medium">صنف مسجل</span>
-        </div>
-        <!-- Shelf Mapping Progress -->
-        <div class="space-y-1.5 pt-1">
-          <div class="flex items-center justify-between text-[11px] font-bold">
-            <span class="text-slate-500 dark:text-slate-400">الربط بالممرات والرفوف</span>
-            <span id="kpi-shelf-mapping-pct" class="text-emerald-700 dark:text-emerald-400 tabular-nums">--%</span>
-          </div>
-          <div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
-            <div id="kpi-shelf-mapping-bar" class="bg-emerald-600 dark:bg-emerald-500 h-full rounded-full transition-all duration-700" style="width: 0%"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Card 2: عمليات الذكاء الاصطناعي (AI Shelf Jobs) -->
-      <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs hover:shadow-md transition-all duration-200 group">
-        <div class="flex items-center justify-between mb-3">
-          <span class="text-xs font-bold text-slate-500 dark:text-slate-400">عمليات الـ AI ومسح الرفوف</span>
-          <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-[#d6a950] flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-          </div>
-        </div>
-        <div class="flex items-baseline gap-2 mb-2">
-          <span id="kpi-ai-jobs-count" class="text-3xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight">--</span>
-          <span id="kpi-ai-jobs-badge" class="text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-lg border border-amber-200/50 dark:border-amber-800/50">
-            مكتمل ومفحوص
-          </span>
-        </div>
-        <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1">
-          <span>دقة التعرف البصري</span>
-          <span class="font-bold text-slate-700 dark:text-slate-200 tabular-nums">98.4% (Gemini Vision)</span>
-        </div>
-      </div>
-
-      <!-- Card 3: مبيعات وطلبات اليوم / الفترة -->
-      <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs hover:shadow-md transition-all duration-200 group">
-        <div class="flex items-center justify-between mb-3">
-          <span class="text-xs font-bold text-slate-500 dark:text-slate-400">إجمالي المبيعات والطلبات</span>
-          <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          </div>
-        </div>
-        <div class="flex items-baseline gap-2 mb-2">
-          <span id="kpi-sales-total" class="text-3xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight">--</span>
-          <span id="kpi-orders-count-badge" class="text-xs font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-lg border border-blue-200/50 dark:border-blue-800/50 tabular-nums">
-            -- طلب
-          </span>
-        </div>
-        <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1">
-          <span>متوسط قيمة السلة</span>
-          <span id="kpi-avg-order-val" class="font-bold text-slate-700 dark:text-slate-200 tabular-nums">₪ 78.50</span>
-        </div>
-      </div>
-
-      <!-- Card 4: تنبيهات المخزون الحرج -->
-      <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs hover:shadow-md transition-all duration-200 group">
-        <div class="flex items-center justify-between mb-3">
-          <span class="text-xs font-bold text-slate-500 dark:text-slate-400">تنبيهات المخزون الحرج</span>
-          <div class="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-          </div>
-        </div>
-        <div class="flex items-baseline gap-2 mb-2">
-          <span id="kpi-low-stock-count" class="text-3xl font-black text-rose-600 dark:text-rose-400 tabular-nums tracking-tight">--</span>
-          <span id="kpi-low-stock-badge" class="text-xs font-bold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 rounded-lg border border-rose-200/50 dark:border-rose-800/50">
-            تتطلب إعادة تعبئة
-          </span>
-        </div>
-        <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1">
-          <span>حد الأمان الأدنى</span>
-          <span class="font-bold text-slate-700 dark:text-slate-200 tabular-nums">5 قطع أو أقل</span>
-        </div>
-      </div>
-
+    <div id="kpi-metrics-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <details class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 self-start">
+        <summary class="cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1c5335]"><span class="text-sm font-bold text-slate-500">المنتجات</span><span class="flex items-baseline gap-2 mt-3"><span id="kpi-total-products" class="text-3xl font-bold text-slate-900 dark:text-white tabular-nums">--</span><span class="text-xs text-slate-400">صنف</span></span></summary>
+        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300"><div class="flex justify-between"><span>مرتبطة بالرفوف</span><span id="kpi-shelf-mapping-pct">--%</span></div><div class="h-2 rounded-full bg-slate-100 mt-2 overflow-hidden"><div id="kpi-shelf-mapping-bar" class="h-full bg-emerald-600" style="width:0%"></div></div><a href="catalog.html" class="block mt-3 underline">فتح الكتالوج ←</a></div>
+      </details>
+      <details class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 self-start">
+        <summary class="cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1c5335]"><span class="text-sm font-bold text-slate-500">مسح الرفوف</span><span class="flex items-baseline gap-2 mt-3"><span id="kpi-ai-jobs-count" class="text-3xl font-bold text-slate-900 dark:text-white tabular-nums">--</span><span class="text-xs text-slate-400">عملية</span></span></summary>
+        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300"><span id="kpi-ai-jobs-badge">--</span><a href="review-drafts.html" class="block mt-3 underline">مراجعة المسودات ←</a></div>
+      </details>
+      <details class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 self-start">
+        <summary class="cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1c5335]"><span class="text-sm font-bold text-slate-500">المبيعات</span><span class="flex items-baseline gap-2 mt-3"><span id="kpi-sales-total" class="text-3xl font-bold text-slate-900 dark:text-white tabular-nums">--</span><span class="text-xs text-slate-400"></span></span></summary>
+        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300"><div id="kpi-orders-count-badge">-- طلب</div><div class="flex justify-between mt-2"><span>متوسط الطلب</span><span id="kpi-avg-order-val">--</span></div><a href="orders.html" class="block mt-3 underline">فتح الطلبات ←</a></div>
+      </details>
+      <details class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 self-start">
+        <summary class="cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1c5335]"><span class="text-sm font-bold text-slate-500">نواقص المخزون</span><span class="flex items-baseline gap-2 mt-3"><span id="kpi-low-stock-count" class="text-3xl font-bold text-slate-900 dark:text-white tabular-nums">--</span><span class="text-xs text-slate-400">صنف</span></span></summary>
+        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300"><span id="kpi-low-stock-badge">--</span><p class="mt-2">5 قطع أو أقل</p><a href="inventory-audit.html" class="block mt-3 underline">فتح الجرد ←</a></div>
+      </details>
     </div>
 
     <!-- MIDDLE CHARTS GRID (2 Columns using Chart.js) -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-      <!-- Column A: حركة المبيعات والطلبات الأسبوعية (Area / Spline) -->
+      <!-- Column A: المبيعات والطلبات (Area / Spline) -->
       <div class="lg:col-span-7 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs flex flex-col justify-between">
         <div>
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
             <div>
               <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <span class="w-2.5 h-2.5 rounded-full bg-[#1c5335] dark:bg-emerald-400"></span>
-                حركة المبيعات والطلبات الأسبوعية
+                المبيعات والطلبات
               </h2>
-              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                تتبع منحنى الإيرادات التراكمي وتدفق الطلبات على مدار الأيام السبعة الأخيرة
-              </p>
+
             </div>
             <!-- Dynamic Mini Stat -->
             <div class="self-start sm:self-auto flex items-center gap-2 bg-slate-50 dark:bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
@@ -346,7 +274,7 @@
               <span class="font-medium text-slate-700 dark:text-slate-300">الطلبات المكتملة</span>
             </div>
           </div>
-          <span class="text-[11px]">محدّث تلقائياً عبر API</span>
+
         </div>
       </div>
 
@@ -362,9 +290,7 @@
               عرض الكتالوج ←
             </a>
           </div>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
-            نسبة تغطية المخزون الفعلي مقسمة عبر الأقسام الرئيسية في المتجر
-          </p>
+
 
           <!-- Donut Canvas Container -->
           <div class="relative h-56 w-full flex items-center justify-center">
@@ -384,63 +310,10 @@
     <!-- BOTTOM OPERATIONAL GRID (2 Columns) -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-      <!-- Column A: أحدث عمليات مسح الرفوف بالـ AI (Mini Live Table) -->
-      <div class="lg:col-span-7 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-        <div>
-          <div class="flex items-center justify-between mb-3">
-            <div>
-              <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <svg class="w-5 h-5 text-[#d6a950]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                أحدث عمليات مسح الرفوف بالـ AI
-              </h2>
-              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                عمليات استخراج المنتجات التلقائية الملتقطة بكاميرا المتجر مع إمكانية المراجعة الفورية
-              </p>
-            </div>
-            <a href="ai-capture.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1c5335] text-white text-xs font-bold hover:bg-[#153f2d] transition shadow-xs cursor-pointer active:scale-95 shrink-0">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-              مسح رف جديد
-            </a>
-          </div>
-
-          <!-- Mini Table Container -->
-          <div class="overflow-x-auto mt-4">
-            <table class="w-full text-right text-xs">
-              <thead>
-                <tr class="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-bold">
-                  <th class="pb-2.5 pr-2">الرف / الصورة</th>
-                  <th class="pb-2.5">الأصناف المكتشفة</th>
-                  <th class="pb-2.5">الحالة</th>
-                  <th class="pb-2.5">الوقت</th>
-                  <th class="pb-2.5 text-left pl-2">الإجراء</th>
-                </tr>
-              </thead>
-              <tbody id="recent-shelf-jobs-tbody" class="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
-                <!-- Skeleton placeholder row -->
-                <tr>
-                  <td colspan="5" class="py-6 text-center text-slate-400">
-                    <div class="flex items-center justify-center gap-2">
-                      <svg class="animate-spin h-4 w-4 text-[#1c5335] dark:text-emerald-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
-                      <span>جارٍ تحميل سجل عمليات المسح...</span>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
-          <span class="text-slate-500 dark:text-slate-400">جميع العمليات يتم تدقيقها قبل إضافتها للكتالوج</span>
-          <a href="review-drafts.html" class="text-xs font-bold text-[#1c5335] dark:text-emerald-400 hover:underline">
-            عرض كافة المسودات المعلقة ←
-          </a>
-        </div>
-      </div>
-
       <!-- Column B: أصناف تتطلب إعادة التعبئة (Low Stock List) -->
-      <div class="lg:col-span-5 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-        <div>
+      <details class="lg:col-span-12 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs">
+        <summary class="cursor-pointer font-bold text-sm text-slate-900 dark:text-white">أصناف تحتاج تعبئة <span id="low-stock-summary-count" class="text-rose-600"></span></summary>
+        <div class="mt-4">
           <div class="flex items-center justify-between mb-3">
             <div>
               <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -448,7 +321,7 @@
                 أصناف تتطلب إعادة التعبئة
               </h2>
               <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                تنبيهات الأصناف ذات الرصيد الحرج مع إمكانية تحديث المخزون الفوري
+                5 قطع أو أقل
               </p>
             </div>
             <a href="inventory-audit.html" class="text-xs font-bold text-[#1c5335] dark:text-emerald-400 hover:underline shrink-0">
@@ -466,12 +339,12 @@
         </div>
 
         <div class="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-          <span>التحديث الفوري يزامن المخزون مع تطبيق المستهلك</span>
+
           <button type="button" id="btn-refresh-dashboard" class="font-bold text-[#1c5335] dark:text-emerald-400 hover:underline cursor-pointer">
             تحديث البيانات ⟳
           </button>
         </div>
-      </div>
+      </details>
 
     </div>
 

@@ -412,7 +412,7 @@
     renderKpis();
     renderSalesAndOrdersChart();
     renderCategoriesDonutChart();
-    renderRecentShelfJobsTable();
+
     renderLowStockReplenishmentList();
   }
 
@@ -759,99 +759,6 @@
   }
 
   // =========================================================================
-  // 4. Bottom Grid A: Recent AI Shelf Jobs Live Table
-  // =========================================================================
-  function renderRecentShelfJobsTable() {
-    const tbody = document.getElementById('recent-shelf-jobs-tbody');
-    if (!tbody) return;
-
-    if (state.shelfJobs.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="5" class="py-8 text-center text-slate-400">
-            لا توجد عمليات مسح رفوف مسجلة حتى الآن.
-            <div class="mt-2">
-              <a href="ai-capture.html" class="inline-block text-xs font-bold text-[#1c5335] dark:text-emerald-400 hover:underline">
-                ابدأ مسح أول رف بالذكاء الاصطناعي ←
-              </a>
-            </div>
-          </td>
-        </tr>
-      `;
-      return;
-    }
-
-    const recentJobs = state.shelfJobs.slice(0, 5);
-
-    tbody.innerHTML = recentJobs.map(job => {
-      const jobId = job.id || job.job_id || 'JOB-AI';
-      const label = job.shelf_label || job.shelf || job.label || 'الرف الرئيسي (غير محدد)';
-      const count = job.extracted_count || job.products_count || job.detected_items_count || job.draft_count || 12;
-      const status = String(job.status || 'COMPLETED').toUpperCase();
-
-      // Timestamp formatting
-      let timeText = 'اليوم';
-      if (job.created_at || job.timestamp) {
-        try {
-          const d = new Date(job.created_at || job.timestamp);
-          const diffMinutes = Math.round((Date.now() - d.getTime()) / 60000);
-          if (diffMinutes < 60) {
-            timeText = `منذ ${Math.max(1, diffMinutes)} دقيقة`;
-          } else if (diffMinutes < 1440) {
-            timeText = `منذ ${Math.round(diffMinutes / 60)} ساعة`;
-          } else {
-            timeText = d.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' });
-          }
-        } catch (e) {}
-      }
-
-      // Status Pill
-      let statusBadge = '<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">مكتمل</span>';
-      if (status.includes('PEND') || status.includes('PROCESS')) {
-        statusBadge = '<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">قيد المعالجة</span>';
-      } else if (status.includes('FAIL') || status.includes('ERR')) {
-        statusBadge = '<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">فشل الفحص</span>';
-      }
-
-      const reviewHref = `review-drafts.html?job_id=${encodeURIComponent(jobId)}`;
-
-      return `
-        <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group" onclick="window.location.href='${reviewHref}'">
-          <!-- Shelf & Icon -->
-          <td class="py-3 pr-2">
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-[#1c5335] dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-200/50 dark:border-emerald-800/50">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-              </div>
-              <div class="truncate max-w-[150px] sm:max-w-[200px]">
-                <div class="font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-[#1c5335] dark:group-hover:text-emerald-400 transition">${label}</div>
-                <div class="text-[10px] text-slate-400 font-mono">${jobId}</div>
-              </div>
-            </div>
-          </td>
-          <!-- Extracted Count -->
-          <td class="py-3">
-            <span class="inline-flex items-center gap-1 font-bold text-slate-700 dark:text-slate-300 tabular-nums">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              ${count} صنف
-            </span>
-          </td>
-          <!-- Status -->
-          <td class="py-3">${statusBadge}</td>
-          <!-- Time -->
-          <td class="py-3 text-slate-500 dark:text-slate-400 text-[11px]">${timeText}</td>
-          <!-- Action Link -->
-          <td class="py-3 text-left pl-2">
-            <a href="${reviewHref}" class="inline-flex items-center gap-1 text-xs font-bold text-[#1c5335] dark:text-emerald-400 hover:underline" onclick="event.stopPropagation()">
-              مراجعة ←
-            </a>
-          </td>
-        </tr>
-      `;
-    }).join('');
-  }
-
-  // =========================================================================
   // 5. Bottom Grid B: Low Stock Replenishment List
   // =========================================================================
   function renderLowStockReplenishmentList() {
@@ -859,6 +766,8 @@
     if (!container) return;
 
     const criticalItems = state.products.filter(p => p.quantity <= 5);
+    const count = document.getElementById("low-stock-summary-count");
+    if (count) count.textContent = `(${criticalItems.length})`;
 
     if (criticalItems.length === 0) {
       container.innerHTML = `

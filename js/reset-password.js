@@ -30,6 +30,11 @@ async function handleResetPassword(event) {
   if (btn?.disabled) return;
   const email = emailInput.value.trim();
   const token = tokenInput.value.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !token) {
+    if (alertBox) { alertBox.textContent = 'أدخل البريد الإلكتروني ورمز الاستعادة.'; alertBox.className = 'mb-4 p-3.5 rounded-xl text-sm text-red-700 bg-red-50'; }
+    return;
+  }
+
   const newPassword = newPassInput.value;
   const confirmPassword = confirmPassInput.value;
 

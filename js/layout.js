@@ -18,6 +18,10 @@ const DawwerLayout = {
     this.ensureThemeToggle();
     this.initInactiveButtonsHandling();
     this.applyInitialState();
+    window.matchMedia('(max-width: 767.98px)').addEventListener('change', () => {
+      document.body.classList.remove('sidebar-open');
+      this.applyInitialState();
+    });
 
     if (typeof Auth !== 'undefined' && typeof Auth.requireAuth === 'function') {
       const isAuthed = Auth.requireAuth();
@@ -760,6 +764,13 @@ const DawwerLayout = {
           <div class="sidebar-tooltip pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 scale-95 transition-all duration-150 ease-out group-hover/nav:opacity-100 group-hover/nav:scale-100 z-50 bg-gray-900 dark:bg-slate-950 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap border border-white/10 dark:border-slate-800">
             مواقع الممرات والرفوف
           </div>
+        </div>
+
+        <div class="relative group/nav flex items-center w-full px-2">
+          <a href="store-map.html" class="nav-item group/item flex items-center w-full h-11 px-3 rounded-xl text-emerald-100/60 hover:text-white hover:bg-white/10" aria-label="خريطة المتجر">
+            <span class="nav-icon w-6 h-6 shrink-0"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.8" d="M3 5l6 2 6-3 6 2v14l-6-2-6 3-6-2z M9 7v14 M15 4v14"/></svg></span>
+            <span class="sidebar-label nav-label hidden mr-3 text-sm font-semibold whitespace-nowrap">خريطة المتجر</span>
+          </a>
         </div>
 
         <!-- 8. فريق العمل والصلاحيات -->

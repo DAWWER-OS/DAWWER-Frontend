@@ -311,7 +311,9 @@ const Auth = {
           storeId: assignedStoreId,
           storeName: res.data.storeName,
           roleName: res.data.roleName,
-          permissions: res.data.effectivePermissions || res.data.permissions || []
+          permissions: res.data.effectivePermissions || res.data.permissions || [],
+          accessScope: res.data.accessScope || null,
+          zoneIds: Array.isArray(res.data.zoneIds) ? res.data.zoneIds : []
         };
 
         localStorage.setItem('dawwer_active_store', JSON.stringify(activeData));
@@ -378,7 +380,9 @@ const Auth = {
           name: storeName,
           storeToken: storeToken || null,
           roleName: activeObj?.roleName || 'Merchant',
-          permissions: activeObj?.permissions || []
+          permissions: activeObj?.permissions || [],
+          accessScope: activeObj?.accessScope || null,
+          zoneIds: Array.isArray(activeObj?.zoneIds) ? activeObj.zoneIds : []
         };
       }
       return activeObj;

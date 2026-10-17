@@ -79,6 +79,7 @@ test('login requiring verification continues to OTP without saving access creden
 test('password reset submits required confirmPassword and never claims success on rejection', async () => {
   const { api, load, run, elements } = harness();
   for (const id of ['email-input', 'token-input', 'new-pass-input', 'confirm-pass-input', 'alert-message', 'submit-btn']) elements[id] = { value: 'NewPassword!1', classList: { add() {} } };
+  elements['email-input'].value = 'merchant@example.com';
   load('reset-password'); let payload;
   api.post = async (_, body) => { payload = body; throw new Error('Invalid reset token'); };
   await run('handleResetPassword({ preventDefault() {} })');
@@ -119,10 +120,12 @@ test('store selection consumes actual accessToken and effectivePermissions field
   const { api, auth, context } = harness();
   context.localStorage.setItem('accessToken', token());
   const scoped = token({ storeId: 'aaaaaaaa-0000-0000-0000-000000000001' });
-  api.post = async () => ({ success: true, data: { accessToken: scoped, storeId: 'aaaaaaaa-0000-0000-0000-000000000001', effectivePermissions: ['Products.Manage'] } });
+  api.post = async () => ({ success: true, data: { accessToken: scoped, storeId: 'aaaaaaaa-0000-0000-0000-000000000001', effectivePermissions: ['Products.Manage'], accessScope: 'Zones', zoneIds: ['zone-a'] } });
   await auth.selectStore('aaaaaaaa-0000-0000-0000-000000000001');
   assert.equal(context.localStorage.getItem('storeToken'), scoped);
   assert.equal(auth.getActiveStore().permissions[0], 'Products.Manage');
+  assert.equal(auth.getActiveStore().accessScope, 'Zones');
+  assert.equal(auth.getActiveStore().zoneIds[0], 'zone-a');
 });
 
 test('shelf upload images resolve against FastAPI while merchant documents use the platform host', () => {

@@ -810,6 +810,11 @@
           const normT = t.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '');
           return normSkuHeader === normT || normSkuHeader.includes(normT);
         });
+        const headerIsSku = STRICT_SKU_KEYWORDS.some(term => normSkuHeader === term.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, ''));
+        if (headerIsSku && !headerIsCategory) {
+          hideSkuWarning();
+          return false;
+        }
         const hasCategoryData = categoryHits > 0 && (categoryHits / sampleRows.length >= 0.15 || headerIsCategory);
 
         if (hasCategoryData) {
@@ -883,7 +888,8 @@
           const categoryRatio = categoryHits / totalVals;
 
           // Check SKU / barcode traits
-          const isCategoryCol = categoryHeaderMatch || categoryRatio > 0.2;
+          const hasExplicitFieldHeader = /^(productname|name|اسم|اسمالمنتج|اسمالصنف|price|unitprice|السعر|سعر|quantity|qty|stock|الكمية|sku|storesku|barcode|باركود|zone|aisle|shelf|rack)$/.test(normHeader);
+          const isCategoryCol = categoryHeaderMatch || (!hasExplicitFieldHeader && categoryRatio > 0.2);
           const strictSkuHeaderMatch = !isCategoryCol && STRICT_SKU_KEYWORDS.some(k => {
             const normK = k.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, '');
             return normHeader === normK || normHeader.includes(normK);
@@ -923,7 +929,7 @@
         // 2. Identify Category column (Route taxonomy values strictly to Category)
         let catCol = colStats.find(c => c.categoryHeaderMatch);
         if (!catCol) {
-          catCol = colStats.find(c => c.categoryRatio > 0.3);
+          catCol = colStats.find(c => c.isCategoryCol && c.categoryRatio > 0.3);
         }
         const categoryHeader = catCol ? catCol.header : '';
 

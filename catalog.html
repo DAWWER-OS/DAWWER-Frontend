@@ -45,7 +45,7 @@
 
     .blueprint-bg {
       background-color: #0f172a;
-      background-image: 
+      background-image:
         linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px),
         linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px);
       background-size: 24px 24px;
@@ -54,7 +54,7 @@
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased min-h-screen flex flex-col font-sans mr-0 md:mr-20 transition-colors duration-200" dir="rtl">
 
-  
+
     <aside id="sidebar-box" class="fixed top-0 right-0 h-screen w-16 bg-[#153f2d] dark:bg-slate-900 text-white flex flex-col justify-between items-center py-3 z-50 shadow-xl border-l border-white/10 dark:border-slate-800 select-none overflow-visible">
       <!-- TOP: Minimal Brand Icon/Logo Only -->
       <div class="flex flex-col items-center w-full pt-1 px-1.5 shrink-0 overflow-visible">
@@ -240,39 +240,37 @@
 
       <div id="tab-content-catalog" class="space-y-6">
 
+        <section aria-labelledby="add-products-title" class="space-y-3">
+          <h2 id="add-products-title" class="text-lg font-bold text-slate-900 dark:text-white">إضافة المنتجات</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button id="btn-import-catalog" type="button" class="product-entry-card text-right p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-[#1c5335] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1c5335] transition flex items-center gap-4">
+              <span class="w-12 h-12 rounded-xl bg-[#edf5f0] text-[#1c5335] flex items-center justify-center shrink-0"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z M8 4v16 M4 9h16 M4 14h16"/></svg></span>
+              <span class="flex-1"><strong class="block text-sm text-slate-900 dark:text-white">من ملف Excel</strong><span class="block text-xs text-slate-500 mt-1">استيراد Excel أو CSV</span></span><span aria-hidden="true" class="text-[#1c5335]">←</span>
+            </button>
+            <button id="btn-ai-shelf-scan" type="button" class="product-entry-card text-right p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-[#1c5335] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1c5335] transition flex items-center gap-4">
+              <span class="w-12 h-12 rounded-xl bg-[#edf5f0] text-[#1c5335] flex items-center justify-center shrink-0"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h4l2-3h4l2 3h4v13H4z M16 13a4 4 0 11-8 0 4 4 0 018 0"/></svg></span>
+              <span class="flex-1"><strong class="block text-sm text-slate-900 dark:text-white">تصوير الرف</strong><span class="block text-xs text-slate-500 mt-1">التقاط صورة أو رفع صور الرفوف</span></span><span aria-hidden="true" class="text-[#1c5335]">←</span>
+            </button>
+            <button id="btn-add-product" type="button" class="product-entry-card text-right p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-[#1c5335] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1c5335] transition flex items-center gap-4">
+              <span class="w-12 h-12 rounded-xl bg-[#edf5f0] text-[#1c5335] flex items-center justify-center shrink-0"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16 M4 12h16"/></svg></span>
+              <span class="flex-1"><strong class="block text-sm text-slate-900 dark:text-white">إضافة يدوية</strong><span class="block text-xs text-slate-500 mt-1">إدخال بيانات منتج</span></span><span aria-hidden="true" class="text-[#1c5335]">←</span>
+            </button>
+          </div>
+        </section>
+
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div class="flex items-center gap-2 flex-wrap">
             <h2 class="text-lg md:text-xl font-bold text-slate-900">قائمة أصناف المتجر والمخزون</h2>
             <span id="total-count-badge" class="px-2.5 py-0.5 text-xs font-bold bg-[#d6a950] text-white rounded-full" title="إجمالي الأصناف">0</span>
             <span id="total-value-badge" class="px-2.5 py-0.5 text-xs font-bold bg-[#edf5f0] text-[#153f2d] border border-[#153f2d]/20 rounded-full">إجمالي القيمة: <strong id="total-catalog-value" class="font-extrabold text-[#153f2d]">0.00 ₪</strong></span>
           </div>
-          <div class="catalog-toolbar relative z-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto">
-            <button id="btn-ai-shelf-scan" type="button" class="relative z-10 pointer-events-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 rounded-2xl shadow-xs transition cursor-pointer active:scale-95">
-              <svg class="w-4 h-4 text-emerald-100 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span>مسح الرف بالذكاء الاصطناعي</span>
-            </button>
-            <button id="btn-import-catalog" type="button" class="relative z-10 pointer-events-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-[#153f2d] bg-white hover:bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs transition cursor-pointer dark:bg-slate-900 dark:border-slate-800">
-              <svg class="w-4 h-4 text-[#153f2d] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-              </svg>
-              <span>استيراد الكتالوج (CSV / Excel)</span>
-            </button>
-            <button id="btn-add-product" type="button" class="relative z-10 pointer-events-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-[#153f2d] hover:bg-[#0f2d20] rounded-2xl shadow-sm transition cursor-pointer active:scale-95">
-              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-              </svg>
-              <span>إضافة منتج جديد</span>
-            </button>
-          </div>
+
         </div>
 
         <div class="bg-white rounded-3xl shadow-xs border border-slate-200/70 overflow-hidden flex flex-col dark:bg-slate-900 dark:border-slate-800">
 
           <div class="p-6 border-b border-slate-100 space-y-4">
-            
+
             <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 pb-4">
               <button data-status-tab="ALL" class="status-tab active px-4 py-2 rounded-xl text-xs font-bold tracking-wide transition flex items-center gap-2 bg-[#153f2d] text-white shadow-xs">
                 <span>كافة المنتجات</span>
@@ -299,10 +297,10 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
-                <input 
-                  id="search-input" 
-                  type="text" 
-                  placeholder="ابحث باسم المنتج أو رمز الـ SKU..." 
+                <input
+                  id="search-input"
+                  type="text"
+                  placeholder="ابحث باسم المنتج أو رمز الـ SKU..."
                   class="w-full pr-10 pl-9 py-2.5 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 focus:border-[#153f2d] focus:ring-1 focus:ring-[#153f2d] rounded-2xl text-sm transition outline-none dark:bg-slate-900 dark:border-slate-800"
                 >
                 <button id="clear-search" class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 hover:text-slate-600 hidden">
@@ -409,7 +407,7 @@
       </div>
 
       <div id="tab-content-floorplan" class="space-y-6 hidden">
-        
+
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/70 shadow-xs dark:bg-slate-900 dark:border-slate-800">
           <div>
             <h2 class="text-lg font-bold text-[#153f2d] flex items-center gap-2">
@@ -549,7 +547,7 @@
               <div id="map-container" class="relative transition-transform duration-150 origin-center cursor-crosshair shadow-2xl rounded-2xl overflow-hidden inline-block max-w-full">
                 <img id="floorplan-image" src="" alt="مخطط المتجر" class="max-w-full h-auto block select-none pointer-events-none rounded-2xl border border-white/20">
                 <div id="pins-layer" class="absolute inset-0 pointer-events-auto"></div>
-                
+
                 <div id="pin-popover" class="absolute z-30 hidden bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 w-64 transform -translate-x-1/2 -translate-y-full mb-3 pointer-events-auto text-right dark:bg-slate-900 dark:border-slate-800">
                   <div class="flex items-center justify-between mb-2">
                     <span class="text-xs font-bold text-slate-800">تسمية الرف / الممر</span>
@@ -600,12 +598,12 @@
 
   </main>
 
-  
+
 
   <div id="import-wizard-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto hidden" aria-modal="true" role="dialog">
     <div id="wizard-backdrop" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm opacity-0 modal-backdrop"></div>
     <div id="wizard-panel" class="relative bg-white rounded-2xl sm:rounded-3xl max-w-3xl w-full p-4 sm:p-6 md:p-8 shadow-2xl border border-slate-100 transform scale-95 opacity-0 modal-panel my-4 sm:my-8 z-10 flex flex-col max-h-[92vh] overflow-y-auto dark:bg-slate-900 dark:border-slate-800">
-      
+
       <div class="flex items-center justify-between pb-5 border-b border-slate-100 shrink-0">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-2xl bg-[#edf5f0] text-[#153f2d] flex items-center justify-center font-bold">
@@ -965,7 +963,7 @@
   <div id="ai-camera-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto hidden" aria-modal="true" role="dialog">
     <div id="ai-camera-backdrop" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md opacity-0 transition-opacity duration-200"></div>
     <div id="ai-camera-panel" class="relative bg-slate-900 text-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-800 transform scale-95 opacity-0 transition-all duration-200 my-8 z-10 flex flex-col gap-4">
-      
+
       <div class="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">

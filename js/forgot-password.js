@@ -12,7 +12,7 @@ async function handleForgotPassword(event) {
   const alertBox = document.getElementById('alert-message') || document.getElementById('error-message');
   const btn = document.getElementById('submit-btn');
 
-  if (!emailInput) return;
+  if (!emailInput || btn?.disabled) return;
 
   const email = emailInput.value.trim();
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -39,13 +39,15 @@ async function handleForgotPassword(event) {
   try {
     const response = await ApiClient.post('/Auth/forgot-password', { email });
 
-    const successMsg = response.message || 'تم إرسال رمز التحقق إلى بريدك الإلكتروني بنجاح.';
+    const result = response?.data ?? response;
+    if (result?.success === false) throw new Error(result.message || 'تعذر إرسال رمز الاستعادة.');
+    const successMsg = result?.message || response?.message || 'إذا كان البريد مسجلًا، ستصلك رسالة الاستعادة. تحقق من البريد غير المرغوب فيه أيضًا.';
     if (alertBox) {
       alertBox.textContent = successMsg;
       alertBox.className = 'mb-4 p-3.5 rounded-xl text-sm font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 block';
     }
     if (typeof showToast === 'function') {
-      showToast({ title: 'تم إرسال الرمز', message: successMsg, type: 'success' });
+      showToast({ title: 'طلب استعادة كلمة المرور', message: successMsg, type: 'success' });
     }
 
     setTimeout(() => {
